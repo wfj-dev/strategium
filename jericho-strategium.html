@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watch Fortress Jericho — Strategium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060706;
+    --panel: #0c100c;
+    --panel-2: #111611;
+    --border: rgba(79, 214, 122, 0.32);
+    --border-dim: rgba(79, 214, 122, 0.14);
+    --green: #4fd67a;
+    --green-dim: #2f8a52;
+    --green-faint: #1f5c38;
+    --gold: #cfae68;
+    --gold-dim: #8f753e;
+    --white: #f2ede0;
+    --red: #e05c4f;
+    --red-dim: #7a3129;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+  }
+
+  h1, h2, .display { font-family: 'Cinzel', serif; }
+  button { font-family: inherit; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 22px 24px 60px; }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; border-bottom: 1px solid var(--border-dim); padding-bottom: 16px; margin-bottom: 24px;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-icon {
+    width: 44px; height: 44px; flex-shrink: 0;
+    border: 1px solid var(--gold-dim); background: #0a0a09;
+    display: flex; align-items: center; justify-content: center; color: var(--gold);
+  }
+  .header-icon svg { width: 23px; height: 23px; }
+  .header-title {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--gold);
+    margin: 0; line-height: 1.1;
+  }
+  .header-sub {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--green-dim); margin-top: 5px;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .status-badge {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 10.5px; padding: 6px 10px; border: 1px solid var(--border-dim);
+    color: var(--green-dim); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .status-badge::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 6px var(--green); animation: pulse 2.2s ease-in-out infinite;
+  }
+  .status-badge.status-live::before { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+  .status-badge.status-error::before { background: var(--red); box-shadow: 0 0 6px var(--red); animation: none; }
+  .status-badge.status-error { color: var(--red); border-color: var(--red-dim); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .icon-btn {
+    background: transparent; border: 1px solid var(--border-dim); color: var(--green-dim);
+    width: 32px; height: 32px; cursor: pointer; font-size: 14px; line-height: 1;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .icon-btn:hover { color: var(--green); border-color: var(--green); }
+
+  .slate {
+    position: relative;
+    border: 1px solid var(--border);
+    background: rgba(79,214,122,0.015);
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 0 30px rgba(79,214,122,0.04);
+    padding: 40px 30px 46px;
+  }
+  .hud-bracket { position: absolute; width: 16px; height: 16px; border: 0 solid var(--green); pointer-events: none; }
+  .hud-bracket.tl { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+  .hud-bracket.tr { top: -1px; right: -1px; border-top-width: 2px; border-right-width: 2px; }
+  .hud-bracket.bl { bottom: -1px; left: -1px; border-bottom-width: 2px; border-left-width: 2px; }
+  .hud-bracket.br { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+
+  .slate-corner { position: absolute; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+  .slate-corner.tl { top: 10px; left: 18px; color: var(--green-dim); }
+  .slate-corner.tr { top: 10px; right: 18px; color: var(--gold-dim); }
+
+  #breadcrumb {
+    display: flex; align-items: center; gap: 6px; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.06em; margin: 18px 0 30px; flex-wrap: wrap;
+    color: var(--green-dim);
+  }
+  #breadcrumb::before { content: ">"; color: var(--green); margin-right: 2px; }
+  .crumb { background: none; border: none; color: var(--green-dim); cursor: pointer; padding: 2px 0; font-family: inherit; font-size: inherit; letter-spacing: inherit; }
+  .crumb:hover { color: var(--green); }
+  .crumb-current { color: var(--gold); }
+  .crumb-sep { color: var(--green-faint); }
+
+  #app { animation: none; }
+  #app.zoom-in { animation: zoomIn 380ms cubic-bezier(.16,.84,.32,1); }
+  @keyframes zoomIn {
+    0% { transform: scale(0.2); opacity: 0.05; }
+    50% { opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  #app.zoom-out { animation: zoomOut 340ms cubic-bezier(.16,.84,.32,1); }
+  @keyframes zoomOut {
+    0% { transform: scale(1.18); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .tier-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--gold-dim); margin: 6px 0 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .tier-label::after { content: ""; flex: 1; height: 1px; background: var(--border-dim); }
+
+  .tier { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+  .tier-apex { justify-content: center; }
+
+  .connector-down { width: 1px; height: 22px; background: var(--border); margin: 2px auto 0; }
+
+  .tree-row { position: relative; padding-top: 20px; }
+  .tree-row::before { content: ""; position: absolute; top: 0; left: 12%; right: 12%; height: 1px; background: var(--border); }
+  .tree-row > * { position: relative; }
+  .tree-row > *::before { content: ""; position: absolute; top: -20px; left: 50%; width: 1px; height: 20px; background: var(--border); transform: translateX(-50%); }
+  @media (max-width: 640px) {
+    .tree-row::before, .tree-row > *::before { display: none; }
+    .tree-row { padding-top: 0; }
+  }
+
+  .branch-row {
+    position: relative; display: flex; gap: 30px; justify-content: center;
+    align-items: flex-start; flex-wrap: wrap; padding-top: 22px;
+  }
+  .branch-row::before { content: ""; position: absolute; top: 0; left: 18%; right: 18%; height: 1px; background: var(--border); }
+  .branch { position: relative; flex: 1 1 380px; max-width: 480px; }
+  .branch::before { content: ""; position: absolute; top: -22px; left: 50%; width: 1px; height: 22px; background: var(--border); transform: translateX(-50%); }
+  .branch-title {
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--gold); text-align: center; margin: 0 0 14px;
+  }
+  .branch-body { border: 1px solid var(--border-dim); background: rgba(79,214,122,0.015); padding: 18px 14px; }
+  @media (max-width: 640px) {
+    .branch-row::before, .branch::before { display: none; }
+    .branch-row { padding-top: 0; gap: 20px; }
+  }
+
+  .plate {
+    background: var(--panel);
+    border: 1px solid var(--border-dim);
+    padding: 10px 14px 12px;
+    min-width: 150px; max-width: 200px;
+    text-align: left; display: flex; flex-direction: column; gap: 3px;
+    cursor: pointer; color: var(--green);
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  }
+  .plate:hover:not(:disabled) { border-color: var(--green); box-shadow: 0 0 12px rgba(79,214,122,0.15); transform: translateY(-2px); }
+  .plate:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+  .plate:disabled { cursor: default; }
+
+  .plate-rank { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--green-dim); }
+  .plate-name { font-weight: 700; font-size: 14.5px; color: var(--white); }
+  .plate-sub { font-size: 10.5px; color: var(--green-faint); }
+
+  .plate.accent-gold { border-left: 3px solid var(--gold); }
+  .plate.accent-gold .plate-rank { color: var(--gold); }
+  .plate.accent-steel { border-left: 3px solid var(--green-dim); }
+  .plate.accent-red { border-left: 3px solid var(--green); }
+  .plate.accent-red .plate-rank { color: var(--green); }
+
+  .plate.vacant { border-style: dashed; }
+  .plate.vacant .plate-name { color: var(--green-faint); font-style: italic; font-weight: 400; }
+
+  .plate.size-lg { min-width: 240px; padding: 16px 20px 18px; }
+  .plate.size-lg .plate-name { font-size: 19px; }
+  .plate.size-md { min-width: 190px; }
+
+  .tier-companies { max-width: 900px; margin: 0 auto; }
+
+  .company-plate {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--border-dim);
+    border-top: 2px solid var(--gold-dim);
+    padding: 14px 16px 16px;
+    min-width: 172px; flex: 1 1 172px; max-width: 212px;
+    text-align: left; display: flex; flex-direction: column; gap: 5px;
+    cursor: pointer; color: var(--green);
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  }
+  .company-plate:hover { border-color: var(--gold); box-shadow: 0 0 14px rgba(207,174,104,0.15); transform: translateY(-3px); }
+  .company-plate:active { transform: translateY(-1px) scale(0.98); }
+  .company-plate-label {
+    font-family: 'Cinzel', serif; font-weight: 600; font-size: 14.5px; letter-spacing: 0.02em; color: var(--white);
+    border-bottom: 1px solid var(--border-dim); padding-bottom: 6px; margin-bottom: 2px;
+  }
+  .company-plate-captain { font-size: 12.5px; color: var(--green); }
+  .company-plate-count { font-size: 10.5px; color: var(--green-faint); }
+
+  .company-sigil {
+    position: absolute; top: 8px; right: 10px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #030303; color: #d8352b;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid #3a3a3a;
+  }
+  .company-sigil svg { width: 15px; height: 15px; }
+
+  .company-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+  .company-sigil-lg {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #030303; color: #d8352b;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid #3a3a3a; flex-shrink: 0;
+  }
+  .company-sigil-lg svg { width: 27px; height: 27px; }
+  .company-header-title {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 20px; letter-spacing: 0.03em;
+    text-transform: uppercase; color: var(--white); margin: 0 0 2px;
+  }
+  .company-header-sub { font-size: 11.5px; color: var(--green-dim); }
+
+  .company-note {
+    font-size: 11.5px; color: var(--green-faint); font-style: italic;
+    margin: 4px auto 28px; text-align: center; max-width: 640px;
+  }
+
+  .tier-formations { max-width: 920px; margin: 0 auto; }
+
+  .formation-plate {
+    background: var(--panel);
+    border: 1px solid var(--border-dim);
+    border-top: 3px solid var(--formation-accent, var(--green-dim));
+    padding: 14px 16px 16px;
+    min-width: 172px; flex: 1 1 172px; max-width: 212px;
+    text-align: left; display: flex; flex-direction: column; gap: 5px;
+    cursor: pointer; color: var(--green);
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  }
+  .formation-plate:hover { border-color: var(--formation-accent, var(--green)); box-shadow: 0 0 14px rgba(79,214,122,0.15); transform: translateY(-3px); }
+  .formation-plate:active { transform: translateY(-1px) scale(0.98); }
+  .formation-plate-label {
+    font-family: 'Cinzel', serif; font-weight: 600; font-size: 14px; letter-spacing: 0.02em; color: var(--white);
+    border-bottom: 1px solid var(--border-dim); padding-bottom: 6px; margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .formation-plate-label::before {
+    content: ""; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--formation-accent, var(--green-dim)); border: 1px solid rgba(255,255,255,0.25); flex-shrink: 0;
+  }
+  .formation-plate-lead { font-size: 12px; color: var(--green); }
+  .formation-plate-count { font-size: 10.5px; color: var(--green-faint); }
+
+  .formation-tier-label { display: flex; align-items: center; gap: 10px; }
+  .formation-tier-label::before {
+    content: ""; order: -1; width: 11px; height: 11px; border-radius: 50%;
+    background: var(--formation-accent, var(--green-dim)); border: 1px solid rgba(255,255,255,0.25); flex-shrink: 0;
+  }
+
+  .tier-formation-lead { margin-bottom: 30px; justify-content: flex-start; }
+
+  .tier-killteams { max-width: 760px; margin: 0 auto; }
+
+  .killteam-plate {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--border-dim);
+    border-left: 3px solid var(--green);
+    padding: 12px 15px;
+    min-width: 200px; flex: 1 1 200px; max-width: 240px;
+    text-align: left; display: flex; flex-direction: column; gap: 4px;
+    cursor: pointer; color: var(--green);
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  }
+  .killteam-plate:hover { border-color: var(--green); box-shadow: 0 0 12px rgba(79,214,122,0.15); transform: translateY(-2px); }
+  .killteam-plate:active { transform: translateY(0) scale(0.98); }
+  .killteam-plate-label { font-family: 'Cinzel', serif; font-weight: 600; font-size: 14.5px; color: var(--white); letter-spacing: 0.01em; }
+  .killteam-plate-lead { font-size: 11.5px; color: var(--green-dim); }
+  .killteam-plate-count { font-size: 10.5px; color: var(--green-faint); }
+
+  .killteam-numeral {
+    position: absolute; top: 8px; right: 10px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #0a0a08; color: var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 10px;
+    border: 1px solid var(--green-dim);
+  }
+
+  .tier-killteam-lead { margin-bottom: 30px; }
+
+  .roster-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  .roster-table th {
+    text-align: left; font-size: 10.5px; letter-spacing: 0.06em;
+    color: var(--gold-dim); border-bottom: 1px solid var(--border); padding: 8px 10px;
+    text-transform: uppercase;
+  }
+  .roster-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-dim); }
+  .roster-row { cursor: pointer; transition: background 0.12s; }
+  .roster-row:hover td { background: rgba(79,214,122,0.06); }
+  .roster-name { color: var(--white); font-weight: 700; }
+  .roster-rank { color: var(--green-dim); }
+  .roster-chapter { color: var(--green-faint); }
+  .roster-empty { color: var(--green-faint); font-style: italic; text-align: center; padding: 20px 10px; }
+
+  .terminal-output {
+    margin-top: 36px;
+    border: 1px solid var(--border-dim);
+    background: rgba(79,214,122,0.02);
+    padding: 16px 18px;
+    font-size: 12px;
+    line-height: 1.85;
+  }
+  .term-line { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+  .term-gap { height: 6px; }
+  .term-prompt { color: var(--green); }
+  .term-label {
+    color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.05em;
+    min-width: 140px; flex-shrink: 0;
+  }
+  .term-value { color: var(--green-dim); flex: 1 1 300px; }
+  .term-active { color: var(--gold); }
+  .term-cursor { display: inline-block; animation: termBlink 1.1s steps(1) infinite; color: var(--green); }
+  @keyframes termBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(3, 5, 3, 0.86);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 60px 20px; z-index: 50; overflow-y: auto;
+  }
+  .overlay.open { display: flex; }
+
+  .overlay-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 30px rgba(79,214,122,0.05);
+    max-width: 440px; width: 100%;
+    padding: 26px 26px 24px;
+    position: relative;
+    transform-origin: top center;
+  }
+  .overlay-panel.panel-wide { max-width: 580px; }
+
+  .overlay-panel.fade-in { animation: fadeScale 200ms ease-out; }
+  @keyframes fadeScale { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+
+  .overlay-panel.unfurl { animation: unfurl 320ms cubic-bezier(.2,.8,.3,1); }
+  @keyframes unfurl {
+    0% { transform: scaleY(0.05); opacity: 0; }
+    55% { transform: scaleY(1.02); opacity: 1; }
+    100% { transform: scaleY(1); opacity: 1; }
+  }
+
+  .overlay-close {
+    position: absolute; top: 12px; right: 16px;
+    background: none; border: none; color: var(--green-dim);
+    font-size: 18px; cursor: pointer;
+  }
+  .overlay-close:hover { color: var(--gold); }
+
+  .overlay-title {
+    font-family: 'Cinzel', serif; font-weight: 600; font-size: 17px; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--gold); margin: 0 0 14px;
+  }
+
+  .field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold-dim); margin-bottom: 6px; display: block; }
+  .field-input {
+    width: 100%; background: #060a06; border: 1px solid var(--border); color: var(--white);
+    padding: 9px 10px; font-family: 'Share Tech Mono', monospace; font-size: 13.5px; margin-bottom: 12px;
+  }
+  .field-input:focus { outline: 1px solid var(--green); border-color: var(--green); }
+  .field-input::placeholder { color: var(--green-faint); }
+
+  .btn-primary {
+    background: var(--green-faint); border: 1px solid var(--green-dim); color: var(--white);
+    padding: 8px 16px; font-weight: 700;
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer;
+  }
+  .btn-primary:hover { background: var(--green-dim); border-color: var(--green); }
+
+  #settings-status { font-size: 12px; color: var(--green-dim); margin-top: 10px; min-height: 16px; }
+
+  .settings-note {
+    margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-dim);
+    font-size: 11.5px; color: var(--green-dim); line-height: 1.6;
+  }
+  .settings-note code { background: rgba(207,174,104,0.12); padding: 1px 4px; color: var(--gold); font-family: monospace; }
+
+  .search-results { margin-top: 12px; max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .search-hint { font-size: 12.5px; font-style: italic; color: var(--green-faint); padding: 6px 2px; }
+  .search-result {
+    background: rgba(79,214,122,0.03); border: 1px solid var(--border-dim); border-left: 3px solid var(--gold-dim);
+    padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px;
+    cursor: pointer; color: var(--green); transition: background 0.12s, border-color 0.12s;
+  }
+  .search-result:hover { background: rgba(79,214,122,0.08); border-color: var(--gold); }
+  .search-result-name { font-weight: 700; font-size: 14px; color: var(--white); }
+  .search-result-meta { font-size: 11px; color: var(--green-dim); }
+
+  .modal-rank { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold); margin-bottom: 6px; }
+  .modal-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 23px; color: var(--white); margin-bottom: 14px; }
+  .modal-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); color: var(--green-dim); }
+  .modal-row span:last-child { color: var(--white); }
+  .modal-vigil-tag { margin-top: 10px; font-size: 12px; font-style: italic; color: var(--green-dim); }
+
+  .modal-divider { text-align: center; color: var(--gold-dim); font-size: 12px; margin: 20px 0; letter-spacing: 0.5em; }
+
+  .modal-backstory { font-size: 14px; line-height: 1.7; color: var(--green); margin: 0; text-align: justify; }
+  .dropcap {
+    float: left; font-family: 'Cinzel', serif; font-weight: 700; font-size: 40px; line-height: 0.85;
+    color: var(--gold); padding: 3px 8px 0 0;
+  }
+
+  @media (max-width: 600px) {
+    .page { padding: 16px 14px 40px; }
+    .slate { padding: 30px 16px 34px; }
+    .header-title { font-size: 17px; }
+    .header-sub { font-size: 9px; }
+    .plate { min-width: 130px; }
+    .company-plate, .killteam-plate, .formation-plate { min-width: 100%; max-width: 100%; }
+    .roster-table { font-size: 12px; }
+    .roster-chapter { display: none; }
+    .roster-table th:nth-child(3) { display: none; }
+    .modal-name { font-size: 19px; }
+    .dropcap { font-size: 32px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+  <div class="page">
+    <header class="header">
+      <div class="header-left">
+        <div class="header-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+            <path d="M2 12 C6 5, 18 5, 22 12 C18 19, 6 19, 2 12 Z"/>
+            <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="header-title">Watch Fortress Jericho</h1>
+          <div class="header-sub">Cogitator-Pattern MK.IV &middot; Strategium Access</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <span id="status-badge" class="status-badge">Loading&hellip;</span>
+        <button id="search-btn" class="icon-btn" title="Search the roster" aria-label="Search">&#8981;</button>
+        <button id="gear-btn" class="icon-btn" title="Data source settings" aria-label="Settings">&#9881;</button>
+      </div>
+    </header>
+
+    <div class="slate">
+      <div class="hud-bracket tl"></div>
+      <div class="hud-bracket tr"></div>
+      <div class="hud-bracket bl"></div>
+      <div class="hud-bracket br"></div>
+      <div class="slate-corner tl">STRATEGIUM-SLATE // JERICHO</div>
+      <div class="slate-corner tr" id="slate-count">ASTARTES ON RECORD: &mdash;</div>
+
+      <nav id="breadcrumb"></nav>
+      <main id="app"></main>
+    </div>
+  </div>
+
+  <div id="search-overlay" class="overlay">
+    <div class="overlay-panel">
+      <button id="search-close-btn" class="overlay-close" aria-label="Close">✕</button>
+      <h2 class="overlay-title">Search // Roster</h2>
+      <input id="search-input" class="field-input" type="text" placeholder="name, rank, or chapter of origin..." autocomplete="off">
+      <div id="search-results" class="search-results"></div>
+    </div>
+  </div>
+
+  <div id="settings-overlay" class="overlay">
+    <div class="overlay-panel">
+      <button id="settings-close-btn" class="overlay-close" aria-label="Close">✕</button>
+      <h2 class="overlay-title">Data Source</h2>
+      <label class="field-label" for="settings-url-input">Live endpoint URL (optional)</label>
+      <input id="settings-url-input" class="field-input" type="url" placeholder="https://your-bot.example.com/api/roster">
+      <button id="settings-save-btn" class="btn-primary" type="button">Save &amp; reconnect</button>
+      <div id="settings-status"></div>
+      <div class="settings-note">
+        Leave blank to browse sample data. To go live, point this at any endpoint
+        (your bot's API, or a scheduled Discord-role export) that returns
+        <code>{ "members": [...] }</code>, where each member has
+        <code>id</code>, <code>name</code>, <code>chapter</code>, <code>rank</code>,
+        <code>company</code> (1–5 or null), <code>killTeam</code> (e.g. <code>"3-2"</code> or null),
+        and optional <code>formation</code>, <code>title</code>, <code>vigil</code>, and
+        <code>backstory</code> (free text, up to ~400 words). Rank values must match this
+        page's rank keys (view source for the full list). A bot token should never be
+        called directly from a browser — have your bot serve this JSON itself.
+      </div>
+    </div>
+  </div>
+
+  <div id="member-modal" class="overlay">
+    <div class="overlay-panel panel-wide">
+      <button id="member-modal-close" class="overlay-close" aria-label="Close">✕</button>
+      <div id="member-modal-body"></div>
+    </div>
+  </div>
+
+<script>
+/* ==========================================================================
+   WATCH FORTRESS JERICHO — STRATEGIUM DISPLAY
+   ==========================================================================
+   Two structures sit side by side under the Watch Master:
+     - Five Watch Companies (Primus..Quintus), each its own Captain,
+       Lieutenant, and four Kill Teams.
+     - Six Specialist Formations, fortress-wide and independent of company
+       lines: The Armory, Librarius, The Reclusiam, The Apothecarion,
+       Hall of Blades, and The Black Vault.
+
+   DATA CONTRACT for live integration:
+   Point "Data Source URL" (gear icon) at any endpoint returning JSON:
+     { "members": [
+         { "id": "m001", "name": "...", "chapter": "...", "rank": "watch_master",
+           "company": null, "killTeam": null, "formation": null,
+           "title": null, "vigil": "...", "backstory": "..." },
+         ...
+     ] }
+   rank must be one of the RANK_LABELS keys below.
+   company is 1-5 (Primus..Quintus) or null.
+   killTeam is "<company>-<1..4>" or null.
+   formation is one of: armory, librarius, reclusiam, apothecarion,
+     hall_of_blades, black_vault — or null.
+   title is an optional free-text honorific (or null). backstory is free
+   text, up to ~400 words.
+   This is the same shape a Discord-role-mapping export or a bot endpoint
+   should produce — see the settings panel in-app for the full note.
+   ========================================================================== */
+
+const RANK_LABELS = {
+  watch_master: "Watch Master",
+  forgemaster: "Forgemaster",
+  void_warden: "Void Warden",
+  chief_apothecary: "Chief Apothecary",
+  high_chaplain: "High Chaplain",
+  blade_master: "Blade Master",
+  huntmaster: "Huntmaster",
+  venerable_dreadnought: "Venerable Dreadnought",
+  watch_captain: "Watch Captain",
+  watch_lieutenant: "Watch Lieutenant",
+  first_blade: "First Blade",
+  techmarine: "Techmarine",
+  librarian: "Watch Librarian",
+  apothecary: "Watch Apothecary",
+  chaplain: "Watch Chaplain",
+  dreadnought: "Dreadnought",
+  kill_marine: "Kill Marine",
+  watch_sergeant: "Watch Sergeant",
+  veteran_sergeant: "Veteran Sergeant",
+  watch_veteran: "Watch Veteran",
+  watch_brother: "Watch Brother",
+  oathsworn: "Oathsworn",
+  blade_guard: "Blade Guard"
+};
+
+/* The six specialist Formations. Independent of the five Watch Companies,
+   each led directly by its own High Command officer — Forgemaster,
+   Void Warden, High Chaplain, Chief Apothecary, Blade Master, Huntmaster. */
+const FORMATIONS = {
+  armory: { name: "Armory", lead: "forgemaster", ranks: ["techmarine", "dreadnought"] },
+  librarius: { name: "Librarius", lead: "void_warden", ranks: ["librarian"] },
+  reclusiam: { name: "Reclusiam", lead: "high_chaplain", ranks: ["chaplain"] },
+  apothecarion: { name: "Apothecarion", lead: "chief_apothecary", ranks: ["apothecary"] },
+  hall_of_blades: { name: "Hall of Blades", lead: "blade_master", ranks: ["first_blade", "blade_guard"] },
+  black_vault: { name: "Black Vault", lead: "huntmaster", ranks: ["kill_marine"] }
+};
+
+const FORMATION_LEAD_RANKS = Object.values(FORMATIONS).map(f => f.lead);
+const FORMATION_MEMBER_RANKS = Object.values(FORMATIONS).flatMap(f => f.ranks).concat(["venerable_dreadnought"]);
+
+const COMPANY_COMMAND_RANKS = ["watch_captain", "watch_lieutenant"];
+const KILL_TEAM_LEAD_RANKS = ["watch_sergeant", "veteran_sergeant"];
+const KILL_TEAM_ROSTER_RANKS = ["watch_brother", "watch_veteran", "oathsworn"];
+
+const COMPANY_NAMES = { 1: "Primus", 2: "Secundus", 3: "Tertius", 4: "Quartus", 5: "Quintus" };
+
+/* Exact Watch Company markings: a black circle, plain for Primus, marked
+   with a red line for the others — horizontal (Secundus), vertical
+   (Tertius), diagonal NW-SE (Quartus), diagonal NE-SW (Quintus). */
+const COMPANY_MARKINGS = { 1: "I", 2: "II", 3: "III", 4: "IV", 5: "V" };
+
+const COMPANY_SIGILS = {
+  1: '<svg viewBox="0 0 24 24"></svg>',
+  2: '<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2.5"/></svg>',
+  3: '<svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" stroke-width="2.5"/></svg>',
+  4: '<svg viewBox="0 0 24 24"><line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2.5"/></svg>',
+  5: '<svg viewBox="0 0 24 24"><line x1="20" y1="4" x2="4" y2="20" stroke="currentColor" stroke-width="2.5"/></svg>'
+};
+
+/* Specialist Formation colours. */
+const FORMATION_COLORS = {
+  armory: "#c0392b",
+  librarius: "#3f6fb0",
+  reclusiam: "#2a2a2a",
+  apothecarion: "#eeeae0",
+  hall_of_blades: "#c9a04a",
+  black_vault: "#5c5c5c"
+};
+
+/* ---------------------------------------------------------------------- */
+/* Sample roster generator — clearly placeholder data for demo purposes.  */
+/* ---------------------------------------------------------------------- */
+
+const FIRST_NAMES = ["Kaelen","Thorne","Bracus","Dorian","Varyn","Sten","Mordan","Aric",
+  "Cassian","Renn","Joran","Halkin","Voss","Draven","Corvin","Talon","Garrick","Soren",
+  "Erevan","Kellis","Malric","Ostren","Bram","Ivor","Rurik","Cael","Anselm","Dagren",
+  "Piet","Ansen"];
+const SURNAMES = ["Vahl","Kreig","Ostmark","Halvard","Serrun","Kant","Vireth","Dorn",
+  "Aurel","Brasca","Icarion","Whist","Corvane","Talbec","Renard","Skarn","Ulric","Faron",
+  "Kesh","Adric","Volgren","Ashworth","Cyrix","Braun","Deverel","Norrick","Sable","Thurn",
+  "Marrow","Idris"];
+const CHAPTERS = ["Hawk Lords","Ultramarines","Imperial Fists","Blood Angels","Salamanders",
+  "Raven Guard","White Scars","Space Wolves","Iron Hands","Crimson Fists","Black Templars",
+  "Star Phantoms","Marines Errant","Novamarines","Astral Claws","Executioners"];
+
+function seededPick(arr, seed) {
+  return arr[seed % arr.length];
+}
+
+function makeName(seed) {
+  return `${seededPick(FIRST_NAMES, seed)} ${seededPick(SURNAMES, seed * 7 + 3)}`;
+}
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function formationName(m) {
+  const f = FORMATIONS[m.formation];
+  return f ? f.name : "Fortress";
+}
+
+/* ---------------------------------------------------------------------- */
+/* Dossier / backstory generator — placeholder flavor text for sample     */
+/* data. Live data can carry its own `backstory` field (up to ~400 words) */
+/* and it will be used as-is instead of any of this.                      */
+/* ---------------------------------------------------------------------- */
+
+const PLANETS = ["Kaldris Reach", "the Ashfall Moons", "Vantor's Landing", "the Threnody Belt",
+  "Coeval Station", "the Obsidian Shoals", "Drennic's Hollow", "the Pale Anchorage"];
+const THREATS = ["orks", "tyranid bio-forms", "necron constructs", "chaos raiders",
+  "eldar corsairs", "an unclassified xenos strain", "drukhari reavers"];
+const CAMPAIGNS = ["the Achilus Crusade", "the Jericho-Maw containment action",
+  "the Ghosar Quintus reprisal", "a campaign still sealed by the Ordo Xenos"];
+
+function categorize(m) {
+  if (m.rank === "watch_master") return "apex";
+  if (FORMATION_LEAD_RANKS.includes(m.rank)) return "hq";
+  if (m.rank === "venerable_dreadnought") return "hq";
+  if (m.rank === "watch_captain" || m.rank === "watch_lieutenant") return "company_lead";
+  if (KILL_TEAM_LEAD_RANKS.includes(m.rank)) return "kill_lead";
+  if (FORMATION_MEMBER_RANKS.includes(m.rank)) return "specialist";
+  return "roster";
+}
+
+const CATEGORY_FRAGMENTS = {
+  apex: {
+    opening: [
+      m => `${m.name} has held the Strategium of Watch Fortress Jericho longer than most of its Astartes have served under it, a Watch Master trusted with the burden of many Chapters at once.`,
+      m => `Before the black armour, ${m.name} bore the colours of the ${m.chapter}, and something of that Chapter's bearing has never quite left the Watch Master's manner.`
+    ],
+    deed: [
+      (m, p, t) => `The founding of the Fortress' current order of battle is largely ${m.name}'s doing, drawn up in the wake of losses at ${p} that nearly broke the Watch's presence in the Reach.`,
+      (m, p, t) => `It was ${m.name} who committed the Fortress' full strength against ${t} at ${p}, a decision still argued over in the Reclusiam.`
+    ],
+    trait: [
+      m => `${m.name} is not given to speeches; orders arrive short, and are rarely repeated twice.`,
+      m => `Those who serve closest to ${m.name} describe a commander who remembers every battle-brother's name and none of their excuses.`
+    ],
+    closing: [
+      m => `The Long Watch continues under ${m.name}'s command, and no successor has yet been named.`,
+      m => `${m.name} has outlived the question of retirement; the Fortress has simply never needed to ask it.`
+    ]
+  },
+  hq: {
+    opening: [
+      m => `${m.name} rose to High Command from the ${m.chapter}, one of the few in the Fortress trusted to speak for their order before the Watch Master himself.`,
+      m => `Seconded from the ${m.chapter}, ${m.name} now answers to no company, only to the Fortress entire.`
+    ],
+    deed: [
+      (m, p, t) => `${m.name}'s reputation was made at ${p}, where a response to ${t} became the standard every company since has been trained against.`,
+      (m, p, t) => `During ${p}'s worst hours against ${t}, ${m.name} held the line others had already written off.`
+    ],
+    trait: [
+      m => `${m.name} keeps to the discipline of their old Chapter more closely than most who wear the black.`,
+      m => `Juniors learn quickly that ${m.name}'s door is always open and their patience is not infinite.`
+    ],
+    closing: [
+      m => `${m.name}'s counsel is sought by every captain in the Fortress, whether or not they enjoy hearing it.`,
+      m => `Retirement to the ${m.chapter} was offered once. ${m.name} did not answer the letter.`
+    ]
+  },
+  company_lead: {
+    opening: [
+      m => `${m.name} came to Company ${COMPANY_NAMES[m.company]} from the ${m.chapter}, and has held their post here longer than most Vigils run.`,
+      m => `Before their secondment, ${m.name} served the ${m.chapter} with a record the Deathwatch found impossible to ignore.`
+    ],
+    deed: [
+      (m, p, t) => `${m.name} is remembered for the stand at ${p}, where Company ${COMPANY_NAMES[m.company]}'s kill-teams broke a line of ${t} that outnumbered them badly.`,
+      (m, p, t) => `During ${p}, ${m.name} took command mid-battle when the chain above them fell, and never quite handed it back.`
+    ],
+    trait: [
+      m => `${m.name} runs Company ${COMPANY_NAMES[m.company]}'s affairs with the exactness of someone who has seen what happens when no one does.`,
+      m => `The kill-teams under ${m.name} know exactly where they stand, which is more than can be said of most companies.`
+    ],
+    closing: [
+      m => `${m.name} shows no sign of relinquishing the post, and Company ${COMPANY_NAMES[m.company]} shows no sign of wanting them to.`,
+      m => `Word from the ${m.chapter} occasionally reaches ${m.name}. It is read, and then the Fortress' business resumes.`
+    ]
+  },
+  kill_lead: {
+    opening: [
+      m => `${m.name} leads a kill-team out of Company ${COMPANY_NAMES[m.company]}, seconded from the ${m.chapter} after a Vigil that began, by their own account, as a punishment detail.`,
+      m => `The ${m.chapter} taught ${m.name} how to fight. The Deathwatch taught them how to fight beside strangers.`
+    ],
+    deed: [
+      (m, p, t) => `At ${p}, ${m.name}'s team held an extraction point against ${t} for longer than the mission plan allowed for, and lost no one doing it.`,
+      (m, p, t) => `${m.name} was the last off the field at ${p}, a habit the rest of the kill-team has learned to expect and quietly resent.`
+    ],
+    trait: [
+      m => `${m.name} names every kill-team after the last one, whether the brothers in it want the honour or not.`,
+      m => `Discipline under ${m.name} is strict on the field and nearly absent off it, which the kill-team seems to prefer.`
+    ],
+    closing: [
+      m => `${m.name}'s Vigil continues, kill-team roster reshuffled as often as the mission demands.`,
+      m => `No one in Company ${COMPANY_NAMES[m.company]} questions ${m.name}'s calls in the field anymore. It took a while.`
+    ]
+  },
+  specialist: {
+    opening: [
+      m => `${m.name} answers to the ${formationName(m)} now, seconded there after distinguishing themself in the ${m.chapter}.`,
+      m => `The ${m.chapter} taught ${m.name} their craft; the ${formationName(m)} is where the Fortress makes use of it.`,
+      m => `${m.name} holds no seat on any company's command roster, only a place within the ${formationName(m)}.`
+    ],
+    deed: [
+      (m, p, t) => `${m.name}'s work at ${p} against ${t} is cited, still, whenever the ${formationName(m)} trains its newest arrivals.`,
+      (m, p, t) => `During ${p}, ${m.name} kept the ${formationName(m)}'s work running under fire that would have stopped most Astartes cold.`,
+      (m, p, t) => `${m.name} was recalled from the field at ${p} once, briefly, when the ${formationName(m)} needed hands it could trust.`
+    ],
+    trait: [
+      m => `${m.name} moves between companies as the mission demands, and belongs, in the end, to none of them.`,
+      m => `Ask any Watch Captain and they will call ${m.name} indispensable. Ask ${m.name} and they will change the subject.`,
+      m => `${m.name} keeps the ${formationName(m)}'s records with a precision the rest of the Fortress finds faintly unsettling.`
+    ],
+    closing: [
+      m => `${m.name} answers to the ${formationName(m)}'s own chain of command before any company's, and the Fortress is better for it.`,
+      m => `The ${formationName(m)} does not release its own easily. ${m.name} has not asked it to.`,
+      m => `Whichever company calls for ${m.name} next, the ${formationName(m)} decides whether they go.`
+    ]
+  },
+  roster: {
+    opening: [
+      m => `${m.name} came to the Long Watch from the ${m.chapter}, one among the many who answer the Chapter's call to a war fought far from home.`,
+      m => `Before the black armour, ${m.name} wore the colours of the ${m.chapter}, and it is said the old markings still show faintly beneath the fresh enamel.`,
+      m => `${m.name} was seconded from the ${m.chapter} after a campaign few now speak of, the details left out of the record that reaches the Fortress.`
+    ],
+    deed: [
+      (m, p, t) => `On ${p}, ${m.name} held a collapsing line against ${t} long enough for the kill-team to withdraw its wounded.`,
+      (m, p, t) => `${m.name} is remembered, quietly, for the extraction at ${p}, where one Astartes should not have made it out — and did.`,
+      (m, p, t) => `During the fighting on ${p}, ${m.name} took a wound that would have ended a lesser warrior's service, and returned within the season.`
+    ],
+    trait: [
+      m => `Battle-brothers describe ${m.name} as steady on the field, and considerably less so in the hours before a drop.`,
+      m => `${m.name} keeps a private ritual before deployment, one the kill-team has learned not to interrupt.`,
+      m => `Few in the Fortress know ${m.name} well; fewer still would call that a failing.`
+    ],
+    closing: [
+      m => `The Long Watch continues, and ${m.name} has made no request to return to the ${m.chapter}.`,
+      m => `Whether ${m.name} will ever see their home Chapter again is a question for a Vigil not yet ended.`,
+      m => `${m.name} serves on, one more name in a roster longer than the Fortress' official record admits to.`
+    ]
+  }
+};
+
+function makeBackstory(m) {
+  const seed = hashStr(m.id);
+  const pools = CATEGORY_FRAGMENTS[categorize(m)];
+  const planet = seededPick(PLANETS, seed + 2);
+  const threat = seededPick(THREATS, seed + 5);
+  const campaign = seededPick(CAMPAIGNS, seed + 9);
+  const opening = seededPick(pools.opening, seed)(m);
+  const deed = seededPick(pools.deed, seed + 1)(m, planet, threat, campaign);
+  const trait = seededPick(pools.trait, seed + 2)(m);
+  const closing = seededPick(pools.closing, seed + 3)(m);
+  return [opening, deed, trait, closing].join(" ");
+}
+
+function generateSampleRoster() {
+  const members = [];
+  let seed = 1;
+  let idn = 0;
+  const nextId = () => "m" + String(++idn).padStart(3, "0");
+
+  members.push({
+    id: nextId(), name: makeName(seed++), chapter: "Hawk Lords",
+    rank: "watch_master", company: null, killTeam: null, formation: null, title: null,
+    vigil: "Presiding since the Fortress' founding"
+  });
+
+  Object.entries(FORMATIONS).forEach(([key, f]) => {
+    members.push({
+      id: nextId(), name: makeName(seed++), chapter: seededPick(CHAPTERS, seed + 3),
+      rank: f.lead, company: null, killTeam: null, formation: key, title: null,
+      vigil: `Leads the ${f.name}`
+    });
+    f.ranks.forEach(rank => {
+      const countFor = rank === "blade_guard" ? 20 : (rank === "kill_marine" ? 8 : 5);
+      for (let i = 0; i < countFor; i++) {
+        members.push({
+          id: nextId(), name: makeName(seed++), chapter: seededPick(CHAPTERS, seed + i),
+          rank, company: null, killTeam: null, formation: key, title: null, vigil: null
+        });
+      }
+    });
+    if (key === "armory") {
+      members.push({
+        id: nextId(), name: makeName(seed++), chapter: seededPick(CHAPTERS, seed + 11),
+        rank: "venerable_dreadnought", company: null, killTeam: null, formation: key, title: null,
+        vigil: "The eldest of the Armory's Dreadnoughts"
+      });
+    }
+  });
+
+  for (let c = 1; c <= 5; c++) {
+    members.push({
+      id: nextId(), name: makeName(seed++), chapter: seededPick(CHAPTERS, seed + c),
+      rank: "watch_captain", company: c, killTeam: null, formation: null, title: null,
+      vigil: `Commands Company ${COMPANY_NAMES[c]}`
+    });
+    members.push({
+      id: nextId(), name: makeName(seed++), chapter: seededPick(CHAPTERS, seed + c + 1),
+      rank: "watch_lieutenant", company: c, killTeam: null, formation: null, title: null,
+      vigil: `Serves Company ${COMPANY_NAMES[c]} command`
+    });
+
+    for (let slot = 1; slot <= 4; slot++) {
+      const killTeam = `${c}-${slot}`;
+      const leadRank = slot % 2 === 0 ? "veteran_sergeant" : "watch_sergeant";
+      members.push({
+        id: nextId(), name: makeName(seed++), chapter: seededPick(CHAPTERS, seed + slot),
+        rank: leadRank, company: c, killTeam, formation: null, title: null,
+        vigil: `Leads Kill-team, Company ${COMPANY_NAMES[c]}`
+      });
+      for (let i = 0; i < 4; i++) {
+        const rosterRank = seededPick(KILL_TEAM_ROSTER_RANKS, seed + i);
+        members.push({
+          id: nextId(), name: makeName(seed++), chapter: seededPick(CHAPTERS, seed + i),
+          rank: rosterRank, company: c, killTeam, formation: null, title: null, vigil: null
+        });
+      }
+    }
+  }
+  members.forEach(m => { m.backstory = makeBackstory(m); });
+  return members;
+}
+
+/* ---------------------------------------------------------------------- */
+/* State + data loading                                                   */
+/* ---------------------------------------------------------------------- */
+
+const state = {
+  view: "strategium",   // 'strategium' | 'company' | 'killteam' | 'formation'
+  companyId: null,
+  killTeamId: null,
+  formationId: null,
+  members: [],
+  dataStatus: "sample",  // 'sample' | 'live' | 'error'
+  dataSourceUrl: ""
+};
+
+function hasStorage() {
+  return typeof window !== "undefined" && !!window.storage;
+}
+
+async function loadSavedSettings() {
+  if (!hasStorage()) return;
+  try {
+    const res = await window.storage.get("jericho-data-source-url");
+    if (res && res.value) state.dataSourceUrl = res.value;
+  } catch (e) {
+    /* no saved value yet — fine */
+  }
+}
+
+async function saveDataSourceUrl(url) {
+  state.dataSourceUrl = url;
+  if (!hasStorage()) return;
+  try {
+    await window.storage.set("jericho-data-source-url", url);
+  } catch (e) {
+    console.error("Could not persist data source url", e);
+  }
+}
+
+async function loadData() {
+  if (state.dataSourceUrl) {
+    try {
+      const resp = await fetch(state.dataSourceUrl);
+      if (!resp.ok) throw new Error("bad response");
+      const json = await resp.json();
+      if (!json || !Array.isArray(json.members)) throw new Error("bad shape");
+      state.members = json.members;
+      state.dataStatus = "live";
+      return;
+    } catch (e) {
+      console.error("Live fetch failed, falling back to sample data", e);
+      state.dataStatus = "error";
+    }
+  }
+  state.members = generateSampleRoster();
+  if (state.dataStatus !== "error") state.dataStatus = "sample";
+}
+
+/* ---------------------------------------------------------------------- */
+/* Data helpers                                                           */
+/* ---------------------------------------------------------------------- */
+
+function companyCommand(companyId) {
+  return COMPANY_COMMAND_RANKS.map(rank => ({
+    rank, member: state.members.find(m => m.rank === rank && m.company === companyId) || null
+  }));
+}
+
+function killTeamsForCompany(companyId) {
+  const teams = [];
+  for (let slot = 1; slot <= 4; slot++) {
+    const killTeam = `${companyId}-${slot}`;
+    const lead = state.members.find(m => m.killTeam === killTeam && KILL_TEAM_LEAD_RANKS.includes(m.rank));
+    const roster = state.members.filter(m => m.killTeam === killTeam);
+    teams.push({ killTeam, slot, lead, roster, count: roster.length });
+  }
+  return teams;
+}
+
+function killTeamDetail(companyId, killTeam) {
+  const roster = state.members.filter(m => m.killTeam === killTeam);
+  const lead = roster.find(m => KILL_TEAM_LEAD_RANKS.includes(m.rank)) || null;
+  const rest = roster.filter(m => m !== lead);
+  return { lead, rest };
+}
+
+function formationMembers(key) {
+  return state.members.filter(m => m.formation === key);
+}
+
+function fortressTotal() {
+  return state.members.length;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Rendering                                                              */
+/* ---------------------------------------------------------------------- */
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+}
+
+function plateHtml({ id, name, rankLabel, sub, accent, vacant, size }) {
+  const cls = ["plate", accent ? `accent-${accent}` : "", vacant ? "vacant" : "", size ? `size-${size}` : ""]
+    .filter(Boolean).join(" ");
+  const clickAttr = id ? `data-member="${escapeHtml(id)}"` : "";
+  return `
+    <button class="${cls}" ${clickAttr} ${id ? "" : "disabled"} type="button">
+      <span class="plate-rank">${escapeHtml(rankLabel)}</span>
+      <span class="plate-name">${vacant ? "Vacant" : escapeHtml(name)}</span>
+      ${sub ? `<span class="plate-sub">${escapeHtml(sub)}</span>` : ""}
+    </button>`;
+}
+
+function renderBreadcrumb() {
+  const el = document.getElementById("breadcrumb");
+  const parts = [`<button class="crumb" data-nav="strategium">Strategium</button>`];
+  if (state.view === "company" || state.view === "killteam") {
+    parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
+    parts.push(`<button class="crumb" data-nav="company" data-company="${state.companyId}">Company ${COMPANY_NAMES[state.companyId]}</button>`);
+  }
+  if (state.view === "killteam") {
+    const teams = killTeamsForCompany(state.companyId);
+    const t = teams.find(t => t.killTeam === state.killTeamId);
+    const label = t && t.lead ? `Kill-team ${t.lead.name.split(" ")[1] || t.lead.name}` : "Kill-team";
+    parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
+    parts.push(`<span class="crumb crumb-current">${escapeHtml(label)}</span>`);
+  }
+  if (state.view === "formation") {
+    const f = FORMATIONS[state.formationId];
+    parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
+    parts.push(`<span class="crumb crumb-current">${escapeHtml(f ? f.name : "Formation")}</span>`);
+  }
+  el.innerHTML = parts.join("");
+}
+
+function renderStrategium() {
+  const wm = state.members.find(m => m.rank === "watch_master");
+
+  const companies = Object.keys(COMPANY_NAMES).map(cid => {
+    const id = Number(cid);
+    const captain = state.members.find(m => m.rank === "watch_captain" && m.company === id);
+    const count = state.members.filter(m => m.company === id).length;
+    return `
+      <button class="company-plate" data-nav="company" data-company="${id}" type="button">
+        <span class="company-sigil" aria-hidden="true">${COMPANY_SIGILS[id]}</span>
+        <span class="company-plate-label">Company ${COMPANY_NAMES[id]}</span>
+        <span class="company-plate-captain">${captain ? escapeHtml(captain.name) : "Captain vacant"}</span>
+        <span class="company-plate-count">${count} sworn</span>
+      </button>`;
+  }).join("");
+
+  const formations = Object.entries(FORMATIONS).map(([key, f]) => {
+    const lead = state.members.find(m => m.rank === f.lead);
+    const count = state.members.filter(m => m.formation === key).length;
+    return `
+      <button class="formation-plate" data-nav="formation" data-formation="${key}" type="button" style="--formation-accent:${FORMATION_COLORS[key]}">
+        <span class="formation-plate-label">${escapeHtml(f.name)}</span>
+        <span class="formation-plate-lead">${lead ? RANK_LABELS[lead.rank] + " " + escapeHtml(lead.name) : "Vacant"}</span>
+        <span class="formation-plate-count">${count} sworn</span>
+      </button>`;
+  }).join("");
+
+  document.getElementById("app").innerHTML = `
+    <div class="tier tier-apex">
+      ${plateHtml({ id: wm && wm.id, name: wm && wm.name, rankLabel: "Watch Master", accent: "gold", vacant: !wm, size: "lg" })}
+    </div>
+    <div class="connector connector-down"></div>
+    <div class="branch-row">
+      <div class="branch">
+        <div class="branch-title">Watch Companies</div>
+        <div class="branch-body"><div class="tier tier-companies">${companies}</div></div>
+      </div>
+      <div class="branch">
+        <div class="branch-title">Specialist Formations</div>
+        <div class="branch-body"><div class="tier tier-formations">${formations}</div></div>
+      </div>
+    </div>
+    <div class="terminal-output">
+      <div class="term-line term-prompt">&gt; QUERY: WATCH_FORTRESS_JERICHO</div>
+      <div class="term-line term-prompt">&gt; ACCESSING STRATEGIUM ARCHIVE&hellip;</div>
+      <div class="term-line term-gap"></div>
+      <div class="term-line"><span class="term-label">Location</span><span class="term-value">The Jericho Reach, Ultima Segmentum</span></div>
+      <div class="term-line"><span class="term-label">Sector Context</span><span class="term-value">Shares the Reach with Watch Fortress Erioch, the elder bastion of the Long Watch in this region</span></div>
+      <div class="term-line"><span class="term-label">Standing Orders</span><span class="term-value">Maintain vigil over the Reach, answerable to the Deathwatch and the Ordo Xenos alone</span></div>
+      <div class="term-line"><span class="term-label">Record Status</span><span class="term-value term-active">ACTIVE</span></div>
+      <div class="term-line term-gap"></div>
+      <div class="term-line term-prompt">&gt; END TRANSMISSION<span class="term-cursor">_</span></div>
+    </div>
+  `;
+}
+
+function renderCompany(companyId) {
+  const numeral = COMPANY_MARKINGS[companyId];
+  const cmd = companyCommand(companyId);
+  const cmdHtml = cmd.map(({ rank, member }) =>
+    plateHtml({
+      id: member && member.id, name: member && member.name, rankLabel: RANK_LABELS[rank],
+      accent: rank === "watch_captain" ? "gold" : "steel", vacant: !member
+    })
+  ).join("");
+
+  const count = state.members.filter(m => m.company === companyId).length;
+
+  const teams = killTeamsForCompany(companyId).map(t => {
+    const leadName = t.lead ? t.lead.name : "Unassigned";
+    const teamLabel = t.lead ? `Kill-team ${t.lead.name.split(" ")[1] || t.lead.name}` : `Kill-team ${t.slot}`;
+    return `
+      <button class="killteam-plate" data-nav="killteam" data-company="${companyId}" data-killteam="${t.killTeam}" type="button">
+        <span class="killteam-numeral" aria-hidden="true">${t.slot}</span>
+        <span class="killteam-plate-label">${escapeHtml(teamLabel)}</span>
+        <span class="killteam-plate-lead">${t.lead ? RANK_LABELS[t.lead.rank] + " " + escapeHtml(leadName) : "No sergeant assigned"}</span>
+        <span class="killteam-plate-count">${t.count} in team</span>
+      </button>`;
+  }).join("");
+
+  document.getElementById("app").innerHTML = `
+    <div class="company-header">
+      <span class="company-sigil company-sigil-lg" aria-hidden="true">${COMPANY_SIGILS[companyId]}</span>
+      <div>
+        <h2 class="company-header-title">Company ${COMPANY_NAMES[companyId]}</h2>
+        <div class="company-header-sub">${numeral} &middot; ${count} battle-brothers sworn to this company</div>
+      </div>
+    </div>
+    <div class="tier-label">Company Command</div>
+    <div class="tier tier-company-command tree-row">${cmdHtml}</div>
+    <p class="company-note">Techmarines, Librarians, Chaplains, Apothecaries, Blade Guard, and Dreadnoughts
+      seconded in support of this company serve within their respective Formations, not this roster.</p>
+    <div class="tier-label">Kill Teams</div>
+    <div class="tier tier-killteams tree-row">${teams}</div>
+  `;
+}
+
+function renderFormation(key) {
+  const f = FORMATIONS[key];
+  const members = formationMembers(key);
+  const lead = members.find(m => m.rank === f.lead) || null;
+  const rest = members.filter(m => m !== lead);
+
+  const leadHtml = plateHtml({
+    id: lead && lead.id, name: lead && lead.name,
+    rankLabel: lead ? RANK_LABELS[lead.rank] : RANK_LABELS[f.lead], accent: "gold", vacant: !lead, size: "md"
+  });
+
+  const rows = rest.map(m => `
+    <tr class="roster-row" data-member="${m.id}">
+      <td class="roster-name">${escapeHtml(m.name)}</td>
+      <td class="roster-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}</td>
+      <td class="roster-chapter">${escapeHtml(m.chapter || "\u2014")}</td>
+    </tr>`).join("");
+
+  document.getElementById("app").innerHTML = `
+    <div class="tier-label formation-tier-label" style="--formation-accent:${FORMATION_COLORS[key]}">${escapeHtml(f.name)}</div>
+    <div class="tier tier-formation-lead">${leadHtml}</div>
+    <div class="tier-label">Formation Roster (${rest.length})</div>
+    <table class="roster-table">
+      <thead><tr><th>Name</th><th>Rank</th><th>Chapter of Origin</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="3" class="roster-empty">No further battle-brothers recorded.</td></tr>`}</tbody>
+    </table>
+  `;
+}
+
+function renderKillTeam(companyId, killTeam) {
+  const { lead, rest } = killTeamDetail(companyId, killTeam);
+  const leadHtml = plateHtml({
+    id: lead && lead.id, name: lead && lead.name,
+    rankLabel: lead ? RANK_LABELS[lead.rank] : "Watch Sergeant", accent: "red", vacant: !lead, size: "md"
+  });
+
+  const rows = rest.map(m => `
+    <tr class="roster-row" data-member="${m.id}">
+      <td class="roster-name">${escapeHtml(m.name)}</td>
+      <td class="roster-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}</td>
+      <td class="roster-chapter">${escapeHtml(m.chapter || "\u2014")}</td>
+    </tr>`).join("");
+
+  document.getElementById("app").innerHTML = `
+    <div class="tier-label">Command</div>
+    <div class="tier tier-killteam-lead">${leadHtml}</div>
+    <div class="tier-label">Roster (${rest.length})</div>
+    <table class="roster-table">
+      <thead><tr><th>Name</th><th>Rank</th><th>Chapter of Origin</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="3" class="roster-empty">No further battle-brothers recorded.</td></tr>`}</tbody>
+    </table>
+  `;
+}
+
+function render(originPct, direction) {
+  renderBreadcrumb();
+  if (state.view === "strategium") renderStrategium();
+  else if (state.view === "company") renderCompany(state.companyId);
+  else if (state.view === "killteam") renderKillTeam(state.companyId, state.killTeamId);
+  else if (state.view === "formation") renderFormation(state.formationId);
+  updateStatusBadge();
+
+  const app = document.getElementById("app");
+  app.classList.remove("zoom-in", "zoom-out");
+  void app.offsetWidth; /* force reflow so the animation retriggers */
+  if (direction === "in" && originPct) {
+    app.style.transformOrigin = `${originPct.x}% ${originPct.y}%`;
+    app.classList.add("zoom-in");
+  } else {
+    app.style.transformOrigin = "50% 12%";
+    app.classList.add("zoom-out");
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function updateStatusBadge() {
+  const badge = document.getElementById("status-badge");
+  const labels = { sample: "Sample data", live: "Live feed connected", error: "Live feed failed \u2014 showing sample" };
+  badge.textContent = labels[state.dataStatus] || "";
+  badge.className = "status-badge status-" + state.dataStatus;
+
+  const slateCount = document.getElementById("slate-count");
+  if (slateCount) slateCount.textContent = "ASTARTES ON RECORD: " + fortressTotal();
+}
+
+function navigate(view, params, originEl, direction) {
+  params = params || {};
+  let originPct = null;
+  if (originEl && direction === "in") {
+    const rect = originEl.getBoundingClientRect();
+    const appRect = document.getElementById("app").getBoundingClientRect();
+    originPct = {
+      x: appRect.width ? ((rect.left + rect.width / 2 - appRect.left) / appRect.width) * 100 : 50,
+      y: appRect.height ? ((rect.top + rect.height / 2 - appRect.top) / appRect.height) * 100 : 50
+    };
+  }
+  state.view = view;
+  state.companyId = params.companyId ?? null;
+  state.killTeamId = params.killTeamId ?? null;
+  state.formationId = params.formationId ?? null;
+  render(originPct, direction || "out");
+}
+
+function findMember(id) {
+  return state.members.find(m => m.id === id);
+}
+
+function dropcapHtml(text) {
+  const escaped = escapeHtml(text);
+  return `<span class="dropcap">${escaped.charAt(0)}</span>${escaped.slice(1)}`;
+}
+
+function openMemberModal(id) {
+  const m = findMember(id);
+  if (!m) return;
+  const overlay = document.getElementById("member-modal");
+  const panel = overlay.querySelector(".overlay-panel");
+  document.getElementById("member-modal-body").innerHTML = `
+    <div class="modal-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}${m.title ? " \u00b7 " + escapeHtml(m.title) : ""}</div>
+    <div class="modal-name">${escapeHtml(m.name)}</div>
+    <div class="modal-row"><span>Chapter of Origin</span><span>${escapeHtml(m.chapter || "Unrecorded")}</span></div>
+    <div class="modal-row"><span>Company</span><span>${m.company ? "Company " + COMPANY_NAMES[m.company] : "Fortress-wide"}</span></div>
+    ${m.formation ? `<div class="modal-row"><span>Formation</span><span>${escapeHtml(FORMATIONS[m.formation] ? FORMATIONS[m.formation].name : m.formation)}</span></div>` : ""}
+    ${m.killTeam ? `<div class="modal-row"><span>Kill-team</span><span>${escapeHtml(m.killTeam)}</span></div>` : ""}
+    ${m.vigil ? `<div class="modal-vigil-tag">${escapeHtml(m.vigil)}</div>` : ""}
+    ${m.backstory ? `<div class="modal-divider">&#10086;</div><p class="modal-backstory">${dropcapHtml(m.backstory)}</p>` : ""}
+  `;
+  overlay.classList.add("open");
+  panel.classList.remove("unfurl");
+  void panel.offsetWidth;
+  panel.classList.add("unfurl");
+}
+
+function closeMemberModal() {
+  document.getElementById("member-modal").classList.remove("open");
+}
+
+/* ---------------------------------------------------------------------- */
+/* Search                                                                 */
+/* ---------------------------------------------------------------------- */
+
+function memberLocationLabel(m) {
+  if (m.company) return "Company " + COMPANY_NAMES[m.company];
+  if (m.formation) return FORMATIONS[m.formation] ? FORMATIONS[m.formation].name : m.formation;
+  return "Fortress-wide";
+}
+
+function renderSearchResults(query) {
+  const resultsEl = document.getElementById("search-results");
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    resultsEl.innerHTML = `<div class="search-hint">Search by name, rank, or Chapter of origin.</div>`;
+    return;
+  }
+  const matches = state.members.filter(m =>
+    m.name.toLowerCase().includes(q) ||
+    (RANK_LABELS[m.rank] || "").toLowerCase().includes(q) ||
+    (m.chapter || "").toLowerCase().includes(q)
+  ).slice(0, 24);
+
+  if (!matches.length) {
+    resultsEl.innerHTML = `<div class="search-hint">No battle-brothers match that search.</div>`;
+    return;
+  }
+  resultsEl.innerHTML = matches.map(m => `
+    <button class="search-result" data-member="${m.id}" type="button">
+      <span class="search-result-name">${escapeHtml(m.name)}</span>
+      <span class="search-result-meta">${escapeHtml(RANK_LABELS[m.rank] || m.rank)} &middot; ${escapeHtml(memberLocationLabel(m))}</span>
+    </button>`).join("");
+}
+
+function openSearch() {
+  const overlay = document.getElementById("search-overlay");
+  const panel = overlay.querySelector(".overlay-panel");
+  const input = document.getElementById("search-input");
+  input.value = "";
+  renderSearchResults("");
+  overlay.classList.add("open");
+  panel.classList.remove("fade-in");
+  void panel.offsetWidth;
+  panel.classList.add("fade-in");
+  input.focus();
+}
+
+function closeSearch() {
+  document.getElementById("search-overlay").classList.remove("open");
+}
+
+/* ---------------------------------------------------------------------- */
+/* Settings panel                                                         */
+/* ---------------------------------------------------------------------- */
+
+function openSettings() {
+  document.getElementById("settings-url-input").value = state.dataSourceUrl;
+  const overlay = document.getElementById("settings-overlay");
+  const panel = overlay.querySelector(".overlay-panel");
+  overlay.classList.add("open");
+  panel.classList.remove("fade-in");
+  void panel.offsetWidth;
+  panel.classList.add("fade-in");
+}
+
+function closeSettings() {
+  document.getElementById("settings-overlay").classList.remove("open");
+}
+
+async function handleSaveSettings() {
+  const url = document.getElementById("settings-url-input").value.trim();
+  await saveDataSourceUrl(url);
+  document.getElementById("settings-status").textContent = "Reconnecting\u2026";
+  await loadData();
+  document.getElementById("settings-status").textContent =
+    state.dataStatus === "live" ? "Connected." : "Could not reach that endpoint \u2014 showing sample data.";
+  navigate("strategium", {});
+}
+
+/* ---------------------------------------------------------------------- */
+/* Event wiring                                                           */
+/* ---------------------------------------------------------------------- */
+
+function wireEvents() {
+  document.body.addEventListener("click", (e) => {
+    const navBtn = e.target.closest("[data-nav]");
+    if (navBtn) {
+      const view = navBtn.dataset.nav;
+      const params = {
+        companyId: navBtn.dataset.company ? Number(navBtn.dataset.company) : null,
+        killTeamId: navBtn.dataset.killteam || null,
+        formationId: navBtn.dataset.formation || null
+      };
+      const isBreadcrumb = navBtn.classList.contains("crumb");
+      navigate(view, params, isBreadcrumb ? null : navBtn, isBreadcrumb ? "out" : "in");
+      return;
+    }
+    const memberBtn = e.target.closest("[data-member]");
+    if (memberBtn) {
+      openMemberModal(memberBtn.dataset.member);
+      if (memberBtn.closest("#search-overlay")) closeSearch();
+      return;
+    }
+    const rosterRow = e.target.closest(".roster-row");
+    if (rosterRow) {
+      openMemberModal(rosterRow.dataset.member);
+      return;
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeMemberModal();
+      closeSettings();
+      closeSearch();
+    }
+  });
+
+  document.getElementById("gear-btn").addEventListener("click", openSettings);
+  document.getElementById("settings-close-btn").addEventListener("click", closeSettings);
+  document.getElementById("settings-save-btn").addEventListener("click", handleSaveSettings);
+  document.getElementById("member-modal-close").addEventListener("click", closeMemberModal);
+  document.getElementById("member-modal").addEventListener("click", (e) => {
+    if (e.target.id === "member-modal") closeMemberModal();
+  });
+  document.getElementById("settings-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "settings-overlay") closeSettings();
+  });
+
+  document.getElementById("search-btn").addEventListener("click", openSearch);
+  document.getElementById("search-close-btn").addEventListener("click", closeSearch);
+  document.getElementById("search-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "search-overlay") closeSearch();
+  });
+  document.getElementById("search-input").addEventListener("input", (e) => {
+    renderSearchResults(e.target.value);
+  });
+}
+
+/* ---------------------------------------------------------------------- */
+/* Init                                                                    */
+/* ---------------------------------------------------------------------- */
+
+async function init() {
+  wireEvents();
+  await loadSavedSettings();
+  await loadData();
+  render();
+}
+
+init();
+
+</script>
+</body>
+</html>
