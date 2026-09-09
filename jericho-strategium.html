@@ -160,6 +160,121 @@
     .branch-row { padding-top: 0; gap: 20px; }
   }
 
+  .fortress-map {
+    position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 900px; margin: 0 auto;
+    grid-template-rows: auto 26px auto 30px auto; gap: 0 9px; align-items: start;
+    padding: 8px 0 4px; isolation: isolate;
+  }
+  .fortress-map::before {
+    content: ""; position: absolute; z-index: -1; left: 3%; right: 3%; top: 58px; bottom: 20px;
+    border-top: 1px solid var(--border-dim); border-bottom: 1px solid var(--border-dim);
+    background: rgba(79,214,122,0.012);
+  }
+  .map-command, .map-node { position: relative; z-index: 1; min-width: 0; }
+  .map-command { grid-column: 3; grid-row: 1; }
+  .map-command::before, .map-command::after, .map-node::before, .map-node::after,
+  .map-branch::before, .map-branch::after, .company-slot::before { display: none; }
+  .map-node .formation-plate, .map-node .company-plate {
+    width: 100%; min-width: 0; max-width: none; height: 92px; padding: 10px 9px 11px;
+  }
+  .map-node .formation-plate-label, .map-node .company-plate-label { font-size: 12px; }
+  .map-node .formation-plate-lead, .map-node .company-plate-captain { font-size: 10px; }
+  .map-node .formation-plate-count, .map-node .company-plate-count { font-size: 9px; }
+  .map-node .company-sigil { right: 6px; top: 6px; width: 19px; height: 19px; }
+  .map-node .company-sigil svg { width: 18px; height: 18px; }
+  .formation-slot-armory { grid-column: 1; grid-row: 1; }
+  .formation-slot-apothecarion { grid-column: 5; grid-row: 1; }
+  .formation-slot-black_vault { grid-column: 2; grid-row: 3; }
+  .formation-slot-librarius { grid-column: 3; grid-row: 3; }
+  .formation-slot-reclusiam { grid-column: 4; grid-row: 3; }
+  .formation-slot-hall_of_blades { grid-column: 5; grid-row: 3; }
+  .formation-slot-armory::before, .formation-slot-apothecarion::before,
+  .formation-slot-armory::after, .formation-slot-apothecarion::after { display: none; }
+  .map-middle-bus, .map-branch { display: none; }
+  .map-connectors {
+    position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%;
+    overflow: visible; pointer-events: none;
+  }
+  .map-connectors line, .map-connectors path {
+    fill: none; stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke;
+  }
+  .company-slot-1 { grid-column: 1; grid-row: 5; }
+  .company-slot-2 { grid-column: 2; grid-row: 5; }
+  .company-slot-3 { grid-column: 3; grid-row: 5; }
+  .company-slot-4 { grid-column: 4; grid-row: 5; }
+  .company-slot-5 { grid-column: 5; grid-row: 5; }
+  .company-slot::before {
+    content: ""; position: absolute; left: 50%; top: -30px; width: 1px; height: 30px;
+    background: var(--border); transform: translateX(-50%);
+  }
+  @media (max-width: 900px) {
+    .fortress-map { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 7px; }
+    .map-command { grid-column: 3; }
+    .formation-slot-armory { grid-column: 1; }
+    .formation-slot-apothecarion { grid-column: 5; }
+    .formation-slot-black_vault { grid-column: 1; }
+    .formation-slot-librarius { grid-column: 2; }
+    .formation-slot-reclusiam { grid-column: 4; }
+    .formation-slot-hall_of_blades { grid-column: 5; }
+    .map-branch { grid-column: 1 / 6; }
+    .company-slot-1 { grid-column: 1; }
+    .company-slot-2 { grid-column: 2; }
+    .company-slot-3 { grid-column: 3; }
+    .company-slot-4 { grid-column: 4; }
+    .company-slot-5 { grid-column: 5; }
+  }
+  @media (max-width: 600px) {
+    .fortress-map { display: block; padding: 4px 0 0; }
+    .fortress-map::before, .map-connectors { display: none; }
+    .map-command { display: flex; justify-content: center; margin-bottom: 14px; }
+    .map-node { margin-top: 9px; }
+    .map-node::before { display: none; }
+    .map-node .formation-plate, .map-node .company-plate { width: 100%; height: 62px; padding: 9px 12px; }
+    .map-node .formation-plate-lead, .map-node .company-plate-captain { display: none; }
+    .map-node .formation-plate-label, .map-node .company-plate-label { font-size: 13px; }
+    .map-node .formation-plate-count, .map-node .company-plate-count { font-size: 10px; }
+  }
+
+  /* Compact schematic layout: three command nodes, four inner nodes, one company rail. */
+  .fortress-map {
+    display: block; max-width: 900px; margin: 0 auto; padding: 8px 0 4px;
+  }
+  .fortress-map::before { display: none; }
+  .map-top, .map-middle, .map-company-row { display: grid; align-items: start; gap: 16px; }
+  .map-top { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .map-middle { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 18px; }
+  .map-company-row { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 62px; }
+  .map-top .map-command { grid-column: 2 / 4; grid-row: 1; }
+  .map-top .formation-slot-armory { grid-column: 1; grid-row: 1; }
+  .map-top .formation-slot-apothecarion { grid-column: 4; grid-row: 1; }
+  .map-middle .formation-slot-black_vault { grid-column: 1; grid-row: 1; }
+  .map-middle .formation-slot-librarius { grid-column: 2; grid-row: 1; }
+  .map-middle .formation-slot-reclusiam { grid-column: 3; grid-row: 1; }
+  .map-middle .formation-slot-hall_of_blades { grid-column: 4; grid-row: 1; }
+  .map-company-row .company-slot { grid-row: 1; }
+  .map-company-row .company-slot-1 { grid-column: 1; }
+  .map-company-row .company-slot-2 { grid-column: 2; }
+  .map-company-row .company-slot-3 { grid-column: 3; }
+  .map-company-row .company-slot-4 { grid-column: 4; }
+  .map-company-row .company-slot-5 { grid-column: 5; }
+  .map-connectors { display: block; }
+  .map-top > .map-node, .map-top > .map-command { min-width: 0; }
+  .map-top .formation-plate, .map-top .map-command .plate {
+    width: 100%; min-width: 0; max-width: none; height: 92px; padding: 10px 9px 11px;
+  }
+  .map-top .map-command { height: 97px; display: flex; justify-content: center; }
+  .map-top .map-command .plate.size-lg {
+    width: 50%; min-width: 0; height: 92px; padding: 10px 9px 11px; align-self: center;
+  }
+  .map-top .plate-name { font-size: 16px; }
+  @media (max-width: 600px) {
+    .fortress-map { display: block; max-width: none; }
+    .map-connectors { display: none; }
+    .map-top, .map-middle, .map-company-row { display: block; margin-top: 0; }
+    .map-node { margin-top: 9px; }
+    .map-top .map-command { margin-top: 0; }
+  }
+
   .plate {
     background: var(--panel);
     border: 1px solid var(--border-dim);
@@ -273,6 +388,11 @@
   }
 
   .tier-formation-lead { margin-bottom: 30px; justify-content: flex-start; }
+
+  .formation-lore, .company-lore {
+    max-width: 700px; margin: 0 auto 24px; color: var(--green-dim);
+    font-size: 12px; line-height: 1.65; text-align: center;
+  }
 
   .tier-killteams { max-width: 760px; margin: 0 auto; }
 
@@ -416,6 +536,8 @@
   .modal-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 23px; color: var(--white); margin-bottom: 14px; }
   .modal-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); color: var(--green-dim); }
   .modal-row span:last-child { color: var(--white); }
+  .modal-stats { margin-top: 16px; border-top: 1px solid var(--border-dim); padding-top: 10px; }
+  .modal-stats-label { color: var(--gold); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
   .modal-vigil-tag { margin-top: 10px; font-size: 12px; font-style: italic; color: var(--green-dim); }
 
   .modal-divider { text-align: center; color: var(--gold-dim); font-size: 12px; margin: 20px 0; letter-spacing: 0.5em; }
@@ -507,7 +629,8 @@
         <code>id</code>, <code>name</code>, <code>chapter</code>, <code>rank</code>,
         <code>company</code> (1–5 or null), <code>killTeam</code> (e.g. <code>"3-2"</code> or null),
         and optional <code>formation</code>, <code>title</code>, <code>vigil</code>, and
-        <code>backstory</code> (free text, up to ~400 words). Rank values must match this
+        <code>backstory</code> (free text, up to ~400 words), and optional service fields
+        <code>serverJoinedAt</code> and <code>aarCount</code>. The display uses continuous progress toward each paired 400 AAR and 14 server-day threshold, awards one plasteel stud per completed threshold, and one auramite stud for every four plasteel studs. Rank values must match this
         page's rank keys (view source for the full list). A bot token should never be
         called directly from a browser — have your bot serve this JSON itself.
       </div>
@@ -545,8 +668,9 @@
    killTeam is "<company>-<1..4>" or null.
    formation is one of: armory, librarius, reclusiam, apothecarion,
      hall_of_blades, black_vault — or null.
-   title is an optional free-text honorific (or null). backstory is free
-   text, up to ~400 words.
+  title is an optional free-text honorific (or null). backstory is free
+  text, up to ~400 words. stats is an optional object of displayable values,
+  for example { "strength": 8, "toughness": 7 }.
    This is the same shape a Discord-role-mapping export or a bot endpoint
    should produce — see the settings panel in-app for the full note.
    ========================================================================== */
@@ -589,6 +713,23 @@ const FORMATIONS = {
   black_vault: { name: "Black Vault", lead: "huntmaster", ranks: ["kill_marine"] }
 };
 
+const FORMATION_LORE = {
+  armory: "The Armory keeps the Fortress armed, repaired, and ready. Its artificers maintain the wargear that lets every other formation answer the next summons.",
+  librarius: "The Librarius guards the Watch's memory and forbidden knowledge. Its seers read threats before they become movements on the tactical slate.",
+  reclusiam: "The Reclusiam tends the oaths that bind the Long Watch together. Its chaplains keep purpose intact when duty outlasts certainty.",
+  apothecarion: "The Apothecarion preserves the warriors who stand the Vigil. Its apothecaries serve as surgeons, custodians of gene-seed, and witnesses to sacrifice.",
+  hall_of_blades: "The Hall of Blades is the Fortress's close-combat reserve. Its veterans turn discipline, timing, and controlled violence into a second wall around the Watch.",
+  black_vault: "The Black Vault holds the hunters and instruments too dangerous to leave unaccounted. Its operatives are released only when the threat warrants the risk."
+};
+
+const COMPANY_LORE = {
+  1: "Company Primus forms the first line of the Watch's rotating strike force.",
+  2: "Company Secundus carries the Vigil into the Reach wherever a second spear is needed.",
+  3: "Company Tertius is a flexible battle line, ready to reinforce a failing front or open a new one.",
+  4: "Company Quartus keeps its kill-teams moving between alert stations and active war zones.",
+  5: "Company Quintus stands ready for the missions that require endurance after the first companies have been committed."
+};
+
 const FORMATION_LEAD_RANKS = Object.values(FORMATIONS).map(f => f.lead);
 const FORMATION_MEMBER_RANKS = Object.values(FORMATIONS).flatMap(f => f.ranks).concat(["venerable_dreadnought"]);
 
@@ -605,10 +746,10 @@ const COMPANY_MARKINGS = { 1: "I", 2: "II", 3: "III", 4: "IV", 5: "V" };
 
 const COMPANY_SIGILS = {
   1: '<svg viewBox="0 0 24 24"></svg>',
-  2: '<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2.5"/></svg>',
-  3: '<svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" stroke-width="2.5"/></svg>',
-  4: '<svg viewBox="0 0 24 24"><line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2.5"/></svg>',
-  5: '<svg viewBox="0 0 24 24"><line x1="20" y1="4" x2="4" y2="20" stroke="currentColor" stroke-width="2.5"/></svg>'
+  2: '<svg viewBox="0 0 24 24"><line x1="0" y1="12" x2="24" y2="12" stroke="currentColor" stroke-width="10"/></svg>',
+  3: '<svg viewBox="0 0 24 24"><line x1="12" y1="0" x2="12" y2="24" stroke="currentColor" stroke-width="10"/></svg>',
+  4: '<svg viewBox="0 0 24 24"><line x1="4.5" y1="4.5" x2="19.5" y2="19.5" stroke="currentColor" stroke-width="10"/></svg>',
+  5: '<svg viewBox="0 0 24 24"><line x1="19.5" y1="4.5" x2="4.5" y2="19.5" stroke="currentColor" stroke-width="10"/></svg>'
 };
 
 /* Specialist Formation colours. */
@@ -620,6 +761,10 @@ const FORMATION_COLORS = {
   hall_of_blades: "#c9a04a",
   black_vault: "#5c5c5c"
 };
+
+/* Late M42 is the default display anchor; the setting can be changed when a
+   more precise Imperial calendar year is chosen for the campaign. */
+const CURRENT_IMPERIAL_YEAR = 41999;
 
 /* ---------------------------------------------------------------------- */
 /* Sample roster generator — clearly placeholder data for demo purposes.  */
@@ -984,7 +1129,63 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
-function plateHtml({ id, name, rankLabel, sub, accent, vacant, size }) {
+function serviceMetrics(member) {
+  if (!member) return "";
+  const numericValue = value => value === null || value === undefined || value === ""
+    ? null : Number.isFinite(Number(value)) ? Number(value) : null;
+  const joinedAt = member.serverJoinedAt || member.discordJoinedAt || member.joinedAt;
+  const joinedMs = joinedAt ? Date.parse(joinedAt) : NaN;
+  const calculatedDays = Number.isFinite(joinedMs) && joinedMs <= Date.now()
+    ? Math.max(0, Math.floor((Date.now() - joinedMs) / (24 * 60 * 60 * 1000))) : null;
+  const serverDays = numericValue(member.serverDays ?? calculatedDays);
+  const aarValue = member.aarCount ?? member.aar;
+  const aar = numericValue(aarValue);
+  const pairedInputsAvailable = aar !== null && serverDays !== null;
+  const pairedProgress = pairedInputsAvailable
+    ? Math.min(aar / 400, serverDays / 14) : null;
+  const plasteelStuds = pairedProgress !== null ? Math.floor(pairedProgress) : null;
+  const auramiteStuds = plasteelStuds !== null ? Math.floor(plasteelStuds / 4) : null;
+  const longVigilYears = pairedProgress !== null ? Math.min(pairedProgress * 25, 400) : null;
+  return { aar, serverDays, plasteelStuds, auramiteStuds, longVigilYears };
+}
+
+function imperialDate(year) {
+  const millennium = Math.ceil(year / 1000);
+  const yearInMillennium = year - ((millennium - 1) * 1000);
+  return `${yearInMillennium.toString().padStart(3, "0")}.M${millennium}`;
+}
+
+function watchEntryLabel(member) {
+  const { longVigilYears } = serviceMetrics(member);
+  if (longVigilYears === null) return "Unrecorded";
+  return imperialDate(Math.max(1, Math.floor(CURRENT_IMPERIAL_YEAR - longVigilYears)));
+}
+
+function serviceRecord(member) {
+  const metrics = serviceMetrics(member);
+  if (!member || !metrics) return "";
+  const { aar, serverDays, plasteelStuds, auramiteStuds, longVigilYears } = metrics;
+  const details = [];
+  if (longVigilYears !== null) details.push(`${longVigilYears.toFixed(1)} Long Vigil years`);
+  if (aar !== null) details.push(`${aar} AAR${aar === 1 ? "" : "s"}`);
+  if (serverDays !== null) details.push(`${serverDays} server day${serverDays === 1 ? "" : "s"}`);
+  if (plasteelStuds !== null) details.push(`${plasteelStuds} plasteel stud${plasteelStuds === 1 ? "" : "s"}`);
+  if (auramiteStuds !== null && auramiteStuds > 0) details.push(`${auramiteStuds} auramite stud${auramiteStuds === 1 ? "" : "s"}`);
+  return details.length ? details.join(" | ") : "Vigil record pending";
+}
+
+function locationRows(member) {
+  if (member.company) {
+    return `<div class="modal-row"><span>Company</span><span>Company ${escapeHtml(COMPANY_NAMES[member.company])}</span></div>
+      ${member.killTeam ? `<div class="modal-row"><span>Kill-team</span><span>${escapeHtml(member.killTeam)}</span></div>` : ""}`;
+  }
+  if (member.formation) {
+    return `<div class="modal-row"><span>Formation</span><span>${escapeHtml(FORMATIONS[member.formation] ? FORMATIONS[member.formation].name : member.formation)}</span></div>`;
+  }
+  return `<div class="modal-row"><span>Assignment</span><span>Fortress-wide</span></div>`;
+}
+
+function plateHtml({ id, member, name, rankLabel, sub, accent, vacant, size }) {
   const cls = ["plate", accent ? `accent-${accent}` : "", vacant ? "vacant" : "", size ? `size-${size}` : ""]
     .filter(Boolean).join(" ");
   const clickAttr = id ? `data-member="${escapeHtml(id)}"` : "";
@@ -992,7 +1193,7 @@ function plateHtml({ id, name, rankLabel, sub, accent, vacant, size }) {
     <button class="${cls}" ${clickAttr} ${id ? "" : "disabled"} type="button">
       <span class="plate-rank">${escapeHtml(rankLabel)}</span>
       <span class="plate-name">${vacant ? "Vacant" : escapeHtml(name)}</span>
-      ${sub ? `<span class="plate-sub">${escapeHtml(sub)}</span>` : ""}
+      ${sub || serviceRecord(member) ? `<span class="plate-sub">${escapeHtml(sub || serviceRecord(member))}</span>` : ""}
     </button>`;
 }
 
@@ -1026,39 +1227,47 @@ function renderStrategium() {
     const captain = state.members.find(m => m.rank === "watch_captain" && m.company === id);
     const count = state.members.filter(m => m.company === id).length;
     return `
+      <div class="map-node company-slot company-slot-${id}">
       <button class="company-plate" data-nav="company" data-company="${id}" type="button">
         <span class="company-sigil" aria-hidden="true">${COMPANY_SIGILS[id]}</span>
         <span class="company-plate-label">Company ${COMPANY_NAMES[id]}</span>
         <span class="company-plate-captain">${captain ? escapeHtml(captain.name) : "Captain vacant"}</span>
         <span class="company-plate-count">${count} sworn</span>
-      </button>`;
+      </button>
+      </div>`;
   }).join("");
 
-  const formations = Object.entries(FORMATIONS).map(([key, f]) => {
+  const formationHtml = key => {
+    const f = FORMATIONS[key];
     const lead = state.members.find(m => m.rank === f.lead);
     const count = state.members.filter(m => m.formation === key).length;
     return `
+      <div class="map-node formation-slot formation-slot-${key}">
       <button class="formation-plate" data-nav="formation" data-formation="${key}" type="button" style="--formation-accent:${FORMATION_COLORS[key]}">
         <span class="formation-plate-label">${escapeHtml(f.name)}</span>
         <span class="formation-plate-lead">${lead ? RANK_LABELS[lead.rank] + " " + escapeHtml(lead.name) : "Vacant"}</span>
         <span class="formation-plate-count">${count} sworn</span>
-      </button>`;
-  }).join("");
+      </button>
+      </div>`;
+  };
 
   document.getElementById("app").innerHTML = `
-    <div class="tier tier-apex">
-      ${plateHtml({ id: wm && wm.id, name: wm && wm.name, rankLabel: "Watch Master", accent: "gold", vacant: !wm, size: "lg" })}
-    </div>
-    <div class="connector connector-down"></div>
-    <div class="branch-row">
-      <div class="branch">
-        <div class="branch-title">Watch Companies</div>
-        <div class="branch-body"><div class="tier tier-companies">${companies}</div></div>
+    <div class="fortress-map">
+      <div class="map-top">
+        ${formationHtml("armory")}
+        <div class="map-command">
+          ${plateHtml({ id: wm && wm.id, member: wm, name: wm && wm.name, rankLabel: "Watch Master", accent: "gold", vacant: !wm, size: "lg" })}
+        </div>
+        ${formationHtml("apothecarion")}
       </div>
-      <div class="branch">
-        <div class="branch-title">Specialist Formations</div>
-        <div class="branch-body"><div class="tier tier-formations">${formations}</div></div>
+      <div class="map-middle">
+        ${formationHtml("black_vault")}
+        ${formationHtml("librarius")}
+        ${formationHtml("reclusiam")}
+        ${formationHtml("hall_of_blades")}
       </div>
+      <div class="map-company-row">${companies}</div>
+      <svg class="map-connectors" aria-hidden="true" focusable="false"></svg>
     </div>
     <div class="terminal-output">
       <div class="term-line term-prompt">&gt; QUERY: WATCH_FORTRESS_JERICHO</div>
@@ -1072,6 +1281,65 @@ function renderStrategium() {
       <div class="term-line term-prompt">&gt; END TRANSMISSION<span class="term-cursor">_</span></div>
     </div>
   `;
+  requestAnimationFrame(drawMapConnectors);
+}
+
+function drawMapConnectors() {
+  const map = document.querySelector(".fortress-map");
+  const svg = map && map.querySelector(".map-connectors");
+  if (!map || !svg || window.innerWidth <= 600) return;
+
+  const mapRect = map.getBoundingClientRect();
+  const rectFor = selector => map.querySelector(selector).getBoundingClientRect();
+  const bounds = selector => {
+    const rect = rectFor(selector);
+    return {
+      left: rect.left - mapRect.left,
+      right: rect.right - mapRect.left,
+      top: rect.top - mapRect.top,
+      bottom: rect.bottom - mapRect.top,
+      centerX: rect.left - mapRect.left + rect.width / 2,
+      centerY: rect.top - mapRect.top + rect.height / 2
+    };
+  };
+  const horizontal = (from, to) => {
+    const source = bounds(from);
+    const target = bounds(to);
+    const startX = source.centerX < target.centerX ? source.right : source.left;
+    const endX = source.centerX < target.centerX ? target.left : target.right;
+    return `<line x1="${startX}" y1="${source.centerY}" x2="${endX}" y2="${target.centerY}"></line>`;
+  };
+  const vertical = (from, to) => {
+    const source = bounds(from);
+    const target = bounds(to);
+    return `<line x1="${source.centerX}" y1="${source.bottom}" x2="${target.centerX}" y2="${target.top}"></line>`;
+  };
+  const orthogonal = (from, to, bendY) => {
+    const source = bounds(from);
+    const target = bounds(to);
+    return `<path d="M ${source.centerX} ${source.bottom} L ${source.centerX} ${bendY} L ${target.centerX} ${bendY} L ${target.centerX} ${target.top}"></path>`;
+  };
+  const command = ".map-command .plate";
+  const formation = key => `.formation-slot-${key} .formation-plate`;
+  const companySelectors = [1, 2, 3, 4, 5].map(id => `.company-slot-${id} .company-plate`);
+  const companies = companySelectors.map(bounds);
+  const commandBounds = bounds(command);
+  const railY = companies[0].top - 24;
+  const middleRect = rectFor(".map-middle");
+  const companyRail = `<line x1="${companies[0].centerX}" y1="${railY}" x2="${companies[4].centerX}" y2="${railY}"></line>`;
+  const lines = [
+    horizontal(command, formation("armory")),
+    horizontal(command, formation("apothecarion")),
+    vertical(command, formation("librarius")),
+    vertical(command, formation("reclusiam")),
+    vertical(formation("armory"), formation("black_vault")),
+    vertical(formation("apothecarion"), formation("hall_of_blades")),
+    `<line x1="${commandBounds.centerX}" y1="${commandBounds.bottom}" x2="${commandBounds.centerX}" y2="${railY}"></line>`,
+    companyRail,
+    ...companies.map(company => `<line x1="${company.centerX}" y1="${railY}" x2="${company.centerX}" y2="${company.top}"></line>`)
+  ];
+  svg.setAttribute("viewBox", `0 0 ${mapRect.width} ${mapRect.height}`);
+  svg.innerHTML = lines.join("");
 }
 
 function renderCompany(companyId) {
@@ -1079,7 +1347,7 @@ function renderCompany(companyId) {
   const cmd = companyCommand(companyId);
   const cmdHtml = cmd.map(({ rank, member }) =>
     plateHtml({
-      id: member && member.id, name: member && member.name, rankLabel: RANK_LABELS[rank],
+      id: member && member.id, member, name: member && member.name, rankLabel: RANK_LABELS[rank],
       accent: rank === "watch_captain" ? "gold" : "steel", vacant: !member
     })
   ).join("");
@@ -1106,10 +1374,9 @@ function renderCompany(companyId) {
         <div class="company-header-sub">${numeral} &middot; ${count} battle-brothers sworn to this company</div>
       </div>
     </div>
+    <p class="company-lore">${escapeHtml(COMPANY_LORE[companyId] || "This company serves the Fortress wherever the Vigil calls.")}</p>
     <div class="tier-label">Company Command</div>
     <div class="tier tier-company-command tree-row">${cmdHtml}</div>
-    <p class="company-note">Techmarines, Librarians, Chaplains, Apothecaries, Blade Guard, and Dreadnoughts
-      seconded in support of this company serve within their respective Formations, not this roster.</p>
     <div class="tier-label">Kill Teams</div>
     <div class="tier tier-killteams tree-row">${teams}</div>
   `;
@@ -1122,7 +1389,7 @@ function renderFormation(key) {
   const rest = members.filter(m => m !== lead);
 
   const leadHtml = plateHtml({
-    id: lead && lead.id, name: lead && lead.name,
+    id: lead && lead.id, member: lead, name: lead && lead.name,
     rankLabel: lead ? RANK_LABELS[lead.rank] : RANK_LABELS[f.lead], accent: "gold", vacant: !lead, size: "md"
   });
 
@@ -1135,6 +1402,7 @@ function renderFormation(key) {
 
   document.getElementById("app").innerHTML = `
     <div class="tier-label formation-tier-label" style="--formation-accent:${FORMATION_COLORS[key]}">${escapeHtml(f.name)}</div>
+    <p class="formation-lore">${escapeHtml(FORMATION_LORE[key] || "This formation serves the Watch according to its own discipline and mandate.")}</p>
     <div class="tier tier-formation-lead">${leadHtml}</div>
     <div class="tier-label">Formation Roster (${rest.length})</div>
     <table class="roster-table">
@@ -1147,7 +1415,7 @@ function renderFormation(key) {
 function renderKillTeam(companyId, killTeam) {
   const { lead, rest } = killTeamDetail(companyId, killTeam);
   const leadHtml = plateHtml({
-    id: lead && lead.id, name: lead && lead.name,
+    id: lead && lead.id, member: lead, name: lead && lead.name,
     rankLabel: lead ? RANK_LABELS[lead.rank] : "Watch Sergeant", accent: "red", vacant: !lead, size: "md"
   });
 
@@ -1232,13 +1500,21 @@ function openMemberModal(id) {
   if (!m) return;
   const overlay = document.getElementById("member-modal");
   const panel = overlay.querySelector(".overlay-panel");
+  const stats = m.stats && typeof m.stats === "object" ? Object.entries(m.stats)
+    .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value)) : [];
+  const statsHtml = stats.length ? `
+    <div class="modal-stats">
+      <div class="modal-stats-label">Recorded Stats</div>
+      ${stats.map(([key, value]) => `<div class="modal-row"><span>${escapeHtml(key.replaceAll("_", " "))}</span><span>${escapeHtml(value)}</span></div>`).join("")}
+    </div>` : "";
   document.getElementById("member-modal-body").innerHTML = `
     <div class="modal-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}${m.title ? " \u00b7 " + escapeHtml(m.title) : ""}</div>
     <div class="modal-name">${escapeHtml(m.name)}</div>
     <div class="modal-row"><span>Chapter of Origin</span><span>${escapeHtml(m.chapter || "Unrecorded")}</span></div>
-    <div class="modal-row"><span>Company</span><span>${m.company ? "Company " + COMPANY_NAMES[m.company] : "Fortress-wide"}</span></div>
-    ${m.formation ? `<div class="modal-row"><span>Formation</span><span>${escapeHtml(FORMATIONS[m.formation] ? FORMATIONS[m.formation].name : m.formation)}</span></div>` : ""}
-    ${m.killTeam ? `<div class="modal-row"><span>Kill-team</span><span>${escapeHtml(m.killTeam)}</span></div>` : ""}
+    ${locationRows(m)}
+    <div class="modal-row"><span>Service</span><span>${escapeHtml(serviceRecord(m))}</span></div>
+    <div class="modal-row"><span>Watch entry</span><span>${escapeHtml(watchEntryLabel(m))}</span></div>
+    ${statsHtml}
     ${m.vigil ? `<div class="modal-vigil-tag">${escapeHtml(m.vigil)}</div>` : ""}
     ${m.backstory ? `<div class="modal-divider">&#10086;</div><p class="modal-backstory">${dropcapHtml(m.backstory)}</p>` : ""}
   `;
@@ -1336,6 +1612,7 @@ async function handleSaveSettings() {
 /* ---------------------------------------------------------------------- */
 
 function wireEvents() {
+  window.addEventListener("resize", () => requestAnimationFrame(drawMapConnectors));
   document.body.addEventListener("click", (e) => {
     const navBtn = e.target.closest("[data-nav]");
     if (navBtn) {
