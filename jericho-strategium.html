@@ -455,6 +455,7 @@
   }
   .term-value { color: var(--green-dim); flex: 1 1 300px; }
   .term-active { color: var(--gold); }
+  .term-alert { color: var(--red); text-shadow: 0 0 5px rgba(224,92,79,0.25); }
   .term-cursor { display: inline-block; animation: termBlink 1.1s steps(1) infinite; color: var(--green); }
   @keyframes termBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
@@ -1274,8 +1275,9 @@ function renderStrategium() {
       <div class="term-line term-prompt">&gt; ACCESSING STRATEGIUM ARCHIVE&hellip;</div>
       <div class="term-line term-gap"></div>
       <div class="term-line"><span class="term-label">Location</span><span class="term-value">The Jericho Reach, Ultima Segmentum</span></div>
-      <div class="term-line"><span class="term-label">Sector Context</span><span class="term-value">Shares the Reach with Watch Fortress Erioch, the elder bastion of the Long Watch in this region</span></div>
-      <div class="term-line"><span class="term-label">Standing Orders</span><span class="term-value">Maintain vigil over the Reach, answerable to the Deathwatch and the Ordo Xenos alone</span></div>
+      <div class="term-line"><span class="term-label">Requesting Authority</span><span class="term-value">Ordo Xenos Inquisitorial Seal // VERIFIED</span></div>
+      <div class="term-line"><span class="term-label">Deployment Priority</span><span class="term-value term-alert">EMERGENCY // JERICHO RESPONSE AUTHORIZED</span></div>
+      <div class="term-line"><span class="term-label">Standing Orders</span><span class="term-value">Deploy Watch assets to the affected zone; contain, identify, and purge the xenos threat</span></div>
       <div class="term-line"><span class="term-label">Record Status</span><span class="term-value term-active">ACTIVE</span></div>
       <div class="term-line term-gap"></div>
       <div class="term-line term-prompt">&gt; END TRANSMISSION<span class="term-cursor">_</span></div>
