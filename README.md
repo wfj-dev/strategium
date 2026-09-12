@@ -1,6 +1,6 @@
 # Watch Fortress Jericho Strategium
 
-A single-page org chart web app for the Watch Fortress Jericho roster. The current build is a static HTML prototype with embedded CSS and JavaScript, sample roster data, searchable member dossiers, company views, specialist formations, and an optional live roster endpoint.
+A single-page org chart web app for the Watch Fortress Jericho roster. The current build includes the embedded frontend and a small backend for signed bot snapshots, searchable member dossiers, company views, specialist formations, Discord OAuth, and user-owned backstory editing.
 
 ## Getting Started
 
@@ -23,7 +23,7 @@ Then open `http://127.0.0.1:8787/`. The backend automatically loads `.env`, serv
 
 ## Live Roster Data
 
-The app can use sample data or load live data from a roster endpoint configured from the in-app settings button.
+The live app loads roster data from its same-origin `/api/roster` endpoint. The Discord bot publishes signed snapshots to the backend's internal `/internal/roster/snapshot` endpoint; browser clients never receive bot credentials.
 
 The endpoint should return JSON in this shape:
 
@@ -58,13 +58,13 @@ Important notes:
 - `serverJoinedAt` is an optional ISO timestamp from Discord. The UI derives completed years of service from it.
 - `serverDays` is an optional direct alternative to `serverJoinedAt` when the bot already calculates Discord tenure.
 - `aarCount` is an optional number of recorded after-action reports.
-- A Marine earns one plasteel stud for every complete pair of thresholds: `400 AAR` **and** `14 server days`. Progress toward the next stud is continuous and uses `min(aarCount / 400, serverDays / 14)`, so partial service is nonzero but cannot exceed the progress supported by either input.
-- Each completed plasteel stud represents 25 Long Vigil years. Every four completed plasteel studs also earns one auramite stud. Long Vigil service is capped at 400 years.
-- The dossier uses a configurable late-M42 anchor (`CURRENT_IMPERIAL_YEAR = 41999`) and estimates Watch entry as the anchor year minus extrapolated Long Vigil years. The setting is intentionally configurable because 40k does not provide one universally fixed current calendar date.
+- A Marine earns one service stud for every complete pair of thresholds: `400 AAR points` **and** `4 complete weeks`. Completed studs are calculated as `min(floor(aarPoints / 400), floor(serverWeeks / 4))`, capped at 16.
+- Each completed service stud represents 25 Long Vigil years. Long Vigil service is therefore `serviceStuds * 25`, capped at 400 years.
+- The dossier uses a configurable late-M42 anchor (`CURRENT_IMPERIAL_YEAR = 41999`) and estimates Watch entry as the anchor year minus completed Long Vigil years. The setting is configurable because 40k does not provide one universally fixed current calendar date.
 - Examples:
-  - `1000 AAR + 10 days` earns `0 plasteel studs` and `17.9 Long Vigil years`; the Marine is partway to the first stud.
-  - `3000 AAR + 365 days` earns `7 plasteel studs`, `1 auramite stud`, and `187.5 Long Vigil years`; the AAR threshold is the limiting factor.
-  - `6400 AAR + 224 days` earns `16 plasteel studs`, `4 auramite studs`, and `400 Long Vigil years` after the global cap.
+  - `400 AAR points + 4 weeks` earns `1 service stud` and `25 Long Vigil years`.
+  - `5000 AAR points + 4 weeks` still earns only `1 service stud` because time is the limiting factor.
+  - `5000 AAR points + 64 weeks` earns `12 service studs` and `300 Long Vigil years`.
 - Do not call a Discord bot token or other secret directly from the browser. The bot publishes signed snapshots to `/internal/roster/snapshot`; this backend stores the snapshot and serves `/api/roster`.
 - `backstory` is the only user-editable field. Discord roles and bot-managed data remain authoritative for all other fields.
 - For production, put the backend behind HTTPS, set `STRATEGIUM_ALLOWED_ORIGIN` to the exact site origin, set `STRATEGIUM_SECURE_COOKIES=1`, and keep all secrets in the host secret manager.
