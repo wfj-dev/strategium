@@ -69,6 +69,27 @@ Important notes:
 - `backstory` is the only user-editable field. Discord roles and bot-managed data remain authoritative for all other fields.
 - For production, put the backend behind HTTPS, set `STRATEGIUM_ALLOWED_ORIGIN` to the exact site origin, set `STRATEGIUM_SECURE_COOKIES=1`, and keep all secrets in the host secret manager.
 
+## Production Hardening
+
+Templates are in `deploy/`:
+
+- `deploy/Caddyfile.example` proxies the public site over HTTPS and returns `404` for `/internal/*`. The bot should publish locally to `http://127.0.0.1:8787/internal/roster/snapshot`, so the signed ingestion route is not publicly reachable.
+- `deploy/strategium.service.example` runs the backend as an unprivileged `strategium` user with `NoNewPrivileges`, private temporary storage, a read-only system filesystem, and write access only to the app's `data/` directory.
+
+Example installation:
+
+```bash
+sudo useradd --system --home /opt/strategium --shell /usr/sbin/nologin strategium
+sudo install -d -o strategium -g strategium /opt/strategium/data
+sudo install -o root -g root -m 644 deploy/strategium.service.example /etc/systemd/system/strategium.service
+sudo install -o root -g root -m 644 deploy/Caddyfile.example /etc/caddy/Caddyfile
+sudo systemctl daemon-reload
+sudo systemctl enable --now strategium
+sudo systemctl reload caddy
+```
+
+Set the production `.env` to the actual HTTPS origin before starting the service. Add rate limiting at the reverse proxy or upstream edge for `/api/auth/*`, `/api/me/backstory`, and public roster reads. Never expose `/internal/roster/snapshot` through the proxy.
+
 ## Repository
 
 Remote repository: <https://github.com/wfj-dev/strategium>
