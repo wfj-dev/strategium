@@ -1,0 +1,10 @@
+# Replace the hostname with the public HTTPS hostname for this deployment.
+jericho-strategium.duckdns.org {
+    # The bot publishes over loopback directly to port 8787.
+    # Never expose the signed ingestion endpoint through the public proxy.
+    handle /internal/* {
+        respond "not found" 404
+    }
+
+    reverse_proxy 127.0.0.1:8787
+}
