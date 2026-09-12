@@ -53,12 +53,56 @@ DISCORD_CLIENT_ID = os.getenv("DISCORD_OAUTH_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_OAUTH_CLIENT_SECRET", "")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_OAUTH_REDIRECT_URI", "")
 DISCORD_GUILD_ID = os.getenv("DISCORD_GUILD_ID", "")
-ALLOWED_ORIGIN = os.getenv("STRATEGIUM_ALLOWED_ORIGIN", "http://127.0.0.1:8787")
+ALLOWED_ORIGIN = os.getenv("STRATEGIUM_ALLOWED_ORIGIN", "http://127.0.0.1:8787").rstrip("/")
 SECURE_COOKIES = os.getenv("STRATEGIUM_SECURE_COOKIES", "0") == "1"
 BACKSTORY_MAX_WORDS = 400
 BACKSTORY_MAX_CHARS = 2400
 
 _LOCK = threading.RLock()
+
+
+def _normalize_origin(value: str) -> str:
+    if not value:
+        return ""
+    value = value.strip()
+    if not value:
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(value)
+    except ValueError:
+        return ""
+    scheme = parsed.scheme.lower()
+    host = parsed.hostname.lower() if parsed.hostname else ""
+    if not scheme or not host:
+        return ""
+    port = parsed.port
+    if port is not None:
+        return f"{scheme}://{host}:{port}"
+    return f"{scheme}://{host}"
+
+
+def _origin_matches(request_origin: str, allowed_origin: str) -> bool:
+    request_value = _normalize_origin(request_origin)
+    allowed_value = _normalize_origin(allowed_origin)
+    return bool(request_value and allowed_value and request_value == allowed_value)
+
+
+def _request_is_secure(headers: Any) -> bool:
+    forwarded = (headers.get("X-Forwarded-Proto") or "").lower()
+    if forwarded:
+        first = forwarded.split(",", 1)[0].strip()
+        if first == "https":
+            return True
+    if (headers.get("X-Forwarded-Ssl") or "").lower() == "on":
+        return True
+    return False
+
+
+def _cookie_flags(secure: bool) -> str:
+    flags = ["Path=/", "HttpOnly", "SameSite=Lax"]
+    if secure:
+        flags.append("Secure")
+    return "; " + "; ".join(flags)
 
 
 def _load_json(path: Path, default: Any) -> Any:
@@ -149,13 +193,19 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def _send(self, status: int, payload: Any, headers: dict[str, str] | None = None) -> None:
         body = _json_bytes(payload)
+        request_origin = self.headers.get("Origin", "")
+        if request_origin and not _origin_matches(request_origin, ALLOWED_ORIGIN):
+            cors_origin = None
+        else:
+            cors_origin = ALLOWED_ORIGIN
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
-        self.send_header("Access-Control-Allow-Credentials", "true")
-        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Strategium-Signature")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+        if cors_origin:
+            self.send_header("Access-Control-Allow-Origin", cors_origin)
+            self.send_header("Access-Control-Allow-Credentials", "true")
+            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Strategium-Signature")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
         for key, value in (headers or {}).items():
             self.send_header(key, value)
         self.end_headers()
@@ -204,7 +254,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/auth/discord/start":
             self._discord_start()
         elif parsed.path == "/api/auth/logout":
-            self._send(HTTPStatus.OK, {"ok": True}, {"Set-Cookie": "strategium_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax"})
+            self._send(HTTPStatus.OK, {"ok": True}, {"Set-Cookie": f"strategium_session=; Max-Age=0{_cookie_flags(SECURE_COOKIES or _request_is_secure(self.headers))}"})
         elif parsed.path == "/api/auth/discord/callback":
             self._discord_callback(urllib.parse.parse_qs(parsed.query))
         elif parsed.path == "/api/me":
@@ -337,10 +387,10 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             "scope": "identify guilds",
             "state": state,
         })
-        secure = "; Secure" if SECURE_COOKIES else ""
+        secure = SECURE_COOKIES or _request_is_secure(self.headers)
         headers = {
             "Location": f"https://discord.com/oauth2/authorize?{query}",
-            "Set-Cookie": f"strategium_oauth_state={state}; Path=/; HttpOnly; SameSite=Lax{secure}",
+            "Set-Cookie": f"strategium_oauth_state={state}{_cookie_flags(secure)}",
         }
         self._send(HTTPStatus.FOUND, {"ok": True}, headers)
 
@@ -364,8 +414,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 self._send(HTTPStatus.FORBIDDEN, {"error": "guild_membership_required"})
                 return
             session = _session_value({"id": str(user["id"]), "name": str(user.get("global_name") or user.get("username") or "")})
-            secure = "; Secure" if SECURE_COOKIES else ""
-            self._send(HTTPStatus.FOUND, {"ok": True}, {"Location": "/", "Set-Cookie": f"strategium_session={session}; Path=/; HttpOnly; SameSite=Lax{secure}"})
+            secure = SECURE_COOKIES or _request_is_secure(self.headers)
+            self._send(HTTPStatus.FOUND, {"ok": True}, {"Location": "/", "Set-Cookie": f"strategium_session={session}{_cookie_flags(secure)}"})
         except (KeyError, OSError, json.JSONDecodeError, urllib.error.URLError, RuntimeError) as error:
             self._send(HTTPStatus.BAD_GATEWAY, {"error": "oauth_exchange_failed", "detail": str(error)})
 
@@ -375,6 +425,8 @@ def main() -> None:
         raise SystemExit("STRATEGIUM_BOT_SHARED_SECRET is required")
     if not SESSION_SECRET:
         raise SystemExit("STRATEGIUM_SESSION_SECRET is required")
+    if not ALLOWED_ORIGIN or ALLOWED_ORIGIN == "http://127.0.0.1:8787" and HOST != "127.0.0.1":
+        pass
     server = ThreadingHTTPServer((HOST, PORT), StrategiumHandler)
     print(f"Strategium backend listening on http://{HOST}:{PORT}")
     server.serve_forever()
