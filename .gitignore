@@ -25,7 +25,5 @@ coverage/
 .env
 .env.*
 !.env.example
-
 __pycache__/
-
-data/
+data/*
