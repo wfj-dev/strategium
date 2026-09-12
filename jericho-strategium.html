@@ -275,9 +275,16 @@
   @media (max-width: 600px) {
     .fortress-map { display: block; max-width: none; }
     .map-connectors { display: none; }
-    .map-top, .map-middle, .map-company-row { display: block; margin-top: 0; }
+    .map-top, .map-middle, .map-company-row { display: grid; grid-template-columns: 1fr; margin-top: 0; }
+    .map-top .map-command { grid-column: 1; grid-row: 1; }
+    .map-top .formation-slot-armory { grid-column: 1; grid-row: 2; }
+    .map-top .formation-slot-apothecarion { grid-column: 1; grid-row: 3; }
+    .map-middle .formation-slot { grid-column: 1; grid-row: auto; }
+    .map-company-row .company-slot { grid-column: 1; grid-row: auto; }
     .map-node { margin-top: 9px; }
     .map-top .map-command { margin-top: 0; }
+    .map-node .formation-plate { height: auto; min-height: 104px; }
+    .map-node .formation-plate-blurb { display: block; }
   }
 
   .plate {
@@ -416,6 +423,9 @@
   }
   .formation-plate-lead { font-size: 12px; color: var(--green); }
   .formation-plate-count { font-size: 10.5px; color: var(--green-faint); }
+  .formation-plate-blurb {
+    display: none; color: var(--green-dim); font-size: 11px; line-height: 1.45;
+  }
 
   .formation-tier-label { display: flex; align-items: center; gap: 10px; }
   .formation-tier-label::before {
@@ -1448,6 +1458,7 @@ function renderStrategium() {
         <span class="formation-plate-label">${escapeHtml(f.name)}</span>
         ${lead ? `<span class="formation-plate-lead">${RANK_LABELS[lead.rank]} ${escapeHtml(displayName(lead.name))}</span>` : ""}
         ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Cadre Dormant &mdash;</span>` : `<span class="formation-plate-count">${count} sworn</span>`}
+        <span class="formation-plate-blurb">${escapeHtml(FORMATION_LORE[key] || "This formation serves the Watch according to its own discipline and mandate.")}</span>
       </button>
       </div>`;
   };
