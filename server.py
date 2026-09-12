@@ -7,9 +7,11 @@ import hashlib
 import hmac
 import http.cookies
 import json
+import logging
 import os
 import secrets
 import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -60,6 +62,10 @@ ALLOWED_ORIGIN = os.getenv("STRATEGIUM_ALLOWED_ORIGIN", "http://127.0.0.1:8787")
 SECURE_COOKIES = os.getenv("STRATEGIUM_SECURE_COOKIES", "0") == "1"
 BACKSTORY_MAX_WORDS = 400
 BACKSTORY_MAX_CHARS = 2400
+SESSION_TTL_SECONDS = int(os.getenv("STRATEGIUM_SESSION_TTL_SECONDS", str(60 * 60 * 24 * 7)))
+MAX_JSON_BODY_BYTES = 64 * 1024
+
+SECURITY_LOG = logging.getLogger("strategium.security")
 
 _LOCK = threading.RLock()
 
@@ -131,6 +137,7 @@ def _signature(body: bytes) -> str:
 
 
 def _session_value(user: dict[str, str]) -> str:
+    user = {**user, "exp": int(time.time()) + SESSION_TTL_SECONDS}
     payload = base64.urlsafe_b64encode(_json_bytes(user)).decode("ascii").rstrip("=")
     digest = hmac.new(
         SESSION_SECRET.encode("utf-8"), payload.encode("ascii"), hashlib.sha256
@@ -148,7 +155,11 @@ def _session_user(value: str) -> dict[str, str] | None:
             return None
         padded = payload + "=" * (-len(payload) % 4)
         user = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
-        return user if isinstance(user, dict) and user.get("id") else None
+        if not isinstance(user, dict) or not user.get("id"):
+            return None
+        if int(user.get("exp", 0)) <= int(time.time()):
+            return None
+        return user
     except (ValueError, TypeError, json.JSONDecodeError):
         return None
 
@@ -237,7 +248,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def _read_json(self) -> tuple[bytes, Any]:
         length = int(self.headers.get("Content-Length", "0"))
-        if length > 1_000_000:
+        if length > MAX_JSON_BODY_BYTES:
             raise ValueError("request body too large")
         body = self.rfile.read(length)
         return body, json.loads(body.decode("utf-8"))
@@ -253,6 +264,11 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         cookies = http.cookies.SimpleCookie(self.headers.get("Cookie", ""))
         morsel = cookies.get(name)
         return morsel.value if morsel else ""
+
+    def _csrf_valid(self, user: dict[str, str]) -> bool:
+        supplied = self.headers.get("X-CSRF-Token", "")
+        expected = str(user.get("csrf") or "")
+        return bool(supplied and expected and hmac.compare_digest(supplied, expected))
 
     def do_OPTIONS(self) -> None:
         self._send(HTTPStatus.NO_CONTENT, {})
@@ -390,12 +406,17 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def _get_me(self) -> None:
         user = self._cookie_user()
-        self._send(HTTPStatus.OK, {"authenticated": bool(user), "user": user})
+        self._send(HTTPStatus.OK, {"authenticated": bool(user), "user": user, "csrf": user.get("csrf") if user else None})
 
     def _set_backstory(self) -> None:
         user = self._cookie_user()
         if not user:
+            SECURITY_LOG.warning("backstory update denied: unauthenticated client=%s", self.client_address[0])
             self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return
+        if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
+            SECURITY_LOG.warning("backstory update denied: csrf/origin user=%s client=%s", user.get("id"), self.client_address[0])
+            self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
             return
         try:
             _, payload = self._read_json()
@@ -479,6 +500,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 {
                     "id": str(user["id"]),
                     "name": str(user.get("global_name") or user.get("username") or ""),
+                    "csrf": secrets.token_urlsafe(32),
                 }
             )
             secure = SECURE_COOKIES or _request_is_secure(self.headers)
