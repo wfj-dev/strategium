@@ -586,6 +586,7 @@
     width: 100%; background: #060a06; border: 1px solid var(--border); color: var(--white);
     padding: 9px 10px; font-family: 'Share Tech Mono', monospace; font-size: 13.5px; margin-bottom: 12px;
   }
+  textarea.field-input { line-height: 1.6; min-height: 180px; resize: vertical; }
   .field-input:focus { outline: 1px solid var(--green); border-color: var(--green); }
   .field-input::placeholder { color: var(--green-faint); }
 
@@ -634,7 +635,12 @@
 
   .modal-divider { text-align: center; color: var(--gold-dim); font-size: 12px; margin: 20px 0; letter-spacing: 0.5em; }
 
-  .modal-backstory { font-size: 14px; line-height: 1.7; color: var(--green); margin: 0; text-align: justify; }
+  .modal-backstory {
+    color: var(--green); font-size: 14px; line-height: 1.8;
+    max-width: 68ch;
+  }
+  .modal-backstory p { margin: 0 0 1.15em; }
+  .modal-backstory p:last-child { margin-bottom: 0; }
   .dropcap {
     float: left; font-family: 'Cinzel', serif; font-weight: 700; font-size: 40px; line-height: 0.85;
     color: var(--gold); padding: 3px 8px 0 0;
@@ -1754,8 +1760,24 @@ function displayName(name) {
 }
 
 function dropcapHtml(text) {
-  const escaped = escapeHtml(text);
-  return `<span class="dropcap">${escaped.charAt(0)}</span>${escaped.slice(1)}`;
+  const characters = Array.from(text);
+  return `<span class="dropcap">${escapeHtml(characters[0] || "")}</span>${escapeHtml(characters.slice(1).join("")).replaceAll("\n", "<br>")}`;
+}
+
+function backstoryHtml(text) {
+  return String(text)
+    .replaceAll("\r\n", "\n")
+    .replaceAll("\r", "\n")
+    .trim()
+    .split(/\n\s*\n/)
+    .filter(Boolean)
+    .map((paragraph, index) => {
+      const content = index === 0
+        ? dropcapHtml(paragraph)
+        : escapeHtml(paragraph).replaceAll("\n", "<br>");
+      return `<p>${content}</p>`;
+    })
+    .join("");
 }
 
 function renderMemberModalContent(m, isEditing = false) {
@@ -1789,7 +1811,7 @@ function renderMemberModalContent(m, isEditing = false) {
     `;
   } else {
     if (m.backstory) {
-      backstorySection += `<div class="modal-divider">&#10086;</div><p class="modal-backstory">${dropcapHtml(m.backstory)}</p>`;
+      backstorySection += `<div class="modal-divider">&#10086;</div><div class="modal-backstory">${backstoryHtml(m.backstory)}</div>`;
     }
     if (canEdit) {
       backstorySection += `
