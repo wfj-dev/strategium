@@ -10,14 +10,13 @@ import json
 import os
 import secrets
 import threading
-import urllib.parse
 import urllib.error
+import urllib.parse
 import urllib.request
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-
 
 ROOT = Path(__file__).resolve().parent
 
@@ -32,7 +31,9 @@ def _load_dotenv(path: Path) -> None:
                 continue
             key, val = line.split("=", 1)
             key, val = key.strip(), val.strip()
-            if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+            if (val.startswith('"') and val.endswith('"')) or (
+                val.startswith("'") and val.endswith("'")
+            ):
                 val = val[1:-1]
             if val and not os.environ.get(key):
                 os.environ[key] = val
@@ -53,7 +54,9 @@ DISCORD_CLIENT_ID = os.getenv("DISCORD_OAUTH_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_OAUTH_CLIENT_SECRET", "")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_OAUTH_REDIRECT_URI", "")
 DISCORD_GUILD_ID = os.getenv("DISCORD_GUILD_ID", "")
-ALLOWED_ORIGIN = os.getenv("STRATEGIUM_ALLOWED_ORIGIN", "http://127.0.0.1:8787").rstrip("/")
+ALLOWED_ORIGIN = os.getenv("STRATEGIUM_ALLOWED_ORIGIN", "http://127.0.0.1:8787").rstrip(
+    "/"
+)
 SECURE_COOKIES = os.getenv("STRATEGIUM_SECURE_COOKIES", "0") == "1"
 BACKSTORY_MAX_WORDS = 400
 BACKSTORY_MAX_CHARS = 2400
@@ -93,9 +96,7 @@ def _request_is_secure(headers: Any) -> bool:
         first = forwarded.split(",", 1)[0].strip()
         if first == "https":
             return True
-    if (headers.get("X-Forwarded-Ssl") or "").lower() == "on":
-        return True
-    return False
+    return (headers.get("X-Forwarded-Ssl") or "").lower() == "on"
 
 
 def _cookie_flags(secure: bool) -> str:
@@ -115,7 +116,9 @@ def _load_json(path: Path, default: Any) -> Any:
 def _save_json(path: Path, value: Any) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     temporary.replace(path)
 
 
@@ -129,14 +132,18 @@ def _signature(body: bytes) -> str:
 
 def _session_value(user: dict[str, str]) -> str:
     payload = base64.urlsafe_b64encode(_json_bytes(user)).decode("ascii").rstrip("=")
-    digest = hmac.new(SESSION_SECRET.encode("utf-8"), payload.encode("ascii"), hashlib.sha256).hexdigest()
+    digest = hmac.new(
+        SESSION_SECRET.encode("utf-8"), payload.encode("ascii"), hashlib.sha256
+    ).hexdigest()
     return f"{payload}.{digest}"
 
 
 def _session_user(value: str) -> dict[str, str] | None:
     try:
         payload, supplied = value.rsplit(".", 1)
-        expected = hmac.new(SESSION_SECRET.encode("utf-8"), payload.encode("ascii"), hashlib.sha256).hexdigest()
+        expected = hmac.new(
+            SESSION_SECRET.encode("utf-8"), payload.encode("ascii"), hashlib.sha256
+        ).hexdigest()
         if not hmac.compare_digest(supplied, expected):
             return None
         padded = payload + "=" * (-len(payload) % 4)
@@ -146,9 +153,13 @@ def _session_user(value: str) -> dict[str, str] | None:
         return None
 
 
-def _discord_request(path: str, method: str = "GET", form: dict[str, str] | None = None, token: str = "") -> Any:
+def _discord_request(
+    path: str, method: str = "GET", form: dict[str, str] | None = None, token: str = ""
+) -> Any:
     url = "https://discord.com/api/v10" + path
-    body = urllib.parse.urlencode(form or {}).encode("utf-8") if form is not None else None
+    body = (
+        urllib.parse.urlencode(form or {}).encode("utf-8") if form is not None else None
+    )
     headers = {
         "Accept": "application/json",
         "User-Agent": "DiscordBot (https://github.com/wfj-dev/strategium, 1.0)",
@@ -163,7 +174,9 @@ def _discord_request(path: str, method: str = "GET", form: dict[str, str] | None
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         error_body = error.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Discord API {error.code} {error.reason}: {error_body}") from error
+        raise RuntimeError(
+            f"Discord API {error.code} {error.reason}: {error_body}"
+        ) from error
 
 
 def _validate_members(payload: Any) -> list[dict[str, Any]]:
@@ -171,7 +184,11 @@ def _validate_members(payload: Any) -> list[dict[str, Any]]:
         raise ValueError("members must be an array")
     members = []
     for member in payload["members"]:
-        if not isinstance(member, dict) or not member.get("id") or not member.get("name"):
+        if (
+            not isinstance(member, dict)
+            or not member.get("id")
+            or not member.get("name")
+        ):
             continue
         members.append(member)
     return members
@@ -191,7 +208,9 @@ class StrategiumHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         return
 
-    def _send(self, status: int, payload: Any, headers: dict[str, str] | None = None) -> None:
+    def _send(
+        self, status: int, payload: Any, headers: dict[str, str] | None = None
+    ) -> None:
         body = _json_bytes(payload)
         request_origin = self.headers.get("Origin", "")
         if request_origin and not _origin_matches(request_origin, ALLOWED_ORIGIN):
@@ -204,8 +223,13 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if cors_origin:
             self.send_header("Access-Control-Allow-Origin", cors_origin)
             self.send_header("Access-Control-Allow-Credentials", "true")
-            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Strategium-Signature")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+            self.send_header(
+                "Access-Control-Allow-Headers",
+                "Authorization, Content-Type, X-Strategium-Signature",
+            )
+            self.send_header(
+                "Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS"
+            )
         for key, value in (headers or {}).items():
             self.send_header(key, value)
         self.end_headers()
@@ -254,7 +278,13 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/auth/discord/start":
             self._discord_start()
         elif parsed.path == "/api/auth/logout":
-            self._send(HTTPStatus.OK, {"ok": True}, {"Set-Cookie": f"strategium_session=; Max-Age=0{_cookie_flags(SECURE_COOKIES or _request_is_secure(self.headers))}"})
+            self._send(
+                HTTPStatus.OK,
+                {"ok": True},
+                {
+                    "Set-Cookie": f"strategium_session=; Max-Age=0{_cookie_flags(SECURE_COOKIES or _request_is_secure(self.headers))}"
+                },
+            )
         elif parsed.path == "/api/auth/discord/callback":
             self._discord_callback(urllib.parse.parse_qs(parsed.query))
         elif parsed.path == "/api/me":
@@ -292,7 +322,9 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         merged = []
         for member in members:
             item = dict(member)
-            item["backstory"] = (backstories.get(str(member.get("id"))) or {}).get("backstory")
+            item["backstory"] = (backstories.get(str(member.get("id"))) or {}).get(
+                "backstory"
+            )
             merged.append(item)
         return merged
 
@@ -305,7 +337,9 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         members = []
         for member in snapshot.get("members", []):
             item = dict(member)
-            item["backstory"] = (backstories.get(str(member.get("id"))) or {}).get("backstory")
+            item["backstory"] = (backstories.get(str(member.get("id"))) or {}).get(
+                "backstory"
+            )
             members.append(item)
         return {
             "members": members,
@@ -315,7 +349,9 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def _receive_snapshot(self) -> None:
         if not BOT_SHARED_SECRET:
-            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "bot secret not configured"})
+            self._send(
+                HTTPStatus.SERVICE_UNAVAILABLE, {"error": "bot secret not configured"}
+            )
             return
         try:
             body, payload = self._read_json()
@@ -327,8 +363,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             snapshot = {
                 "generatedAt": payload.get("generatedAt"),
                 "members": members,
-                "killTeams": payload.get("killTeams") if isinstance(payload.get("killTeams"), dict) else {},
-                "directiveStats": payload.get("directiveStats") if isinstance(payload.get("directiveStats"), dict) else {},
+                "killTeams": payload.get("killTeams")
+                if isinstance(payload.get("killTeams"), dict)
+                else {},
+                "directiveStats": payload.get("directiveStats")
+                if isinstance(payload.get("directiveStats"), dict)
+                else {},
             }
             with _LOCK:
                 _save_json(ROSTER_PATH, snapshot)
@@ -343,7 +383,10 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return
         with _LOCK:
             backstories = _load_json(BACKSTORIES_PATH, {})
-        self._send(HTTPStatus.OK, {"backstory": (backstories.get(user["id"]) or {}).get("backstory", "")})
+        self._send(
+            HTTPStatus.OK,
+            {"backstory": (backstories.get(user["id"]) or {}).get("backstory", "")},
+        )
 
     def _get_me(self) -> None:
         user = self._cookie_user()
@@ -377,16 +420,20 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def _discord_start(self) -> None:
         if not DISCORD_CLIENT_ID or not DISCORD_REDIRECT_URI or not SESSION_SECRET:
-            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "oauth_not_configured"})
+            self._send(
+                HTTPStatus.SERVICE_UNAVAILABLE, {"error": "oauth_not_configured"}
+            )
             return
         state = secrets.token_urlsafe(24)
-        query = urllib.parse.urlencode({
-            "client_id": DISCORD_CLIENT_ID,
-            "response_type": "code",
-            "redirect_uri": DISCORD_REDIRECT_URI,
-            "scope": "identify guilds",
-            "state": state,
-        })
+        query = urllib.parse.urlencode(
+            {
+                "client_id": DISCORD_CLIENT_ID,
+                "response_type": "code",
+                "redirect_uri": DISCORD_REDIRECT_URI,
+                "scope": "identify guilds",
+                "state": state,
+            }
+        )
         secure = SECURE_COOKIES or _request_is_secure(self.headers)
         headers = {
             "Location": f"https://discord.com/oauth2/authorize?{query}",
@@ -397,27 +444,63 @@ class StrategiumHandler(BaseHTTPRequestHandler):
     def _discord_callback(self, query: dict[str, list[str]]) -> None:
         code = (query.get("code") or [""])[0]
         state = (query.get("state") or [""])[0]
-        if not code or not state or not hmac.compare_digest(state, self._cookie_value("strategium_oauth_state")) or not DISCORD_CLIENT_ID or not DISCORD_CLIENT_SECRET or not DISCORD_REDIRECT_URI:
+        if (
+            not code
+            or not state
+            or not hmac.compare_digest(
+                state, self._cookie_value("strategium_oauth_state")
+            )
+            or not DISCORD_CLIENT_ID
+            or not DISCORD_CLIENT_SECRET
+            or not DISCORD_REDIRECT_URI
+        ):
             self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_oauth_callback"})
             return
         try:
-            token = _discord_request("/oauth2/token", method="POST", form={
-                "client_id": DISCORD_CLIENT_ID,
-                "client_secret": DISCORD_CLIENT_SECRET,
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": DISCORD_REDIRECT_URI,
-            })
+            token = _discord_request(
+                "/oauth2/token",
+                method="POST",
+                form={
+                    "client_id": DISCORD_CLIENT_ID,
+                    "client_secret": DISCORD_CLIENT_SECRET,
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": DISCORD_REDIRECT_URI,
+                },
+            )
             user = _discord_request("/users/@me", token=token["access_token"])
             guilds = _discord_request("/users/@me/guilds", token=token["access_token"])
-            if DISCORD_GUILD_ID and not any(str(guild.get("id")) == DISCORD_GUILD_ID for guild in guilds):
+            if DISCORD_GUILD_ID and not any(
+                str(guild.get("id")) == DISCORD_GUILD_ID for guild in guilds
+            ):
                 self._send(HTTPStatus.FORBIDDEN, {"error": "guild_membership_required"})
                 return
-            session = _session_value({"id": str(user["id"]), "name": str(user.get("global_name") or user.get("username") or "")})
+            session = _session_value(
+                {
+                    "id": str(user["id"]),
+                    "name": str(user.get("global_name") or user.get("username") or ""),
+                }
+            )
             secure = SECURE_COOKIES or _request_is_secure(self.headers)
-            self._send(HTTPStatus.FOUND, {"ok": True}, {"Location": "/", "Set-Cookie": f"strategium_session={session}{_cookie_flags(secure)}"})
-        except (KeyError, OSError, json.JSONDecodeError, urllib.error.URLError, RuntimeError) as error:
-            self._send(HTTPStatus.BAD_GATEWAY, {"error": "oauth_exchange_failed", "detail": str(error)})
+            self._send(
+                HTTPStatus.FOUND,
+                {"ok": True},
+                {
+                    "Location": "/",
+                    "Set-Cookie": f"strategium_session={session}{_cookie_flags(secure)}",
+                },
+            )
+        except (
+            KeyError,
+            OSError,
+            json.JSONDecodeError,
+            urllib.error.URLError,
+            RuntimeError,
+        ) as error:
+            self._send(
+                HTTPStatus.BAD_GATEWAY,
+                {"error": "oauth_exchange_failed", "detail": str(error)},
+            )
 
 
 def main() -> None:
@@ -425,7 +508,11 @@ def main() -> None:
         raise SystemExit("STRATEGIUM_BOT_SHARED_SECRET is required")
     if not SESSION_SECRET:
         raise SystemExit("STRATEGIUM_SESSION_SECRET is required")
-    if not ALLOWED_ORIGIN or ALLOWED_ORIGIN == "http://127.0.0.1:8787" and HOST != "127.0.0.1":
+    if (
+        not ALLOWED_ORIGIN
+        or ALLOWED_ORIGIN == "http://127.0.0.1:8787"
+        and HOST != "127.0.0.1"
+    ):
         pass
     server = ThreadingHTTPServer((HOST, PORT), StrategiumHandler)
     print(f"Strategium backend listening on http://{HOST}:{PORT}")
