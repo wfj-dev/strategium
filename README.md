@@ -6,7 +6,20 @@ A single-page org chart web app for the Watch Fortress Jericho roster. The curre
 
 Open `jericho-strategium.html` directly in a browser.
 
-No build step or package install is required yet.
+For the live local app with the backend:
+
+1. Run the one-time local secret setup script:
+```bash
+./setup-secrets.sh
+```
+*(Optionally pass your Discord token: `./setup-secrets.sh <DISCORD_TOKEN>`)*
+
+2. Start the Strategium backend:
+```bash
+python3 server.py
+```
+
+Then open `http://127.0.0.1:8787/`. The backend automatically loads `.env`, serves the page, receives signed bot snapshots, serves merged roster data, and owns authenticated backstory edits.
 
 ## Live Roster Data
 
@@ -52,7 +65,9 @@ Important notes:
   - `1000 AAR + 10 days` earns `0 plasteel studs` and `17.9 Long Vigil years`; the Marine is partway to the first stud.
   - `3000 AAR + 365 days` earns `7 plasteel studs`, `1 auramite stud`, and `187.5 Long Vigil years`; the AAR threshold is the limiting factor.
   - `6400 AAR + 224 days` earns `16 plasteel studs`, `4 auramite studs`, and `400 Long Vigil years` after the global cap.
-- Do not call a Discord bot token or other secret directly from the browser. Serve roster JSON from a backend endpoint instead.
+- Do not call a Discord bot token or other secret directly from the browser. The bot publishes signed snapshots to `/internal/roster/snapshot`; this backend stores the snapshot and serves `/api/roster`.
+- `backstory` is the only user-editable field. Discord roles and bot-managed data remain authoritative for all other fields.
+- For production, put the backend behind HTTPS, set `STRATEGIUM_ALLOWED_ORIGIN` to the exact site origin, set `STRATEGIUM_SECURE_COOKIES=1`, and keep all secrets in the host secret manager.
 
 ## Repository
 

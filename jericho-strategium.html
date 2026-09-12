@@ -61,19 +61,24 @@
   }
 
   .header-right { display: flex; align-items: center; gap: 10px; }
-  .status-badge {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 10.5px; padding: 6px 10px; border: 1px solid var(--border-dim);
-    color: var(--green-dim); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em;
+  .auth-badge {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; padding: 5px 10px; border: 1px solid var(--border-dim);
+    color: var(--green); text-transform: uppercase; letter-spacing: 0.05em;
+    background: rgba(79,214,122,0.03);
   }
-  .status-badge::before {
-    content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green);
-    box-shadow: 0 0 6px var(--green); animation: pulse 2.2s ease-in-out infinite;
+  .auth-badge-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 6px var(--green);
   }
-  .status-badge.status-live::before { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
-  .status-badge.status-error::before { background: var(--red); box-shadow: 0 0 6px var(--red); animation: none; }
-  .status-badge.status-error { color: var(--red); border-color: var(--red-dim); }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .auth-btn {
+    background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
+    padding: 5px 12px; cursor: pointer; font-family: inherit; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.15s;
+  }
+  .auth-btn:hover { background: rgba(207,174,104,0.1); border-color: var(--gold); }
+  .auth-btn-logout { border-color: var(--border-dim); color: var(--green-dim); font-size: 10px; padding: 3px 7px; margin-left: 4px; }
+  .auth-btn-logout:hover { border-color: var(--red-dim); color: var(--red); background: rgba(224,92,79,0.08); }
 
   .icon-btn {
     background: transparent; border: 1px solid var(--border-dim); color: var(--green-dim);
@@ -276,6 +281,7 @@
   }
 
   .plate {
+    position: relative;
     background: var(--panel);
     border: 1px solid var(--border-dim);
     padding: 10px 14px 12px;
@@ -298,8 +304,38 @@
   .plate.accent-red { border-left: 3px solid var(--green); }
   .plate.accent-red .plate-rank { color: var(--green); }
 
-  .plate.vacant { border-style: dashed; }
+  .plate.vacant { border-style: dashed; opacity: 0.55; }
   .plate.vacant .plate-name { color: var(--green-faint); font-style: italic; font-weight: 400; }
+
+  .company-plate.unit-unformed, .formation-plate.unit-unformed {
+    border-style: dashed;
+    border-color: rgba(79, 214, 122, 0.12);
+    background: rgba(6, 10, 6, 0.4);
+    opacity: 0.5;
+    filter: grayscale(0.65);
+  }
+  .company-plate.unit-unformed:hover, .formation-plate.unit-unformed:hover {
+    opacity: 0.85;
+    filter: none;
+    border-style: solid;
+  }
+  .unit-unformed-tag {
+    font-size: 9.5px;
+    color: var(--green-faint);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-style: italic;
+  }
+  .unit-dormant-banner {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(224, 92, 79, 0.04); border: 1px dashed var(--border-dim);
+    padding: 12px 18px; margin: 10px auto 28px; font-size: 11.5px;
+    letter-spacing: 0.06em; color: var(--green-dim); text-transform: uppercase;
+    max-width: 680px; text-align: center;
+  }
+  .unit-dormant-tag {
+    color: var(--gold-dim); border: 1px solid var(--gold-dim); padding: 1px 6px; font-weight: 700;
+  }
 
   .plate.size-lg { min-width: 240px; padding: 16px 20px 18px; }
   .plate.size-lg .plate-name { font-size: 19px; }
@@ -424,6 +460,34 @@
 
   .tier-killteam-lead { margin-bottom: 30px; }
 
+  .formation-directive-stat {
+    display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+    background: rgba(207,174,104,0.05); border: 1px solid var(--gold-dim);
+    padding: 8px 16px; margin: 0 auto 24px; font-size: 11.5px;
+    letter-spacing: 0.05em; color: var(--gold); text-transform: uppercase;
+    max-width: 680px; box-shadow: inset 0 0 15px rgba(207,174,104,0.05);
+  }
+  .directive-tier-tag {
+    background: #141b14; border: 1px solid var(--gold); color: var(--gold);
+    font-weight: 700; font-size: 10px; padding: 2px 7px; border-radius: 2px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .killteam-plate-renown {
+    font-size: 9.5px; color: var(--gold-dim); margin-top: 2px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .directive-tier-badge {
+    color: var(--gold); font-weight: 700; font-size: 9px;
+    border: 1px solid rgba(207,174,104,0.4); padding: 1px 4px; border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .killteam-header { margin-bottom: 24px; text-align: center; }
+  .killteam-header-title {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px; letter-spacing: 0.03em;
+    text-transform: uppercase; color: var(--white); margin: 0 0 4px;
+  }
+  .killteam-header-sub { font-size: 11.5px; color: var(--green-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+
   .roster-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
   .roster-table th {
     text-align: left; font-size: 10.5px; letter-spacing: 0.06em;
@@ -499,6 +563,24 @@
     text-transform: uppercase; color: var(--gold); margin: 0 0 14px;
   }
 
+  .modal-actions {
+    display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 18px;
+  }
+  .btn-dossier-action {
+    background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
+    padding: 6px 14px; font-family: inherit; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-dossier-action:hover { background: rgba(207,174,104,0.12); border-color: var(--gold); }
+  .btn-dossier-cancel {
+    border-color: var(--border-dim); color: var(--green-dim);
+  }
+  .btn-dossier-cancel:hover { border-color: var(--green-dim); color: var(--white); background: rgba(79,214,122,0.05); }
+
+  .backstory-edit-container {
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-dim);
+  }
+
   .field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold-dim); margin-bottom: 6px; display: block; }
   .field-input {
     width: 100%; background: #060a06; border: 1px solid var(--border); color: var(--white);
@@ -534,11 +616,20 @@
   .search-result-meta { font-size: 11px; color: var(--green-dim); }
 
   .modal-rank { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold); margin-bottom: 6px; }
+  .modal-heading { position: relative; padding-top: 20px; min-height: 78px; }
+  .modal-studs { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; }
+  .modal-studs-label { color: var(--gold); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 2px; }
+  .modal-studs .stud-display { justify-content: center; }
   .modal-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 23px; color: var(--white); margin-bottom: 14px; }
   .modal-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); color: var(--green-dim); }
   .modal-row span:last-child { color: var(--white); }
   .modal-stats { margin-top: 16px; border-top: 1px solid var(--border-dim); padding-top: 10px; }
   .modal-stats-label { color: var(--gold); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+  .service-years-value { color: var(--white); font-size: 14px; letter-spacing: 0.04em; }
+  .stud-display { display: flex; align-items: center; gap: 7px; min-height: 28px; }
+  .stud-pip { display: inline-flex; width: 23px; height: 23px; align-items: center; justify-content: center; font-size: 20px; line-height: 1; }
+  .stud-pip.plasteel { color: #b9c7c9; text-shadow: 0 0 7px rgba(185,199,201,0.85); }
+  .stud-pip.auramite { color: #f1c75b; text-shadow: 0 0 5px #f1c75b, 0 0 13px rgba(241,199,91,0.8); transform: scale(1.08); }
   .modal-vigil-tag { margin-top: 10px; font-size: 12px; font-style: italic; color: var(--green-dim); }
 
   .modal-divider { text-align: center; color: var(--gold-dim); font-size: 12px; margin: 20px 0; letter-spacing: 0.5em; }
@@ -587,9 +678,8 @@
         </div>
       </div>
       <div class="header-right">
-        <span id="status-badge" class="status-badge">Loading&hellip;</span>
+        <div id="auth-container"></div>
         <button id="search-btn" class="icon-btn" title="Search the roster" aria-label="Search">&#8981;</button>
-        <button id="gear-btn" class="icon-btn" title="Data source settings" aria-label="Settings">&#9881;</button>
       </div>
     </header>
 
@@ -612,29 +702,6 @@
       <h2 class="overlay-title">Search // Roster</h2>
       <input id="search-input" class="field-input" type="text" placeholder="name, rank, or chapter of origin..." autocomplete="off">
       <div id="search-results" class="search-results"></div>
-    </div>
-  </div>
-
-  <div id="settings-overlay" class="overlay">
-    <div class="overlay-panel">
-      <button id="settings-close-btn" class="overlay-close" aria-label="Close">✕</button>
-      <h2 class="overlay-title">Data Source</h2>
-      <label class="field-label" for="settings-url-input">Live endpoint URL (optional)</label>
-      <input id="settings-url-input" class="field-input" type="url" placeholder="https://your-bot.example.com/api/roster">
-      <button id="settings-save-btn" class="btn-primary" type="button">Save &amp; reconnect</button>
-      <div id="settings-status"></div>
-      <div class="settings-note">
-        Leave blank to browse sample data. To go live, point this at any endpoint
-        (your bot's API, or a scheduled Discord-role export) that returns
-        <code>{ "members": [...] }</code>, where each member has
-        <code>id</code>, <code>name</code>, <code>chapter</code>, <code>rank</code>,
-        <code>company</code> (1–5 or null), <code>killTeam</code> (e.g. <code>"3-2"</code> or null),
-        and optional <code>formation</code>, <code>title</code>, <code>vigil</code>, and
-        <code>backstory</code> (free text, up to ~400 words), and optional service fields
-        <code>serverJoinedAt</code> and <code>aarCount</code>. The display uses continuous progress toward each paired 400 AAR and 14 server-day threshold, awards one plasteel stud per completed threshold, and one auramite stud for every four plasteel studs. Rank values must match this
-        page's rank keys (view source for the full list). A bot token should never be
-        called directly from a browser — have your bot serve this JSON itself.
-      </div>
     </div>
   </div>
 
@@ -678,13 +745,14 @@
 
 const RANK_LABELS = {
   watch_master: "Watch Master",
-  forgemaster: "Forgemaster",
+  forgemaster: "Forge Master",
   void_warden: "Void Warden",
   chief_apothecary: "Chief Apothecary",
   high_chaplain: "High Chaplain",
   blade_master: "Blade Master",
-  huntmaster: "Huntmaster",
+  huntmaster: "Hunt Master",
   venerable_dreadnought: "Venerable Dreadnought",
+  honored_dreadnought: "Honored Dreadnought",
   watch_captain: "Watch Captain",
   watch_lieutenant: "Watch Lieutenant",
   first_blade: "First Blade",
@@ -703,10 +771,9 @@ const RANK_LABELS = {
 };
 
 /* The six specialist Formations. Independent of the five Watch Companies,
-   each led directly by its own High Command officer — Forgemaster,
-   Void Warden, High Chaplain, Chief Apothecary, Blade Master, Huntmaster. */
+   each led directly by its own High Command officer. */
 const FORMATIONS = {
-  armory: { name: "Armory", lead: "forgemaster", ranks: ["techmarine", "dreadnought"] },
+  armory: { name: "Armory", lead: "forgemaster", ranks: ["techmarine", "dreadnought", "honored_dreadnought"] },
   librarius: { name: "Librarius", lead: "void_warden", ranks: ["librarian"] },
   reclusiam: { name: "Reclusiam", lead: "high_chaplain", ranks: ["chaplain"] },
   apothecarion: { name: "Apothecarion", lead: "chief_apothecary", ranks: ["apothecary"] },
@@ -1036,32 +1103,22 @@ const state = {
   killTeamId: null,
   formationId: null,
   members: [],
+  killTeams: {},
+  directiveStats: { companies: {}, killTeams: {}, formations: {}, fortress: {} },
   dataStatus: "sample",  // 'sample' | 'live' | 'error'
-  dataSourceUrl: ""
+  dataSourceUrl: "",
+  auth: { authenticated: false, user: null }
 };
+
+const DEFAULT_DATA_SOURCE_URL = window.location.protocol.startsWith("http")
+  ? `${window.location.origin}/api/roster` : "";
 
 function hasStorage() {
   return typeof window !== "undefined" && !!window.storage;
 }
 
 async function loadSavedSettings() {
-  if (!hasStorage()) return;
-  try {
-    const res = await window.storage.get("jericho-data-source-url");
-    if (res && res.value) state.dataSourceUrl = res.value;
-  } catch (e) {
-    /* no saved value yet — fine */
-  }
-}
-
-async function saveDataSourceUrl(url) {
-  state.dataSourceUrl = url;
-  if (!hasStorage()) return;
-  try {
-    await window.storage.set("jericho-data-source-url", url);
-  } catch (e) {
-    console.error("Could not persist data source url", e);
-  }
+  state.dataSourceUrl = DEFAULT_DATA_SOURCE_URL;
 }
 
 async function loadData() {
@@ -1072,6 +1129,8 @@ async function loadData() {
       const json = await resp.json();
       if (!json || !Array.isArray(json.members)) throw new Error("bad shape");
       state.members = json.members;
+      state.killTeams = json.killTeams || state.killTeams;
+      state.directiveStats = json.directiveStats || state.directiveStats;
       state.dataStatus = "live";
       return;
     } catch (e) {
@@ -1081,6 +1140,66 @@ async function loadData() {
   }
   state.members = generateSampleRoster();
   if (state.dataStatus !== "error") state.dataStatus = "sample";
+}
+
+async function loadAuth() {
+  if (!window.location.protocol.startsWith("http")) return;
+  try {
+    const resp = await fetch(`${window.location.origin}/api/me`, { credentials: "include" });
+    if (resp.ok) state.auth = await resp.json();
+  } catch (e) {
+    state.auth = { authenticated: false, user: null };
+  }
+  renderAuthButton();
+}
+
+function renderAuthButton() {
+  const container = document.getElementById("auth-container");
+  if (!container) return;
+  if (state.auth && state.auth.authenticated && state.auth.user) {
+    const name = state.auth.user.name || "Authenticated";
+    container.innerHTML = `
+      <div class="auth-badge">
+        <span class="auth-badge-dot"></span>
+        <span>${escapeHtml(name)}</span>
+        <button id="auth-logout-btn" class="auth-btn auth-btn-logout" title="Log out" type="button">Logout</button>
+      </div>`;
+    const logoutBtn = document.getElementById("auth-logout-btn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        fetch(apiUrl("/api/auth/logout"), { credentials: "include" }).finally(() => {
+          state.auth = { authenticated: false, user: null };
+          renderAuthButton();
+        });
+      });
+    }
+  } else {
+    container.innerHTML = `<button id="auth-login-btn" class="auth-btn" type="button">Login with Discord</button>`;
+    const loginBtn = document.getElementById("auth-login-btn");
+    if (loginBtn) {
+      loginBtn.addEventListener("click", startDiscordLogin);
+    }
+  }
+}
+
+function apiUrl(path) {
+  return `${window.location.origin}${path}`;
+}
+
+function startDiscordLogin() {
+  window.location.assign(apiUrl("/api/auth/discord/start"));
+}
+
+async function saveBackstory(memberId, text) {
+  const resp = await fetch(apiUrl("/api/me/backstory"), {
+    method: "PATCH", credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ backstory: text })
+  });
+  const payload = await resp.json();
+  if (!resp.ok) throw new Error(payload.error || "Could not save backstory.");
+  const member = findMember(memberId);
+  if (member) member.backstory = payload.backstory;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1094,21 +1213,53 @@ function companyCommand(companyId) {
 }
 
 function killTeamsForCompany(companyId) {
+  const companyMembers = state.members.filter(m => m.company === companyId);
+  const catalog = state.killTeams && state.killTeams[String(companyId)];
+  if (Array.isArray(catalog) && catalog.length > 0) {
+    const teams = [];
+    catalog.forEach((team, index) => {
+      const roster = companyMembers.filter(m => m.killTeam === team.id || m.killTeamName === team.name || m.killTeam === team.name);
+      if (roster.length === 0) return; // Omit completely empty kill teams
+      const lead = roster.find(m => KILL_TEAM_LEAD_RANKS.includes(m.rank)) || null;
+      teams.push({
+        killTeam: team.id,
+        slot: index + 1,
+        name: team.name,
+        lead,
+        roster,
+        count: roster.length
+      });
+    });
+    return teams;
+  }
   const teams = [];
   for (let slot = 1; slot <= 4; slot++) {
     const killTeam = `${companyId}-${slot}`;
-    const lead = state.members.find(m => m.killTeam === killTeam && KILL_TEAM_LEAD_RANKS.includes(m.rank));
-    const roster = state.members.filter(m => m.killTeam === killTeam);
-    teams.push({ killTeam, slot, lead, roster, count: roster.length });
+    const roster = companyMembers.filter(m => m.killTeam === killTeam);
+    if (roster.length === 0) continue; // Omit completely empty kill teams
+    const lead = roster.find(m => KILL_TEAM_LEAD_RANKS.includes(m.rank)) || null;
+    const namedMember = roster.find(m => m.killTeamName);
+    teams.push({
+      killTeam,
+      slot,
+      name: namedMember ? namedMember.killTeamName : `Kill Team ${slot}`,
+      lead,
+      roster,
+      count: roster.length
+    });
   }
   return teams;
 }
 
 function killTeamDetail(companyId, killTeam) {
-  const roster = state.members.filter(m => m.killTeam === killTeam);
+  const catalog = (state.killTeams && state.killTeams[String(companyId)]) || [];
+  const catalogEntry = catalog.find(t => t.id === killTeam || t.name === killTeam);
+  const targetName = catalogEntry ? catalogEntry.name : killTeam;
+  const roster = state.members.filter(m => m.company === companyId && (m.killTeam === killTeam || m.killTeamName === targetName || m.killTeam === targetName));
   const lead = roster.find(m => KILL_TEAM_LEAD_RANKS.includes(m.rank)) || null;
   const rest = roster.filter(m => m !== lead);
-  return { lead, rest };
+  const name = catalogEntry ? catalogEntry.name : (roster.find(m => m.killTeamName)?.killTeamName || killTeam);
+  return { lead, rest, name };
 }
 
 function formationMembers(key) {
@@ -1131,23 +1282,9 @@ function escapeHtml(str) {
 }
 
 function serviceMetrics(member) {
-  if (!member) return "";
-  const numericValue = value => value === null || value === undefined || value === ""
-    ? null : Number.isFinite(Number(value)) ? Number(value) : null;
-  const joinedAt = member.serverJoinedAt || member.discordJoinedAt || member.joinedAt;
-  const joinedMs = joinedAt ? Date.parse(joinedAt) : NaN;
-  const calculatedDays = Number.isFinite(joinedMs) && joinedMs <= Date.now()
-    ? Math.max(0, Math.floor((Date.now() - joinedMs) / (24 * 60 * 60 * 1000))) : null;
-  const serverDays = numericValue(member.serverDays ?? calculatedDays);
-  const aarValue = member.aarCount ?? member.aar;
-  const aar = numericValue(aarValue);
-  const pairedInputsAvailable = aar !== null && serverDays !== null;
-  const pairedProgress = pairedInputsAvailable
-    ? Math.min(aar / 400, serverDays / 14) : null;
-  const plasteelStuds = pairedProgress !== null ? Math.floor(pairedProgress) : null;
-  const auramiteStuds = plasteelStuds !== null ? Math.floor(plasteelStuds / 4) : null;
-  const longVigilYears = pairedProgress !== null ? Math.min(pairedProgress * 25, 400) : null;
-  return { aar, serverDays, plasteelStuds, auramiteStuds, longVigilYears };
+  if (!member) return { vigilYears: null, studsPips: "—" };
+  const vigilYears = Number.isFinite(Number(member.vigilYears)) ? Number(member.vigilYears) : null;
+  return { vigilYears, studsPips: member.serviceStudPips || "—" };
 }
 
 function imperialDate(year) {
@@ -1157,25 +1294,33 @@ function imperialDate(year) {
 }
 
 function watchEntryLabel(member) {
-  const { longVigilYears } = serviceMetrics(member);
-  if (longVigilYears === null) return "Unrecorded";
-  return imperialDate(Math.max(1, Math.floor(CURRENT_IMPERIAL_YEAR - longVigilYears)));
+  const metrics = serviceMetrics(member);
+  if (metrics.vigilYears === null || !member.serverJoinedAt) return "Unrecorded";
+  const joinedMs = Date.parse(member.serverJoinedAt);
+  if (!Number.isFinite(joinedMs)) return "Unrecorded";
+  return imperialDate(Math.max(1, CURRENT_IMPERIAL_YEAR - Math.floor(metrics.vigilYears)));
 }
 
 function serviceRecord(member) {
   const metrics = serviceMetrics(member);
-  if (!member || !metrics) return "";
-  const { aar, serverDays, plasteelStuds, auramiteStuds, longVigilYears } = metrics;
-  const details = [];
-  if (longVigilYears !== null) details.push(`${longVigilYears.toFixed(1)} Long Vigil years`);
-  if (aar !== null) details.push(`${aar} AAR${aar === 1 ? "" : "s"}`);
-  if (serverDays !== null) details.push(`${serverDays} server day${serverDays === 1 ? "" : "s"}`);
-  if (plasteelStuds !== null) details.push(`${plasteelStuds} plasteel stud${plasteelStuds === 1 ? "" : "s"}`);
-  if (auramiteStuds !== null && auramiteStuds > 0) details.push(`${auramiteStuds} auramite stud${auramiteStuds === 1 ? "" : "s"}`);
-  return details.length ? details.join(" | ") : "Vigil record pending";
+  return metrics.vigilYears === null ? "Vigil record pending" : `${metrics.vigilYears} years given to the Long Vigil`;
+}
+
+function vigilEntryRecord(member) {
+  const entry = watchEntryLabel(member);
+  return entry === "Unrecorded" ? "Vigil record pending" : `Joined the Long Vigil ${entry}`;
+}
+
+function serviceStudsHtml(member) {
+  const pips = String(member.serviceStudPips || "—");
+  if (pips === "—") return `<span class="stud-display">—</span>`;
+  return `<span class="stud-display">${[...pips].map(pip => `<span class="stud-pip ${pip === "●" ? "auramite" : "plasteel"}" aria-hidden="true">${pip}</span>`).join("")}</span>`;
 }
 
 function locationRows(member) {
+  if (member.rank === "watch_master") {
+    return `<div class="modal-row"><span>Assignment</span><span>Watch Master of Watch Fortress Jericho</span></div>`;
+  }
   if (member.company) {
     return `<div class="modal-row"><span>Company</span><span>Company ${escapeHtml(COMPANY_NAMES[member.company])}</span></div>
       ${member.killTeam ? `<div class="modal-row"><span>Kill-team</span><span>${escapeHtml(member.killTeam)}</span></div>` : ""}`;
@@ -1193,8 +1338,9 @@ function plateHtml({ id, member, name, rankLabel, sub, accent, vacant, size }) {
   return `
     <button class="${cls}" ${clickAttr} ${id ? "" : "disabled"} type="button">
       <span class="plate-rank">${escapeHtml(rankLabel)}</span>
-      <span class="plate-name">${vacant ? "Vacant" : escapeHtml(name)}</span>
+      <span class="plate-name">${vacant ? "Vacant" : escapeHtml(displayName(name))}</span>
       ${sub || serviceRecord(member) ? `<span class="plate-sub">${escapeHtml(sub || serviceRecord(member))}</span>` : ""}
+      ${member && member.serverJoinedAt ? `<span class="plate-sub">${escapeHtml(vigilEntryRecord(member))}</span>` : ""}
     </button>`;
 }
 
@@ -1207,8 +1353,8 @@ function renderBreadcrumb() {
   }
   if (state.view === "killteam") {
     const teams = killTeamsForCompany(state.companyId);
-    const t = teams.find(t => t.killTeam === state.killTeamId);
-    const label = t && t.lead ? `Kill-team ${t.lead.name.split(" ")[1] || t.lead.name}` : "Kill-team";
+    const t = teams.find(t => t.killTeam === state.killTeamId || t.name === state.killTeamId);
+    const label = t ? t.name : "Kill-team";
     parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
     parts.push(`<span class="crumb crumb-current">${escapeHtml(label)}</span>`);
   }
@@ -1226,14 +1372,17 @@ function renderStrategium() {
   const companies = Object.keys(COMPANY_NAMES).map(cid => {
     const id = Number(cid);
     const captain = state.members.find(m => m.rank === "watch_captain" && m.company === id);
+    const lieutenant = state.members.find(m => m.rank === "watch_lieutenant" && m.company === id);
     const count = state.members.filter(m => m.company === id).length;
+    const isUnformed = count === 0 && !captain && !lieutenant;
     return `
       <div class="map-node company-slot company-slot-${id}">
-      <button class="company-plate" data-nav="company" data-company="${id}" type="button">
+      <button class="company-plate ${isUnformed ? 'unit-unformed' : ''}" data-nav="company" data-company="${id}" type="button">
         <span class="company-sigil" aria-hidden="true">${COMPANY_SIGILS[id]}</span>
         <span class="company-plate-label">Company ${COMPANY_NAMES[id]}</span>
-        <span class="company-plate-captain">${captain ? escapeHtml(captain.name) : "Captain vacant"}</span>
-        <span class="company-plate-count">${count} sworn</span>
+        ${captain ? `<span class="company-plate-captain">Watch Captain ${escapeHtml(displayName(captain.name))}</span>` : ""}
+        ${lieutenant ? `<span class="company-plate-captain">Watch Lieutenant ${escapeHtml(displayName(lieutenant.name))}</span>` : ""}
+        ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Unfounded &mdash;</span>` : `<span class="company-plate-count">${count} sworn</span>`}
       </button>
       </div>`;
   }).join("");
@@ -1242,12 +1391,13 @@ function renderStrategium() {
     const f = FORMATIONS[key];
     const lead = state.members.find(m => m.rank === f.lead);
     const count = state.members.filter(m => m.formation === key).length;
+    const isUnformed = count === 0 && !lead;
     return `
       <div class="map-node formation-slot formation-slot-${key}">
-      <button class="formation-plate" data-nav="formation" data-formation="${key}" type="button" style="--formation-accent:${FORMATION_COLORS[key]}">
+      <button class="formation-plate ${isUnformed ? 'unit-unformed' : ''}" data-nav="formation" data-formation="${key}" type="button" style="--formation-accent:${FORMATION_COLORS[key]}">
         <span class="formation-plate-label">${escapeHtml(f.name)}</span>
-        <span class="formation-plate-lead">${lead ? RANK_LABELS[lead.rank] + " " + escapeHtml(lead.name) : "Vacant"}</span>
-        <span class="formation-plate-count">${count} sworn</span>
+        ${lead ? `<span class="formation-plate-lead">${RANK_LABELS[lead.rank]} ${escapeHtml(displayName(lead.name))}</span>` : ""}
+        ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Cadre Dormant &mdash;</span>` : `<span class="formation-plate-count">${count} sworn</span>`}
       </button>
       </div>`;
   };
@@ -1346,25 +1496,32 @@ function drawMapConnectors() {
 
 function renderCompany(companyId) {
   const numeral = COMPANY_MARKINGS[companyId];
-  const cmd = companyCommand(companyId);
+  const companyDirective = (state.directiveStats && state.directiveStats.companies && state.directiveStats.companies[`Watch Company ${COMPANY_NAMES[companyId]}`]) || {};
+  const cmd = companyCommand(companyId).filter(({ member }) => member);
   const cmdHtml = cmd.map(({ rank, member }) =>
     plateHtml({
-      id: member && member.id, member, name: member && member.name, rankLabel: RANK_LABELS[rank],
-      accent: rank === "watch_captain" ? "gold" : "steel", vacant: !member
+      id: member.id, member, name: member.name, rankLabel: RANK_LABELS[rank],
+      accent: rank === "watch_captain" ? "gold" : "steel", vacant: false
     })
   ).join("");
 
   const count = state.members.filter(m => m.company === companyId).length;
+  const isUnformed = count === 0 && !cmd.length;
 
   const teams = killTeamsForCompany(companyId).map(t => {
     const leadName = t.lead ? t.lead.name : "Unassigned";
-    const teamLabel = t.lead ? `Kill-team ${t.lead.name.split(" ")[1] || t.lead.name}` : `Kill-team ${t.slot}`;
+    const directive = (state.directiveStats && state.directiveStats.killTeams && state.directiveStats.killTeams[t.name]) || {};
     return `
       <button class="killteam-plate" data-nav="killteam" data-company="${companyId}" data-killteam="${t.killTeam}" type="button">
         <span class="killteam-numeral" aria-hidden="true">${t.slot}</span>
-        <span class="killteam-plate-label">${escapeHtml(teamLabel)}</span>
-        <span class="killteam-plate-lead">${t.lead ? RANK_LABELS[t.lead.rank] + " " + escapeHtml(leadName) : "No sergeant assigned"}</span>
+        <span class="killteam-plate-label">${escapeHtml(t.name)}</span>
+        <span class="killteam-plate-lead">${t.lead ? RANK_LABELS[t.lead.rank] + " " + escapeHtml(displayName(leadName)) : "No active Watch Sergeant"}</span>
         <span class="killteam-plate-count">${t.count} in team</span>
+        ${directive.tier || directive.completed ? `
+          <div class="killteam-plate-renown">
+            <span class="directive-tier-badge">${escapeHtml(directive.tier || 'Unproven')}</span>
+            <span>${directive.completed || directive.completions_28d || 0} completed &middot; ${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)} rep</span>
+          </div>` : ""}
       </button>`;
   }).join("");
 
@@ -1376,11 +1533,19 @@ function renderCompany(companyId) {
         <div class="company-header-sub">${numeral} &middot; ${count} battle-brothers sworn to this company</div>
       </div>
     </div>
+    ${isUnformed ? `
+      <div class="unit-dormant-banner">
+        <span class="unit-dormant-tag">COGITATOR RECORD</span>
+        <span>Company ${COMPANY_NAMES[companyId]} is currently unfounded &middot; No battle-brothers assigned to this battle line.</span>
+      </div>` : ""}
+    ${companyDirective.tier || companyDirective.completed ? `
+      <div class="formation-directive-stat">
+        <span class="directive-tier-tag">${escapeHtml(companyDirective.tier || 'Sworn')}</span>
+        <span>Strike Directives: <strong>${companyDirective.completed || companyDirective.completions_28d || 0}</strong> completed &middot; <strong>${Number(companyDirective.rep_earned || companyDirective.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
+      </div>` : ""}
     <p class="company-lore">${escapeHtml(COMPANY_LORE[companyId] || "This company serves the Fortress wherever the Vigil calls.")}</p>
-    <div class="tier-label">Company Command</div>
-    <div class="tier tier-company-command tree-row">${cmdHtml}</div>
-    <div class="tier-label">Kill Teams</div>
-    <div class="tier tier-killteams tree-row">${teams}</div>
+    ${cmdHtml ? `<div class="tier-label">Company Command</div><div class="tier tier-company-command tree-row">${cmdHtml}</div>` : ""}
+    ${teams ? `<div class="tier-label">Kill Teams (${teams.length})</div><div class="tier tier-killteams tree-row">${teams}</div>` : ""}
   `;
 }
 
@@ -1389,15 +1554,17 @@ function renderFormation(key) {
   const members = formationMembers(key);
   const lead = members.find(m => m.rank === f.lead) || null;
   const rest = members.filter(m => m !== lead);
+  const directive = state.directiveStats.formations[key] || {};
+  const isDormant = members.length === 0;
 
-  const leadHtml = plateHtml({
-    id: lead && lead.id, member: lead, name: lead && lead.name,
-    rankLabel: lead ? RANK_LABELS[lead.rank] : RANK_LABELS[f.lead], accent: "gold", vacant: !lead, size: "md"
-  });
+  const leadHtml = lead ? plateHtml({
+    id: lead.id, member: lead, name: lead.name,
+    rankLabel: RANK_LABELS[lead.rank], accent: "gold", vacant: false, size: "md"
+  }) : "";
 
   const rows = rest.map(m => `
     <tr class="roster-row" data-member="${m.id}">
-      <td class="roster-name">${escapeHtml(m.name)}</td>
+      <td class="roster-name">${escapeHtml(displayName(m.name))}</td>
       <td class="roster-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}</td>
       <td class="roster-chapter">${escapeHtml(m.chapter || "\u2014")}</td>
     </tr>`).join("");
@@ -1405,17 +1572,28 @@ function renderFormation(key) {
   document.getElementById("app").innerHTML = `
     <div class="tier-label formation-tier-label" style="--formation-accent:${FORMATION_COLORS[key]}">${escapeHtml(f.name)}</div>
     <p class="formation-lore">${escapeHtml(FORMATION_LORE[key] || "This formation serves the Watch according to its own discipline and mandate.")}</p>
-    <div class="tier tier-formation-lead">${leadHtml}</div>
+    ${isDormant ? `
+      <div class="unit-dormant-banner">
+        <span class="unit-dormant-tag">CADRE DORMANT</span>
+        <span>No specialists currently active in the ${escapeHtml(f.name)} &middot; All seats awaiting summons.</span>
+      </div>` : ""}
+    ${directive.tier || directive.completed ? `
+      <div class="formation-directive-stat">
+        <span class="directive-tier-tag">${escapeHtml(directive.tier || 'Sworn')}</span>
+        <span>Strike Directives: <strong>${directive.completed || directive.completions_28d || 0}</strong> completed &middot; <strong>${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
+      </div>` : ""}
+    ${leadHtml ? `<div class="tier-label">Cadre Leadership</div><div class="tier tier-formation-lead">${leadHtml}</div>` : ""}
     <div class="tier-label">Formation Roster (${rest.length})</div>
     <table class="roster-table">
       <thead><tr><th>Name</th><th>Rank</th><th>Chapter of Origin</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="3" class="roster-empty">No further battle-brothers recorded.</td></tr>`}</tbody>
+      <tbody>${rows || `<tr><td colspan="3" class="roster-empty">No battle-brothers currently seconded to this cadre.</td></tr>`}</tbody>
     </table>
   `;
 }
 
 function renderKillTeam(companyId, killTeam) {
-  const { lead, rest } = killTeamDetail(companyId, killTeam);
+  const { lead, rest, name } = killTeamDetail(companyId, killTeam);
+  const directive = (state.directiveStats && state.directiveStats.killTeams && state.directiveStats.killTeams[name]) || {};
   const leadHtml = plateHtml({
     id: lead && lead.id, member: lead, name: lead && lead.name,
     rankLabel: lead ? RANK_LABELS[lead.rank] : "Watch Sergeant", accent: "red", vacant: !lead, size: "md"
@@ -1423,12 +1601,21 @@ function renderKillTeam(companyId, killTeam) {
 
   const rows = rest.map(m => `
     <tr class="roster-row" data-member="${m.id}">
-      <td class="roster-name">${escapeHtml(m.name)}</td>
+      <td class="roster-name">${escapeHtml(displayName(m.name))}</td>
       <td class="roster-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}</td>
       <td class="roster-chapter">${escapeHtml(m.chapter || "\u2014")}</td>
     </tr>`).join("");
 
   document.getElementById("app").innerHTML = `
+    <div class="killteam-header">
+      <h2 class="killteam-header-title">${escapeHtml(name)}</h2>
+      <div class="killteam-header-sub">Company ${COMPANY_NAMES[companyId]} &middot; ${rest.length + (lead ? 1 : 0)} battle-brothers sworn</div>
+    </div>
+    ${directive.tier || directive.completed ? `
+      <div class="formation-directive-stat">
+        <span class="directive-tier-tag">${escapeHtml(directive.tier || 'Unproven')}</span>
+        <span>Strike Directives: <strong>${directive.completed || directive.completions_28d || 0}</strong> completed &middot; <strong>${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
+      </div>` : ""}
     <div class="tier-label">Command</div>
     <div class="tier tier-killteam-lead">${leadHtml}</div>
     <div class="tier-label">Roster (${rest.length})</div>
@@ -1461,13 +1648,11 @@ function render(originPct, direction) {
 }
 
 function updateStatusBadge() {
-  const badge = document.getElementById("status-badge");
-  const labels = { sample: "Sample data", live: "Live feed connected", error: "Live feed failed \u2014 showing sample" };
-  badge.textContent = labels[state.dataStatus] || "";
-  badge.className = "status-badge status-" + state.dataStatus;
-
   const slateCount = document.getElementById("slate-count");
-  if (slateCount) slateCount.textContent = "ASTARTES ON RECORD: " + fortressTotal();
+  if (slateCount) {
+    slateCount.textContent = "ASTARTES ON RECORD: " + fortressTotal();
+    slateCount.style.display = state.view === "strategium" ? "" : "none";
+  }
 }
 
 function navigate(view, params, originEl, direction) {
@@ -1492,9 +1677,132 @@ function findMember(id) {
   return state.members.find(m => m.id === id);
 }
 
+function displayName(name) {
+  let clean = String(name || "")
+    .replace(/[●⚬▬]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const prefixes = [
+    "The Venerable Dreadnought", "The Honored Dreadnought",
+    "Venerable Dreadnought", "Chief Apothecary", "Watch Lieutenant", "Watch Librarian",
+    "Watch Apothecary", "Watch Techmarine", "Watch Sergeant", "Watch Captain",
+    "Veteran Sergeant", "Honored Dreadnought", "High Chaplain", "Blade Master",
+    "Forge Master", "Forgemaster", "Hunt Master", "Huntmaster", "Watch Master",
+    "First Blade", "Bladeguard", "Watch Veteran", "Watch Brother", "Oathsworn"
+  ];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const prefix = prefixes.find(item => clean.toLowerCase().startsWith(`${item.toLowerCase()} `));
+    if (prefix) {
+      clean = clean.slice(prefix.length).trim();
+      changed = true;
+    }
+  }
+  return clean.split(" ").map(word => {
+    if (word.length > 1 && (word === word.toUpperCase() || (word[0] === word[0].toLowerCase() && word.slice(1) === word.slice(1).toUpperCase()))) {
+      return word[0].toUpperCase() + word.slice(1).toLowerCase();
+    }
+    return word;
+  }).join(" ")
+    .replace(/\s+the\s+(honored|venerable)$/i, "")
+    .replace(/^Dreadnought\s+/i, "");
+}
+
 function dropcapHtml(text) {
   const escaped = escapeHtml(text);
   return `<span class="dropcap">${escaped.charAt(0)}</span>${escaped.slice(1)}`;
+}
+
+function renderMemberModalContent(m, isEditing = false) {
+  const stats = m.stats && typeof m.stats === "object" ? Object.entries(m.stats)
+    .filter(([key, value]) => ["string", "number", "boolean"].includes(typeof value) && ![
+      "aar_points",
+      "operational_rating", "operational_rating_raw", "operational_rating_delta",
+      "operational_rating_events", "operational_rating_tier", "last_aar_ts"
+    ].includes(key)) : [];
+  const statsHtml = stats.length ? `
+    <div class="modal-stats">
+      <div class="modal-stats-label">Recorded Stats</div>
+      ${stats.map(([key, value]) => `<div class="modal-row"><span>${escapeHtml(key.replaceAll("_", " "))}</span><span>${escapeHtml(value)}</span></div>`).join("")}
+    </div>` : "";
+  const canEdit = state.auth.authenticated && state.auth.user && String(state.auth.user.id) === String(m.id);
+
+  let backstorySection = "";
+  if (isEditing && canEdit) {
+    backstorySection = `
+      <div class="modal-divider">&#10086;</div>
+      <div class="backstory-edit-container">
+        <label class="field-label" for="backstory-input">Commune with the Cogitator &middot; Inscribe Vigil Chronicle</label>
+        <textarea id="backstory-input" class="field-input" rows="7" maxlength="2400" placeholder="Inscribe your warrior's history and deeds...">${escapeHtml(m.backstory || "")}</textarea>
+        <div id="backstory-count" class="settings-note">0 / 2400 characters (max 400 words)</div>
+        <div class="modal-actions">
+          <button id="backstory-cancel-btn" class="btn-dossier-action btn-dossier-cancel" type="button">Cancel</button>
+          <button id="backstory-save-btn" class="btn-dossier-action" type="button">Affix Seal &amp; Inscribe</button>
+        </div>
+        <div id="backstory-status" style="margin-top: 8px; font-size: 11px;"></div>
+      </div>
+    `;
+  } else {
+    if (m.backstory) {
+      backstorySection += `<div class="modal-divider">&#10086;</div><p class="modal-backstory">${dropcapHtml(m.backstory)}</p>`;
+    }
+    if (canEdit) {
+      backstorySection += `
+        <div class="modal-actions">
+          <button id="backstory-edit-trigger-btn" class="btn-dossier-action" type="button">&#x270E; Inscribe Chronicle</button>
+        </div>
+      `;
+    }
+  }
+
+  document.getElementById("member-modal-body").innerHTML = `
+    <div class="modal-heading">
+      <div class="modal-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}${m.title ? " \u00b7 " + escapeHtml(m.title) : ""}</div>
+      <div class="modal-name">${escapeHtml(displayName(m.name))}</div>
+      ${m.serviceStudPips ? `<div class="modal-studs"><div class="modal-studs-label">Service Studs</div>${serviceStudsHtml(m)}</div>` : ""}
+    </div>
+    <div class="modal-row"><span>Chapter of Origin</span><span>${escapeHtml(m.chapter || "Unrecorded")}</span></div>
+    ${locationRows(m)}
+    <div class="modal-row"><span>AAR Points</span><span>${escapeHtml(Number.isFinite(Number(m.aarPoints ?? m.stats?.aar_points)) ? Number(m.aarPoints ?? m.stats.aar_points) : "Unrecorded")}</span></div>
+    <div class="modal-row"><span>Strike Directives</span><span>${escapeHtml(Number.isFinite(Number(m.strikeDirectives)) ? `${m.strikeDirectives} completed` : (Number.isFinite(Number(m.stats?.strike_directives)) ? `${m.stats.strike_directives} completed` : "0 completed"))}</span></div>
+    <div class="modal-row"><span>Years given to the Long Vigil</span><span class="service-years-value">${escapeHtml(m.vigilYears === undefined ? "Unrecorded" : `${m.vigilYears} years`)}</span></div>
+    <div class="modal-row"><span>Joined the Long Vigil</span><span>${escapeHtml(watchEntryLabel(m))}</span></div>
+    ${statsHtml}
+    ${m.vigil ? `<div class="modal-vigil-tag">${escapeHtml(m.vigil)}</div>` : ""}
+    ${backstorySection}
+  `;
+
+  if (isEditing && canEdit) {
+    const input = document.getElementById("backstory-input");
+    const count = document.getElementById("backstory-count");
+    const updateCount = () => { count.textContent = `${input.value.length} / 2400 characters`; };
+    input.addEventListener("input", updateCount);
+    updateCount();
+    document.getElementById("backstory-save-btn").addEventListener("click", async () => {
+      const status = document.getElementById("backstory-status");
+      status.style.color = "var(--gold)";
+      status.textContent = "Communing with Cogitator archives...";
+      try {
+        await saveBackstory(m.id, input.value);
+        m.backstory = input.value;
+        renderMemberModalContent(m, false);
+      } catch (error) {
+        status.style.color = "var(--red)";
+        status.textContent = error.message;
+      }
+    });
+    document.getElementById("backstory-cancel-btn").addEventListener("click", () => {
+      renderMemberModalContent(m, false);
+    });
+  } else if (canEdit) {
+    const editBtn = document.getElementById("backstory-edit-trigger-btn");
+    if (editBtn) {
+      editBtn.addEventListener("click", () => {
+        renderMemberModalContent(m, true);
+      });
+    }
+  }
 }
 
 function openMemberModal(id) {
@@ -1502,24 +1810,7 @@ function openMemberModal(id) {
   if (!m) return;
   const overlay = document.getElementById("member-modal");
   const panel = overlay.querySelector(".overlay-panel");
-  const stats = m.stats && typeof m.stats === "object" ? Object.entries(m.stats)
-    .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value)) : [];
-  const statsHtml = stats.length ? `
-    <div class="modal-stats">
-      <div class="modal-stats-label">Recorded Stats</div>
-      ${stats.map(([key, value]) => `<div class="modal-row"><span>${escapeHtml(key.replaceAll("_", " "))}</span><span>${escapeHtml(value)}</span></div>`).join("")}
-    </div>` : "";
-  document.getElementById("member-modal-body").innerHTML = `
-    <div class="modal-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}${m.title ? " \u00b7 " + escapeHtml(m.title) : ""}</div>
-    <div class="modal-name">${escapeHtml(m.name)}</div>
-    <div class="modal-row"><span>Chapter of Origin</span><span>${escapeHtml(m.chapter || "Unrecorded")}</span></div>
-    ${locationRows(m)}
-    <div class="modal-row"><span>Service</span><span>${escapeHtml(serviceRecord(m))}</span></div>
-    <div class="modal-row"><span>Watch entry</span><span>${escapeHtml(watchEntryLabel(m))}</span></div>
-    ${statsHtml}
-    ${m.vigil ? `<div class="modal-vigil-tag">${escapeHtml(m.vigil)}</div>` : ""}
-    ${m.backstory ? `<div class="modal-divider">&#10086;</div><p class="modal-backstory">${dropcapHtml(m.backstory)}</p>` : ""}
-  `;
+  renderMemberModalContent(m, false);
   overlay.classList.add("open");
   panel.classList.remove("unfurl");
   void panel.offsetWidth;
@@ -1559,7 +1850,7 @@ function renderSearchResults(query) {
   }
   resultsEl.innerHTML = matches.map(m => `
     <button class="search-result" data-member="${m.id}" type="button">
-      <span class="search-result-name">${escapeHtml(m.name)}</span>
+      <span class="search-result-name">${escapeHtml(displayName(m.name))}</span>
       <span class="search-result-meta">${escapeHtml(RANK_LABELS[m.rank] || m.rank)} &middot; ${escapeHtml(memberLocationLabel(m))}</span>
     </button>`).join("");
 }
@@ -1579,34 +1870,6 @@ function openSearch() {
 
 function closeSearch() {
   document.getElementById("search-overlay").classList.remove("open");
-}
-
-/* ---------------------------------------------------------------------- */
-/* Settings panel                                                         */
-/* ---------------------------------------------------------------------- */
-
-function openSettings() {
-  document.getElementById("settings-url-input").value = state.dataSourceUrl;
-  const overlay = document.getElementById("settings-overlay");
-  const panel = overlay.querySelector(".overlay-panel");
-  overlay.classList.add("open");
-  panel.classList.remove("fade-in");
-  void panel.offsetWidth;
-  panel.classList.add("fade-in");
-}
-
-function closeSettings() {
-  document.getElementById("settings-overlay").classList.remove("open");
-}
-
-async function handleSaveSettings() {
-  const url = document.getElementById("settings-url-input").value.trim();
-  await saveDataSourceUrl(url);
-  document.getElementById("settings-status").textContent = "Reconnecting\u2026";
-  await loadData();
-  document.getElementById("settings-status").textContent =
-    state.dataStatus === "live" ? "Connected." : "Could not reach that endpoint \u2014 showing sample data.";
-  navigate("strategium", {});
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1644,20 +1907,13 @@ function wireEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeMemberModal();
-      closeSettings();
       closeSearch();
     }
   });
 
-  document.getElementById("gear-btn").addEventListener("click", openSettings);
-  document.getElementById("settings-close-btn").addEventListener("click", closeSettings);
-  document.getElementById("settings-save-btn").addEventListener("click", handleSaveSettings);
   document.getElementById("member-modal-close").addEventListener("click", closeMemberModal);
   document.getElementById("member-modal").addEventListener("click", (e) => {
     if (e.target.id === "member-modal") closeMemberModal();
-  });
-  document.getElementById("settings-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "settings-overlay") closeSettings();
   });
 
   document.getElementById("search-btn").addEventListener("click", openSearch);
@@ -1678,6 +1934,7 @@ async function init() {
   wireEvents();
   await loadSavedSettings();
   await loadData();
+  await loadAuth();
   render();
 }
 
