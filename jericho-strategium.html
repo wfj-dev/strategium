@@ -1110,6 +1110,9 @@ const state = {
   auth: { authenticated: false, user: null, csrf: null }
 };
 
+const BACKSTORY_MAX_WORDS = 400;
+const BACKSTORY_MAX_CHARS = 2400;
+
 const DEFAULT_DATA_SOURCE_URL = window.location.protocol.startsWith("http")
   ? `${window.location.origin}/api/roster` : "";
 
@@ -1143,14 +1146,23 @@ async function loadData() {
 }
 
 async function loadAuth() {
-  if (!window.location.protocol.startsWith("http")) return;
+  if (!window.location.protocol.startsWith("http")) {
+    state.auth = { authenticated: false, user: null, csrf: null };
+    renderAuthButton();
+    return state.auth;
+  }
   try {
     const resp = await fetch(`${window.location.origin}/api/me`, { credentials: "include" });
-    if (resp.ok) state.auth = await resp.json();
+    if (!resp.ok) throw new Error("Could not refresh authentication.");
+    const auth = await resp.json();
+    state.auth = auth && auth.authenticated
+      ? auth
+      : { authenticated: false, user: null, csrf: null };
   } catch (e) {
     state.auth = { authenticated: false, user: null, csrf: null };
   }
   renderAuthButton();
+  return state.auth;
 }
 
 function renderAuthButton() {
@@ -1191,15 +1203,48 @@ function startDiscordLogin() {
 }
 
 async function saveBackstory(memberId, text) {
-  const resp = await fetch(apiUrl("/api/me/backstory"), {
+  const send = () => fetch(apiUrl("/api/me/backstory"), {
     method: "PATCH", credentials: "include",
-    headers: { "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || "" },
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf },
     body: JSON.stringify({ backstory: text })
   });
-  const payload = await resp.json();
-  if (!resp.ok) throw new Error(payload.error || "Could not save backstory.");
+  const requireCsrf = async () => {
+    const auth = await loadAuth();
+    if (!auth.authenticated || !auth.csrf) {
+      throw new Error("Your session has expired. Log in again before inscribing your chronicle.");
+    }
+  };
+
+  await requireCsrf();
+  let resp = await send();
+  let payload = await resp.json();
+  if (resp.status === 403 && payload.error === "csrf_failed") {
+    await requireCsrf();
+    resp = await send();
+    payload = await resp.json();
+  }
+  if (!resp.ok) {
+    const message = payload.error === "csrf_failed"
+      ? "The security seal could not be verified. Reload the page and log in again."
+      : payload.error || "Could not save backstory.";
+    throw new Error(message);
+  }
   const member = findMember(memberId);
   if (member) member.backstory = payload.backstory;
+  return payload.backstory;
+}
+
+function backstoryLimitError(text) {
+  const normalized = text.trim();
+  const characterCount = normalized.length;
+  if (characterCount > BACKSTORY_MAX_CHARS) {
+    return `Backstory is too long: ${characterCount.toLocaleString("en-US")}/${BACKSTORY_MAX_CHARS.toLocaleString("en-US")} characters. You're not that guy.`;
+  }
+  const wordCount = normalized ? normalized.split(/\s+/).length : 0;
+  if (wordCount > BACKSTORY_MAX_WORDS) {
+    return `Backstory is too long: ${wordCount.toLocaleString("en-US")}/${BACKSTORY_MAX_WORDS.toLocaleString("en-US")} words. You're not that guy.`;
+  }
+  return "";
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1734,8 +1779,8 @@ function renderMemberModalContent(m, isEditing = false) {
       <div class="modal-divider">&#10086;</div>
       <div class="backstory-edit-container">
         <label class="field-label" for="backstory-input">Commune with the Cogitator &middot; Inscribe Vigil Chronicle</label>
-        <textarea id="backstory-input" class="field-input" rows="7" maxlength="2400" placeholder="Inscribe your warrior's history and deeds...">${escapeHtml(m.backstory || "")}</textarea>
-        <div id="backstory-count" class="settings-note">0 / 2400 characters (max 400 words)</div>
+        <textarea id="backstory-input" class="field-input" rows="7" placeholder="Inscribe your warrior's history and deeds...">${escapeHtml(m.backstory || "")}</textarea>
+        <div id="backstory-count" class="settings-note">0 / 2,400 characters &middot; 0 / 400 words</div>
         <div class="modal-actions">
           <button id="backstory-cancel-btn" class="btn-dossier-action btn-dossier-cancel" type="button">Cancel</button>
           <button id="backstory-save-btn" class="btn-dossier-action" type="button">Affix Seal &amp; Inscribe</button>
@@ -1776,16 +1821,29 @@ function renderMemberModalContent(m, isEditing = false) {
   if (isEditing && canEdit) {
     const input = document.getElementById("backstory-input");
     const count = document.getElementById("backstory-count");
-    const updateCount = () => { count.textContent = `${input.value.length} / 2400 characters`; };
+    const saveBtn = document.getElementById("backstory-save-btn");
+    const updateCount = () => {
+      const normalized = input.value.trim();
+      const wordCount = normalized ? normalized.split(/\s+/).length : 0;
+      const error = backstoryLimitError(input.value);
+      count.textContent = error || `${normalized.length.toLocaleString("en-US")} / 2,400 characters · ${wordCount.toLocaleString("en-US")} / 400 words`;
+      count.style.color = error ? "var(--red)" : "";
+      saveBtn.disabled = Boolean(error);
+    };
     input.addEventListener("input", updateCount);
     updateCount();
-    document.getElementById("backstory-save-btn").addEventListener("click", async () => {
+    saveBtn.addEventListener("click", async () => {
       const status = document.getElementById("backstory-status");
+      const limitError = backstoryLimitError(input.value);
+      if (limitError) {
+        status.style.color = "var(--red)";
+        status.textContent = limitError;
+        return;
+      }
       status.style.color = "var(--gold)";
       status.textContent = "Communing with Cogitator archives...";
       try {
-        await saveBackstory(m.id, input.value);
-        m.backstory = input.value;
+        m.backstory = await saveBackstory(m.id, input.value);
         renderMemberModalContent(m, false);
       } catch (error) {
         status.style.color = "var(--red)";

@@ -206,10 +206,18 @@ def _validate_members(payload: Any) -> list[dict[str, Any]]:
 
 
 def _backstory_error(text: str) -> str | None:
-    if len(text) > BACKSTORY_MAX_CHARS:
-        return f"backstory exceeds {BACKSTORY_MAX_CHARS} characters"
-    if len(text.split()) > BACKSTORY_MAX_WORDS:
-        return f"backstory exceeds {BACKSTORY_MAX_WORDS} words"
+    character_count = len(text)
+    if character_count > BACKSTORY_MAX_CHARS:
+        return (
+            f"Backstory is too long: {character_count:,}/{BACKSTORY_MAX_CHARS:,} "
+            "characters. You're not that guy."
+        )
+    word_count = len(text.split())
+    if word_count > BACKSTORY_MAX_WORDS:
+        return (
+            f"Backstory is too long: {word_count:,}/{BACKSTORY_MAX_WORDS:,} words. "
+            "You're not that guy."
+        )
     return None
 
 
@@ -279,6 +287,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
@@ -315,6 +324,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
         self.end_headers()
         self.wfile.write(body)
 
@@ -415,8 +425,16 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             SECURITY_LOG.warning("backstory update denied: unauthenticated client=%s", self.client_address[0])
             self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
             return
-        if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
-            SECURITY_LOG.warning("backstory update denied: csrf/origin user=%s client=%s", user.get("id"), self.client_address[0])
+        origin_valid = _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN)
+        csrf_valid = self._csrf_valid(user)
+        if not origin_valid or not csrf_valid:
+            SECURITY_LOG.warning(
+                "backstory update denied: origin_valid=%s csrf_valid=%s user=%s client=%s",
+                origin_valid,
+                csrf_valid,
+                user.get("id"),
+                self.client_address[0],
+            )
             self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
             return
         try:
