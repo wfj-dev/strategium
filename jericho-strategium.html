@@ -283,8 +283,9 @@
     .map-company-row .company-slot { grid-column: 1; grid-row: auto; }
     .map-node { margin-top: 9px; }
     .map-top .map-command { margin-top: 0; }
-    .map-node .formation-plate { height: auto; min-height: 104px; }
-    .map-node .formation-plate-blurb { display: block; }
+    .map-top .map-command .plate.size-lg { width: 100%; min-height: 108px; }
+    .map-node .formation-plate, .map-node .company-plate { height: auto; min-height: 104px; }
+    .map-node .formation-plate-blurb, .map-node .company-plate-blurb { display: block; }
   }
 
   .plate {
@@ -425,6 +426,10 @@
   .formation-plate-count { font-size: 10.5px; color: var(--green-faint); }
   .formation-plate-blurb {
     display: none; color: var(--green-dim); font-size: 11px; line-height: 1.45;
+  }
+  .company-plate-blurb {
+    display: none; color: var(--green-dim); font-size: 11px; line-height: 1.45;
+    padding-right: 28px;
   }
 
   .formation-tier-label { display: flex; align-items: center; gap: 10px; }
@@ -1443,6 +1448,7 @@ function renderStrategium() {
         ${captain ? `<span class="company-plate-captain">Watch Captain ${escapeHtml(displayName(captain.name))}</span>` : ""}
         ${lieutenant ? `<span class="company-plate-captain">Watch Lieutenant ${escapeHtml(displayName(lieutenant.name))}</span>` : ""}
         ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Unfounded &mdash;</span>` : `<span class="company-plate-count">${count} sworn</span>`}
+        ${isUnformed ? "" : `<span class="company-plate-blurb">${escapeHtml(COMPANY_LORE[id] || "This company serves the Fortress wherever the Vigil calls.")}</span>`}
       </button>
       </div>`;
   }).join("");
