@@ -520,9 +520,10 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             urllib.error.URLError,
             RuntimeError,
         ) as error:
+            SECURITY_LOG.exception("OAuth exchange failed")
             self._send(
                 HTTPStatus.BAD_GATEWAY,
-                {"error": "oauth_exchange_failed", "detail": str(error)},
+                {"error": "oauth_exchange_failed"},
             )
 
 
