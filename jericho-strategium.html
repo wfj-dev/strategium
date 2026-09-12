@@ -1180,8 +1180,7 @@ function renderAuthButton() {
     if (logoutBtn) {
       logoutBtn.addEventListener("click", () => {
         fetch(apiUrl("/api/auth/logout"), { credentials: "include" }).finally(() => {
-          state.auth = { authenticated: false, user: null, csrf: null };
-          renderAuthButton();
+          window.location.reload();
         });
       });
     }
