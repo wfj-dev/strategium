@@ -1107,7 +1107,7 @@ const state = {
   directiveStats: { companies: {}, killTeams: {}, formations: {}, fortress: {} },
   dataStatus: "sample",  // 'sample' | 'live' | 'error'
   dataSourceUrl: "",
-  auth: { authenticated: false, user: null }
+  auth: { authenticated: false, user: null, csrf: null }
 };
 
 const DEFAULT_DATA_SOURCE_URL = window.location.protocol.startsWith("http")
@@ -1148,7 +1148,7 @@ async function loadAuth() {
     const resp = await fetch(`${window.location.origin}/api/me`, { credentials: "include" });
     if (resp.ok) state.auth = await resp.json();
   } catch (e) {
-    state.auth = { authenticated: false, user: null };
+    state.auth = { authenticated: false, user: null, csrf: null };
   }
   renderAuthButton();
 }
@@ -1168,7 +1168,7 @@ function renderAuthButton() {
     if (logoutBtn) {
       logoutBtn.addEventListener("click", () => {
         fetch(apiUrl("/api/auth/logout"), { credentials: "include" }).finally(() => {
-          state.auth = { authenticated: false, user: null };
+          state.auth = { authenticated: false, user: null, csrf: null };
           renderAuthButton();
         });
       });
@@ -1193,7 +1193,7 @@ function startDiscordLogin() {
 async function saveBackstory(memberId, text) {
   const resp = await fetch(apiUrl("/api/me/backstory"), {
     method: "PATCH", credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || "" },
     body: JSON.stringify({ backstory: text })
   });
   const payload = await resp.json();
