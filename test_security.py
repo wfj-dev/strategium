@@ -1,4 +1,6 @@
-from server import _cookie_flags, _origin_matches, _request_is_secure
+import time
+
+from server import _cookie_flags, _origin_matches, _request_is_secure, _session_user, _session_value
 
 
 def test_origin_matches_exact_allowed_origin() -> None:
@@ -17,3 +19,11 @@ def test_request_is_secure_uses_forwarded_proto() -> None:
     headers = {"X-Forwarded-Proto": "https"}
     assert _request_is_secure(headers)
     assert not _request_is_secure({"X-Forwarded-Proto": "http"})
+
+
+def test_session_contains_expiry_and_csrf_token() -> None:
+    token = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+    user = _session_user(token)
+    assert user is not None
+    assert user["csrf"] == "csrf-token"
+    assert user["exp"] > int(time.time())

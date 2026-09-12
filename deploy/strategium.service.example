@@ -1,0 +1,24 @@
+[Unit]
+Description=Watch Fortress Jericho Strategium
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=strategium
+Group=strategium
+WorkingDirectory=/opt/strategium
+EnvironmentFile=/opt/strategium/.env
+ExecStart=/usr/bin/python3 /opt/strategium/server.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/strategium/data
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
