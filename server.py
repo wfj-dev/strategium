@@ -63,7 +63,7 @@ SECURE_COOKIES = os.getenv("STRATEGIUM_SECURE_COOKIES", "0") == "1"
 BACKSTORY_MAX_WORDS = 400
 BACKSTORY_MAX_CHARS = 2400
 SESSION_TTL_SECONDS = int(os.getenv("STRATEGIUM_SESSION_TTL_SECONDS", str(60 * 60 * 24 * 7)))
-MAX_JSON_BODY_BYTES = 64 * 1024
+MAX_JSON_BODY_BYTES = 1024 * 1024
 
 SECURITY_LOG = logging.getLogger("strategium.security")
 
@@ -390,6 +390,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 _save_json(ROSTER_PATH, snapshot)
             self._send(HTTPStatus.OK, {"ok": True, "memberCount": len(members)})
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            SECURITY_LOG.warning("roster snapshot rejected: %s client=%s", error, self.client_address[0])
             self._send(HTTPStatus.BAD_REQUEST, {"error": str(error)})
 
     def _get_backstory(self) -> None:
