@@ -25,6 +25,14 @@ Then open `http://127.0.0.1:8787/`. The backend automatically loads `.env`, serv
 
 The live app loads roster data from its same-origin `/api/roster` endpoint. The Discord bot publishes signed snapshots to the backend's internal `/internal/roster/snapshot` endpoint; browser clients never receive bot credentials.
 
+## Record of Blood
+
+Visit `/record-of-blood` for the fortress wall, using `assets/record of blood wall.png` as its backdrop. It shows one pauldron for each Chapter represented by the live ranked roster, excluding Black Shield and unrecorded origins. Use the arrows to browse eight Chapters at a time (four on narrow screens). Hover or focus a pauldron for its Chapter's member names; select it to open the full roster and member dossiers. Without a live roster, the room shows a relay/empty state rather than sample Chapters.
+
+Pauldrons without supplied artwork are intentionally unmarked. The supplied PNGs are served in place from `assets/Painted Pauldrons/Completed/`; the Chapter-to-filename list is `PAULDRON_ART` in `jericho-strategium.html`. To add another, place a transparent PNG in that folder and add its Chapter name to the list (or an explicit filename override when spelling differs, as with Celestial Lions). The server serves only simple PNG basenames from this folder; it does not expose the PSD template or other files.
+
+Optional ambience uses `assets/ambience/fortress-ambience.mp3`. The play control stays disabled until this file is present; playback never starts automatically, and stops when the visitor leaves the room or hides the tab. Use an original or licensed loop you have permission to distribute. Both asset folders are included when `assets/` is copied during deployment.
+
 The endpoint should return JSON in this shape:
 
 ```json
