@@ -81,6 +81,8 @@ Example installation:
 ```bash
 sudo useradd --system --home /opt/strategium --shell /usr/sbin/nologin strategium
 sudo install -d -o strategium -g strategium /opt/strategium/data
+sudo install -o root -g root -m 644 server.py jericho-strategium.html /opt/strategium/
+sudo cp -r assets /opt/strategium/  # ribbon images; awards are dropped (and logged) if missing
 sudo install -o root -g root -m 644 deploy/strategium.service.example /etc/systemd/system/strategium.service
 sudo install -o root -g root -m 644 deploy/Caddyfile.example /etc/caddy/Caddyfile
 sudo systemctl daemon-reload

@@ -225,8 +225,12 @@ def _validate_awards(value: Any) -> list[dict[str, str]]:
             continue
         name = _text(award.get("name"), 80)
         ribbon = _text(award.get("ribbon"), 80)
-        if name and _ribbon_path(ribbon) is not None:
-            awards.append({"name": name, "ribbon": ribbon})
+        if not name:
+            continue
+        if _ribbon_path(ribbon) is None:
+            SECURITY_LOG.warning("award dropped: ribbon image %r not found in %s", ribbon, RIBBONS_DIR)
+            continue
+        awards.append({"name": name, "ribbon": ribbon})
     return awards
 
 
@@ -535,7 +539,10 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             }
             reach = None
             if "reach" in payload:
-                reach = {**_validate_reach(payload["reach"]), "generatedAt": _text(payload.get("generatedAt"), 40) or None}
+                try:
+                    reach = {**_validate_reach(payload["reach"]), "generatedAt": _text(payload.get("generatedAt"), 40) or None}
+                except ValueError as error:
+                    SECURITY_LOG.warning("reach snapshot skipped: %s client=%s", error, self.client_address[0])
             with _LOCK:
                 _save_json(ROSTER_PATH, snapshot)
                 if reach is not None:
