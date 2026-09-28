@@ -835,6 +835,70 @@
   .strat-pos { color: var(--green); }
   .strat-neg { color: var(--red); }
 
+  .blood-page .page { max-width: 1520px; }
+  .blood-page .header { max-width: 1180px; margin-left: auto; margin-right: auto; }
+  .blood-page .slate { padding: 0; border: 0; background: none; box-shadow: none; }
+  .blood-page .hud-bracket, .blood-page .slate-corner { display: none; }
+  .blood-page #breadcrumb { max-width: 1180px; margin: 12px auto 18px; }
+  .blood-room { color: #c9c0aa; }
+  .blood-heading { max-width: 1180px; margin: 0 auto; padding: 12px 0 24px; }
+  .blood-overline { color: var(--gold-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; }
+  .blood-heading h2 { font-family: 'Cinzel', serif; text-transform: uppercase; color: var(--white); font-size: clamp(28px, 4vw, 48px); margin: 4px 0 14px; font-weight: 600; }
+  .blood-heading-foot { display: flex; gap: 12px; align-items: center; justify-content: space-between; color: #aaa48e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+  #blood-audio { background: #171c19; border: 1px solid #645c46; color: var(--gold); cursor: pointer; padding: 8px 12px; font-size: 11px; text-transform: uppercase; white-space: nowrap; }
+  #blood-audio:hover, #blood-audio[aria-pressed="true"] { background: #292b23; border-color: var(--gold); }
+  #blood-audio:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .blood-wall {
+    position: relative; isolation: isolate; overflow: hidden; min-height: 610px;
+    background: #3b3328 url('/assets/record-of-blood-wall.png') center center / cover no-repeat;
+    box-shadow: inset 0 0 65px 12px rgba(11,9,7,.55), 0 18px 40px #000;
+  }
+  .blood-wall::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; background: linear-gradient(90deg, rgba(17,13,9,.18), transparent 25% 75%, rgba(17,13,9,.28)); }
+  .blood-light { position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 24% 25%, rgba(255,196,110,.16), transparent 65%); animation: bloodGlow 8s ease-in-out infinite alternate; }
+  @keyframes bloodGlow { from { opacity: .5; } to { opacity: 1; } }
+  .blood-mounts { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 4px 12px; width: min(76%, 950px); height: 445px; margin: 0 auto; padding: 28px 0 12px; }
+  .blood-mount { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 4px; border: 0; color: #f1e5c8; background: none; cursor: pointer; text-align: center; }
+  .blood-mount::before { content: ""; position: absolute; top: 15%; width: min(90%, 190px); aspect-ratio: 1; border-radius: 48%; pointer-events: none; background: radial-gradient(ellipse at 55% 59%, rgba(13,10,8,.86) 15%, rgba(29,20,13,.62) 47%, rgba(50,35,20,.14) 71%, transparent 78%); filter: blur(6px); }
+  .blood-pauldron { position: relative; display: block; width: min(100%, 140px); aspect-ratio: 1; filter: drop-shadow(5px 10px 5px rgba(0,0,0,.85)); transition: filter .25s, transform .25s; }
+  .blood-pauldron svg { width: 100%; height: 100%; fill: #9c916f; stroke: #c0b291; stroke-width: 2; }
+  .blood-plate { fill: #343a36; stroke: #b5a484; stroke-width: 7; }
+  .blood-trim { fill: #252b28; stroke: #55594d; stroke-width: 3; }
+  .blood-grain { fill: none; stroke: #868373; stroke-width: 2; opacity: .55; }
+  .blood-pauldron img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 2px #000); }
+  .blood-pauldron img[hidden] { display: none; }
+  .blood-mount:hover .blood-pauldron, .blood-mount:focus-visible .blood-pauldron, .blood-mount.selected .blood-pauldron { filter: drop-shadow(0 0 10px rgba(246,196,110,.4)) drop-shadow(5px 10px 5px #000); transform: translateY(-2px); }
+  .blood-mount:hover, .blood-mount:focus { z-index: 4; }
+  .blood-preview { position: absolute; z-index: 5; top: 0; left: 100%; width: 260px; max-width: calc(100vw - 32px); max-height: 240px; padding: 12px; overflow-y: auto; text-align: left; background: rgba(8,14,10,.98); border: 1px solid var(--gold-dim); border-left: 3px solid var(--gold); box-shadow: 0 12px 30px #050605, inset 0 0 24px rgba(79,214,122,.04); opacity: 0; visibility: hidden; pointer-events: none; }
+  .blood-mount:nth-child(4n + 3) .blood-preview, .blood-mount:nth-child(4n) .blood-preview { left: auto; right: 100%; }
+  .blood-mount:hover .blood-preview, .blood-mount:focus .blood-preview { opacity: 1; visibility: visible; pointer-events: auto; }
+  .blood-mounts:focus-within .blood-mount:hover:not(:focus) .blood-preview { opacity: 0; visibility: hidden; pointer-events: none; }
+  .blood-preview-title { display: block; margin-bottom: 7px; padding-bottom: 7px; border-bottom: 1px solid var(--border-dim); color: var(--gold); font-family: 'Cinzel', serif; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+  .blood-preview-member { display: block; padding: 4px 0; color: var(--green); font-size: 12px; overflow-wrap: anywhere; }
+  .blood-empty { position: relative; z-index: 2; text-align: center; padding: 130px 24px; color: #281f15; }
+  .blood-controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 16px auto; color: var(--gold); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  .blood-controls button { width: 42px; height: 42px; background: #191d18; border: 1px solid var(--gold-dim); color: var(--gold); cursor: pointer; font-size: 20px; }
+  .blood-controls button:hover:not(:disabled) { border-color: var(--gold); background: #313329; }
+  .blood-controls button:disabled { opacity: .35; cursor: default; }
+  .blood-roster { max-width: 1180px; margin: 22px auto 0; padding: 20px 22px 28px; border-top: 2px solid #8f753e; background: #101511; }
+  .blood-roster-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; border-bottom: 1px solid #514b36; padding-bottom: 12px; }
+  .blood-roster h3 { font-family: 'Cinzel', serif; color: var(--white); font-size: 21px; margin: 4px 0 0; }
+  .blood-close { background: none; border: 1px solid #645c46; color: var(--gold); width: 32px; height: 32px; cursor: pointer; font-size: 20px; }
+  .blood-roster-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 7px; padding-top: 14px; }
+  .blood-brother { display: flex; flex-direction: column; gap: 5px; text-align: left; padding: 11px; border: 1px solid #3a4037; background: #171d18; color: var(--white); cursor: pointer; }
+  .blood-brother:hover { border-color: var(--gold); }
+  .blood-brother small { color: #ada681; font-size: 10px; }
+  @media (max-width: 600px) {
+    .blood-page .page { padding: 14px 10px 32px; }
+    .blood-heading { padding: 10px 5px 20px; }
+    .blood-wall { min-height: 540px; background-position: center; }
+    .blood-mounts { width: min(92%, 360px); height: 395px; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 16px 0 8px; }
+    .blood-pauldron { width: min(100%, 120px); }
+    .blood-preview, .blood-mount:nth-child(4n + 3) .blood-preview { left: 0; right: auto; width: min(270px, calc(100vw - 44px)); max-height: 180px; }
+    .blood-mount:nth-child(2n) .blood-preview { left: auto; right: 0; }
+    .blood-roster { padding: 16px 12px; }
+  }
+
   @media (max-width: 600px) {
     .header { flex-wrap: wrap; }
     .site-nav { order: 3; width: 100%; }
@@ -849,6 +913,8 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     .reach-pulse { animation: none; opacity: 0.5; }
+    .blood-mount { opacity: 1; }
+    .blood-light { animation: none; }
   }
 
   :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
@@ -873,6 +939,7 @@
       <nav class="site-nav" aria-label="Strategium sections">
         <a href="/" data-page="fortress">Fortress</a>
         <a href="/reach" data-page="reach">Reach Map</a>
+        <a href="/record-of-blood" data-page="blood">Record of Blood</a>
       </nav>
       <div class="header-right">
         <div id="auth-container"></div>
@@ -1027,6 +1094,17 @@ function sortByRank(members) {
 function formationEquerries(key) {
   const f = FORMATIONS[key];
   return sortByRank(state.members.filter(m => m.equerry && m.rank !== f.lead && (m.formation === key || f.ranks.includes(m.rank))));
+}
+const EQUERRY_TITLES = {
+  first_blade: "High Blade",
+  techmarine: "Forge Adept",
+  librarian: "Lexicanum Primus",
+  apothecary: "Primus Medicae",
+  chaplain: "Reclusiarch",
+  kill_marine: "Venator Primus"
+};
+function equerryTitle(member) {
+  return EQUERRY_TITLES[member.rank] || `${RANK_LABELS[member.rank] || member.rank} · Equerry`;
 }
 const FORMATION_MEMBER_RANKS = Object.values(FORMATIONS).flatMap(f => f.ranks).concat(["venerable_dreadnought"]);
 
@@ -1327,7 +1405,7 @@ function generateSampleRoster() {
 /* ---------------------------------------------------------------------- */
 
 const state = {
-  page: "fortress",    // 'fortress' | 'reach'
+  page: "fortress",    // 'fortress' | 'reach' | 'blood'
   view: "strategium",   // 'strategium' | 'company' | 'killteam' | 'formation'
   companyId: null,
   killTeamId: null,
@@ -1345,7 +1423,9 @@ const state = {
   reachAdj: new Map(),
   reachFilters: { statuses: new Set(["deployed", "recruiting", "distributed", "unassigned", "completed", "failed", "lapsed"]), company: "all" },
   reachSuppressClick: false,
-  selectedPlanet: null
+  selectedPlanet: null,
+  selectedChapter: null,
+  bloodPage: 0
 };
 
 const BACKSTORY_MAX_WORDS = 400;
@@ -1723,6 +1803,10 @@ function plateHtml({ id, member, name, rankLabel, sub, accent, vacant, size }) {
 
 function renderBreadcrumb() {
   const el = document.getElementById("breadcrumb");
+  if (state.page === "blood") {
+    el.innerHTML = `<span class="crumb crumb-current">Record of Blood</span>`;
+    return;
+  }
   if (state.page === "reach") {
     el.innerHTML = `<span class="crumb crumb-current">Jericho Reach</span><span class="crumb-sep">&rsaquo;</span><span class="crumb">Ordo Xenos Strike Directives</span>`;
     return;
@@ -1780,7 +1864,7 @@ function renderStrategium() {
       <button class="formation-plate ${isUnformed ? 'unit-unformed' : ''}" data-nav="formation" data-formation="${key}" type="button" style="--formation-accent:${FORMATION_COLORS[key]}">
         <span class="formation-plate-label">${escapeHtml(f.name)}</span>
         ${lead ? `<span class="formation-plate-lead">${RANK_LABELS[lead.rank]} ${escapeHtml(displayName(lead.name))}</span>` : ""}
-        ${equerries.map(e => `<span class="formation-plate-lead">Equerry ${escapeHtml(displayName(e.name))}</span>`).join("")}
+        ${equerries.map(e => `<span class="formation-plate-lead">${escapeHtml(equerryTitle(e))} ${escapeHtml(displayName(e.name))}</span>`).join("")}
         ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Cadre Dormant &mdash;</span>` : `<span class="formation-plate-count">${count} sworn</span>`}
         <span class="formation-plate-blurb">${escapeHtml(FORMATION_LORE[key] || "This formation serves the Watch according to its own discipline and mandate.")}</span>
       </button>
@@ -1949,7 +2033,7 @@ function renderFormation(key) {
     rankLabel: RANK_LABELS[lead.rank], accent: "gold", vacant: false, size: "md"
   }) : "", ...equerries.map(equerry => plateHtml({
     id: equerry.id, member: equerry, name: equerry.name,
-    rankLabel: `Equerry \u00b7 ${RANK_LABELS[equerry.rank] || equerry.rank}`, accent: "steel", vacant: false, size: "md"
+    rankLabel: equerryTitle(equerry), accent: "steel", vacant: false, size: "md"
   }))].join("");
 
   const rows = rest.map(m => `
@@ -2015,10 +2099,177 @@ function renderKillTeam(companyId, killTeam) {
   `;
 }
 
+function chaptersOnRecord() {
+  const chapters = new Map();
+  state.members.forEach(member => {
+    const name = typeof member.chapter === "string" ? member.chapter.trim() : "";
+    if (!name || name.toLowerCase() === "black shield") return;
+    const key = name.toLocaleLowerCase("en");
+    if (!chapters.has(key)) chapters.set(key, { name, members: [] });
+    chapters.get(key).members.push(member);
+  });
+  return [...chapters.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const PAULDRON_ART = Object.fromEntries([
+  "Angels Encarmine", "Angels of Defiance", "Angels of Vengeance", "Black Templars",
+  "Blood Angels", "Blood Ravens", "Blood Scythes", "Carcharodons", "Carmine Blades",
+  "Cowled Wardens", "Crimson Fists", "Dark Angels", "Dark Krakens", "Death Spectres",
+  "Executioners", "Exorcists", "Flesh Tearers", "Genesis Chapter", "Hawk Lords",
+  "Hospitallers", "Howling Griffons", "Imperial Fists", "Imperius Reavers", "Iron Hands",
+  "Iron Ravens", "Knights of Abhorrence", "Lamenters", "Marines Errant",
+  "Marines Malevolent", "Mentors", "Minotaurs", "Necropolis Hawks", "Raptors",
+  "Raven Guard", "Red Scorpions", "Red Templars", "Salamanders",
+  "Scythes of the Emperor", "Space Wolves", "Tome Keepers", "Ultramarines", "White Scars"
+].map(name => [name, `${name}.png`]));
+PAULDRON_ART["Celestial Lions"] = "Celestial lions.png";
+
+let bloodPageSize = window.matchMedia("(max-width: 600px)").matches ? 4 : 8;
+
+function visibleBloodChapters(chapters) {
+  const pageSize = window.matchMedia("(max-width: 600px)").matches ? 4 : 8;
+  if (pageSize !== bloodPageSize) {
+    state.bloodPage = Math.floor(state.bloodPage * bloodPageSize / pageSize);
+    bloodPageSize = pageSize;
+  }
+  const pages = Math.max(1, Math.ceil(chapters.length / pageSize));
+  state.bloodPage = Math.min(state.bloodPage, pages - 1);
+  const start = state.bloodPage * pageSize;
+  return { visible: chapters.slice(start, start + pageSize), start, pages };
+}
+
+async function openChapterRecord(name) {
+  if (state.dataStatus !== "live") return;
+  const chapters = chaptersOnRecord();
+  const index = chapters.findIndex(chapter => chapter.name === name);
+  if (index < 0) return;
+  visibleBloodChapters(chapters);
+  state.bloodPage = Math.floor(index / bloodPageSize);
+  state.selectedChapter = name;
+  closeMemberModal();
+  if (state.page === "blood") renderRecordOfBlood();
+  else await setPage("blood", true);
+  document.getElementById("blood-roster")?.focus();
+}
+
+const bloodAudio = new Audio("/assets/ambience/fortress-ambience.mp3");
+bloodAudio.loop = true;
+bloodAudio.volume = 0.35;
+let bloodAudioAvailable = false;
+
+function updateBloodAudioButton() {
+  const button = document.getElementById("blood-audio");
+  if (!button) return;
+  button.disabled = !bloodAudioAvailable;
+  const playing = !bloodAudio.paused;
+  button.setAttribute("aria-pressed", String(playing));
+  button.title = bloodAudioAvailable ? (playing ? "Stop fortress ambience" : "Play fortress ambience") : "Ambience recording not installed";
+  button.querySelector("span").textContent = bloodAudioAvailable ? (playing ? "Ambience on" : "Ambience off") : "Ambience unavailable";
+}
+
+function pauseBloodAudio() {
+  bloodAudio.pause();
+  bloodAudio.currentTime = 0;
+  updateBloodAudioButton();
+}
+
+async function checkBloodAudio() {
+  if (state.page !== "blood" || !window.location.protocol.startsWith("http")) return;
+  try {
+    const response = await fetch("/assets/ambience/fortress-ambience.mp3", { method: "HEAD" });
+    bloodAudioAvailable = response.ok;
+  } catch {
+    bloodAudioAvailable = false;
+  }
+  if (state.page === "blood") updateBloodAudioButton();
+}
+
+async function toggleBloodAudio() {
+  if (!bloodAudioAvailable) return;
+  if (bloodAudio.paused) {
+    try {
+      await bloodAudio.play();
+    } catch {
+      bloodAudioAvailable = false;
+    }
+  } else {
+    pauseBloodAudio();
+  }
+  updateBloodAudioButton();
+}
+
+function chapterRosterHtml(chapters) {
+  const selected = chapters.find(chapter => chapter.name === state.selectedChapter);
+  if (!selected) return "";
+  const members = sortByRank(selected.members);
+  return `<section class="blood-roster" id="blood-roster" aria-labelledby="blood-roster-title" tabindex="-1">
+    <div class="blood-roster-heading">
+      <div><div class="blood-overline">The brothers who bear its colours</div><h3 id="blood-roster-title">${escapeHtml(selected.name)}</h3></div>
+      <button class="blood-close" type="button" data-close-chapter aria-label="Close Chapter roster" title="Close Chapter roster">&times;</button>
+    </div>
+    <div class="blood-roster-list">${members.map(member => `
+      <button class="blood-brother" type="button" data-member="${escapeHtml(member.id)}">
+        <span>${escapeHtml(displayName(member.name))}</span>
+        <small>${escapeHtml(RANK_LABELS[member.rank] || member.rank || "Brother")} &middot; ${escapeHtml(memberLocationLabel(member))}</small>
+      </button>`).join("")}</div>
+  </section>`;
+}
+
+function chapterPreviewHtml(chapter) {
+  return `<span class="blood-preview" aria-hidden="true">
+    <span class="blood-preview-title">${escapeHtml(chapter.name)}</span>
+    ${sortByRank(chapter.members).map(member => `<span class="blood-preview-member">${escapeHtml(displayName(member.name))}</span>`).join("")}
+  </span>`;
+}
+
+function renderRecordOfBlood() {
+  const chapters = chaptersOnRecord();
+  const { visible, start, pages } = visibleBloodChapters(chapters);
+  if (state.selectedChapter && !chapters.some(chapter => chapter.name === state.selectedChapter)) state.selectedChapter = null;
+  const empty = state.dataStatus === "error" ? "The roster relay is unavailable. The Record cannot be verified."
+    : state.dataStatus === "sample" ? "Connect the fortress roster to reveal the Chapters on watch."
+    : state.members.length ? "No Chapters are recorded among the brothers on watch." : "No brothers are currently on record.";
+  const mounts = state.dataStatus === "live" ? visible.map(chapter => {
+    const selected = chapter.name === state.selectedChapter;
+    const art = PAULDRON_ART[chapter.name];
+    return `<button class="blood-mount${selected ? " selected" : ""}" type="button" data-chapter="${escapeHtml(chapter.name)}"
+      aria-pressed="${selected}" aria-label="${escapeHtml(chapter.name)}, ${chapter.members.length} brother${chapter.members.length === 1 ? "" : "s"}">
+      <span class="blood-pauldron" aria-hidden="true">
+        ${art ? "" : `<svg viewBox="0 0 200 170" focusable="false"><path class="blood-plate" d="M17 61 Q30 18 100 14 Q170 18 183 61 L174 110 Q158 153 100 159 Q42 153 26 110 Z"/><path class="blood-trim" d="M23 65 Q40 27 100 22 Q160 27 177 65 L167 107 Q149 143 100 150 Q51 143 33 107 Z"/><path class="blood-grain" d="M44 59 Q63 41 97 39 M37 105 Q64 132 100 135"/><circle cx="34" cy="73" r="3"/><circle cx="166" cy="73" r="3"/><circle cx="100" cy="145" r="3"/></svg>`}
+        ${art ? `<img src="/assets/pauldrons/${encodeURIComponent(art)}" alt="" loading="lazy" onerror="this.hidden=true">` : ""}
+      </span>
+      ${chapterPreviewHtml(chapter)}
+    </button>`;
+  }).join("") : "";
+
+  document.getElementById("app").innerHTML = `
+    <div class="blood-room">
+      <div class="blood-heading">
+        <div class="blood-overline">Watch Fortress Jericho / The living roll</div>
+        <h2>Record of Blood</h2>
+        <div class="blood-heading-foot"><span>${state.dataStatus === "live" ? `${chapters.length} Chapters &middot; ${chapters.reduce((total, chapter) => total + chapter.members.length, 0)} brothers` : "Awaiting fortress record"}</span>
+          <button id="blood-audio" type="button" aria-pressed="false" title="Play fortress ambience">&#9835; <span>Ambience off</span></button></div>
+      </div>
+      <div class="blood-wall">
+        <div class="blood-light" aria-hidden="true"></div>
+        ${mounts ? `<div class="blood-mounts">${mounts}</div>` : `<p class="blood-empty">${empty}</p>`}
+      </div>
+      ${chapters.length > bloodPageSize && state.dataStatus === "live" ? `<nav class="blood-controls" aria-label="Browse Chapters">
+        <button type="button" data-blood-page="previous" aria-label="Previous pauldrons" title="Previous pauldrons" ${state.bloodPage === 0 ? "disabled" : ""}>&larr;</button>
+        <span role="status" aria-live="polite">${start + 1}&ndash;${start + visible.length} of ${chapters.length} Chapters</span>
+        <button type="button" data-blood-page="next" aria-label="Next pauldrons" title="Next pauldrons" ${state.bloodPage >= pages - 1 ? "disabled" : ""}>&rarr;</button>
+      </nav>` : ""}
+      ${chapterRosterHtml(chapters)}
+    </div>`;
+  updateBloodAudioButton();
+}
+
 function render(originPct, direction) {
+  document.body.classList.toggle("blood-page", state.page === "blood");
   renderBreadcrumb();
   updateSiteNav();
   if (state.page === "reach") renderReach();
+  else if (state.page === "blood") renderRecordOfBlood();
   else if (state.view === "strategium") renderStrategium();
   else if (state.view === "company") renderCompany(state.companyId);
   else if (state.view === "killteam") renderKillTeam(state.companyId, state.killTeamId);
@@ -2027,6 +2278,7 @@ function render(originPct, direction) {
 
   const app = document.getElementById("app");
   app.classList.remove("zoom-in", "zoom-out");
+  if (state.page === "blood") return;
   void app.offsetWidth; /* force reflow so the animation retriggers */
   if (direction === "in" && originPct) {
     app.style.transformOrigin = `${originPct.x}% ${originPct.y}%`;
@@ -2043,6 +2295,11 @@ function updateStatusBadge() {
   if (slateCount) {
     if (state.page === "reach") {
       slateCount.textContent = "ACTIVE DIRECTIVES: " + activeReachDirectives().length;
+      slateCount.style.display = "";
+      return;
+    }
+    if (state.page === "blood") {
+      slateCount.textContent = state.dataStatus === "live" ? "CHAPTERS ON RECORD: " + chaptersOnRecord().length : "ROSTER RELAY OFFLINE";
       slateCount.style.display = "";
       return;
     }
@@ -2127,6 +2384,8 @@ function backstoryHtml(text) {
 }
 
 function renderMemberModalContent(m, isEditing = false) {
+  const chapter = state.dataStatus === "live" ? chaptersOnRecord().find(entry =>
+    entry.name.toLocaleLowerCase("en") === String(m.chapter || "").trim().toLocaleLowerCase("en")) : null;
   const stats = m.stats && typeof m.stats === "object" ? Object.entries(m.stats)
     .filter(([key, value]) => ["string", "number", "boolean"].includes(typeof value) && ![
       "aar_points",
@@ -2174,7 +2433,7 @@ function renderMemberModalContent(m, isEditing = false) {
       <div class="modal-name">${escapeHtml(displayName(m.name))}</div>
       ${m.serviceStudPips ? `<div class="modal-studs"><div class="modal-studs-label">Service Studs</div>${serviceStudsHtml(m)}</div>` : ""}
     </div>
-    <div class="modal-row"><span>Chapter of Origin</span><span>${escapeHtml(m.chapter || "Unrecorded")}</span></div>
+    <div class="modal-row"><span>Chapter of Origin</span><span>${chapter ? `<button class="modal-link" type="button" data-chapter-link="${escapeHtml(chapter.name)}">${escapeHtml(chapter.name)} &rsaquo;</button>` : escapeHtml(m.chapter || "Unrecorded")}</span></div>
     ${locationRows(m)}
     <div class="modal-row"><span>AAR Points</span><span>${escapeHtml(Number.isFinite(Number(m.aarPoints ?? m.stats?.aar_points)) ? Number(m.aarPoints ?? m.stats.aar_points) : "Unrecorded")}</span></div>
     <div class="modal-row"><span>Strike Directives</span><span>${escapeHtml(Number.isFinite(Number(m.strikeDirectives)) ? `${m.strikeDirectives} completed` : (Number.isFinite(Number(m.stats?.strike_directives)) ? `${m.stats.strike_directives} completed` : "0 completed"))}</span></div>
@@ -2477,7 +2736,8 @@ function relativeTime(iso) {
 }
 
 function pageFromLocation() {
-  return window.location.pathname.replace(/\/+$/, "") === "/reach" ? "reach" : "fortress";
+  const path = window.location.pathname.replace(/\/+$/, "");
+  return path === "/reach" ? "reach" : path === "/record-of-blood" ? "blood" : "fortress";
 }
 
 function updateSiteNav() {
@@ -2496,11 +2756,14 @@ async function setPage(page, push) {
   }
   state.page = page;
   closePlanetModal();
+  if (page !== "blood") pauseBloodAudio();
   if (push && window.location.protocol.startsWith("http")) {
-    history.pushState({ page }, "", page === "reach" ? "/reach" : "/");
+    history.pushState({ page }, "", page === "reach" ? "/reach" : page === "blood" ? "/record-of-blood" : "/");
   }
   if (page === "reach" && state.reachStatus === "idle") await loadReach();
   render(null, "out");
+  if (page === "blood") checkBloodAudio();
+  window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 async function loadReach() {
@@ -3101,8 +3364,14 @@ function closeSearch() {
 /* ---------------------------------------------------------------------- */
 
 function wireEvents() {
-  window.addEventListener("resize", () => requestAnimationFrame(() => { drawMapConnectors(); applyReachView(); }));
+  window.addEventListener("resize", () => requestAnimationFrame(() => {
+    drawMapConnectors(); applyReachView();
+    if (state.page === "blood" && (window.matchMedia("(max-width: 600px)").matches ? 4 : 8) !== bloodPageSize) renderRecordOfBlood();
+  }));
   window.addEventListener("popstate", () => setPage(pageFromLocation(), false));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) pauseBloodAudio();
+  });
   const clampRibbonTip = (e) => {
     const ribbon = e.target.closest && e.target.closest(".ribbon");
     const tip = ribbon && ribbon.querySelector(".ribbon-tip");
@@ -3142,6 +3411,38 @@ function wireEvents() {
     if (pageLink) {
       e.preventDefault();
       setPage(pageLink.dataset.page, true);
+      return;
+    }
+    const chapterLink = e.target.closest("[data-chapter-link]");
+    if (chapterLink) {
+      openChapterRecord(chapterLink.dataset.chapterLink);
+      return;
+    }
+    if (e.target.closest("#blood-audio")) {
+      toggleBloodAudio();
+      return;
+    }
+    const pageButton = e.target.closest("[data-blood-page]");
+    if (pageButton) {
+      const pages = Math.ceil(chaptersOnRecord().length / bloodPageSize);
+      state.bloodPage = Math.max(0, Math.min(pages - 1, state.bloodPage + (pageButton.dataset.bloodPage === "next" ? 1 : -1)));
+      state.selectedChapter = null;
+      renderRecordOfBlood();
+      document.querySelector(`[data-blood-page="${pageButton.dataset.bloodPage}"]`)?.focus();
+      return;
+    }
+    const chapterBtn = e.target.closest("[data-chapter]");
+    if (chapterBtn) {
+      state.selectedChapter = chapterBtn.dataset.chapter;
+      renderRecordOfBlood();
+      document.getElementById("blood-roster")?.focus();
+      return;
+    }
+    if (e.target.closest("[data-close-chapter]")) {
+      const selected = state.selectedChapter;
+      state.selectedChapter = null;
+      renderRecordOfBlood();
+      [...document.querySelectorAll("[data-chapter]")].find(button => button.dataset.chapter === selected)?.focus();
       return;
     }
     const filterBtn = e.target.closest("[data-reach-filter]");
@@ -3240,6 +3541,7 @@ async function init() {
   await Promise.all([loadData(), state.page === "reach" ? loadReach() : null]);
   await loadAuth();
   render();
+  if (state.page === "blood") checkBloodAudio();
   setInterval(refreshReach, REACH_REFRESH_MS);
 }
 
