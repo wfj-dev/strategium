@@ -676,6 +676,7 @@
   .honours-note { font-size: 10px; color: var(--green-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; text-align: right; }
   @media (max-width: 760px) {
     .command-row { grid-template-columns: 1fr; gap: 0; }
+    .ribbon-tip { max-width: min(270px, calc(100vw - 16px)); }
   }
   .modal-stats { margin-top: 16px; border-top: 1px solid var(--border-dim); padding-top: 10px; }
   .modal-stats-label { color: var(--gold); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
@@ -3102,6 +3103,19 @@ function closeSearch() {
 function wireEvents() {
   window.addEventListener("resize", () => requestAnimationFrame(() => { drawMapConnectors(); applyReachView(); }));
   window.addEventListener("popstate", () => setPage(pageFromLocation(), false));
+  const clampRibbonTip = (e) => {
+    const ribbon = e.target.closest && e.target.closest(".ribbon");
+    const tip = ribbon && ribbon.querySelector(".ribbon-tip");
+    if (!tip) return;
+    tip.style.marginLeft = "0px";
+    const rect = tip.getBoundingClientRect();
+    if (!rect.width) return;
+    const overflowRight = rect.right - (window.innerWidth - 8);
+    if (rect.left < 8) tip.style.marginLeft = `${8 - rect.left}px`;
+    else if (overflowRight > 0) tip.style.marginLeft = `${-overflowRight}px`;
+  };
+  document.addEventListener("mouseover", clampRibbonTip);
+  document.addEventListener("focusin", clampRibbonTip);
   document.body.addEventListener("change", (e) => {
     const select = e.target.closest("[data-reach-company]");
     if (select) {
