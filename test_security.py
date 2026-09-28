@@ -7,8 +7,11 @@ from server import (
     _cookie_flags,
     _origin_matches,
     _request_is_secure,
+    _ribbon_path,
     _session_user,
     _session_value,
+    _validate_awards,
+    _validate_reach,
 )
 
 
@@ -57,3 +60,74 @@ def test_backstory_word_error_includes_actual_and_maximum() -> None:
         f"Backstory is too long: {actual:,}/{BACKSTORY_MAX_WORDS:,} words. "
         "You're not that guy."
     )
+
+
+def test_reach_validation_drops_unknown_fields_and_bad_references() -> None:
+    reach = _validate_reach(
+        {
+            "nodes": [{"id": "Avarax", "x": 10, "y": "bad", "secret": 1}, {"x": 3}],
+            "edges": [{"source": "Avarax", "target": "Nowhere"}],
+            "directives": [
+                {
+                    "id": "a",
+                    "node": "Avarax",
+                    "status": "deployed",
+                    "company": 9,
+                    "participants": ["123", "<script>"],
+                    "forumThreadId": 5,
+                },
+                {"id": "b", "node": "Avarax", "status": "hacked"},
+                {"id": "c", "node": "Nowhere", "status": "deployed"},
+            ],
+            "rep": 99,
+        }
+    )
+    assert reach["nodes"] == [
+        {
+            "id": "Avarax",
+            "type": "",
+            "region": "",
+            "x": 10.0,
+            "y": 0.0,
+            "gamePlanet": False,
+        }
+    ]
+    assert reach["edges"] == []
+    [directive] = reach["directives"]
+    assert directive["company"] is None
+    assert directive["participants"] == ["123"]
+    assert "forumThreadId" not in directive
+    assert reach["rep"] == 2.0
+
+
+def test_reach_validation_tolerates_wrong_container_types() -> None:
+    reach = _validate_reach({"nodes": {"a": 1}, "edges": "x", "directives": None})
+    assert reach == {"nodes": [], "edges": [], "directives": [], "rep": 0.0}
+
+
+def test_ribbon_path_rejects_traversal_and_non_png() -> None:
+    assert _ribbon_path("1-Order Omega.png") is not None
+    for name in [
+        "../server.py",
+        "..%2Fserver.py",
+        "../assets/ribbons/1-Order Omega.png",
+        "/etc/passwd.png",
+        "sub\\x.png",
+        ".hidden.png",
+        "server.py",
+        "missing.png",
+    ]:
+        assert _ribbon_path(name) is None
+
+
+def test_awards_validation_keeps_only_known_ribbons() -> None:
+    awards = _validate_awards(
+        [
+            {"name": "The Order Omega", "ribbon": "1-Order Omega.png"},
+            {"name": "Evil", "ribbon": "../server.py"},
+            {"name": "", "ribbon": "1-Order Omega.png"},
+            "junk",
+        ]
+    )
+    assert awards == [{"name": "The Order Omega", "ribbon": "1-Order Omega.png"}]
+    assert _validate_awards(None) == []
