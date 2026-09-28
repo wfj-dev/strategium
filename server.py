@@ -48,6 +48,10 @@ _load_dotenv(ROOT / ".env")
 DATA_DIR = ROOT / "data"
 ROSTER_PATH = DATA_DIR / "roster_snapshot.json"
 BACKSTORIES_PATH = DATA_DIR / "backstories.json"
+REACH_PATH = DATA_DIR / "reach_snapshot.json"
+RIBBONS_DIR = ROOT / "assets" / "ribbons"
+RIBBON_URL_PREFIX = "/assets/ribbons/"
+MAX_AWARDS_PER_MEMBER = 40
 HOST = os.getenv("STRATEGIUM_HOST", "127.0.0.1")
 PORT = int(os.getenv("STRATEGIUM_PORT", "8787"))
 BOT_SHARED_SECRET = os.getenv("STRATEGIUM_BOT_SHARED_SECRET", "")
@@ -64,6 +68,13 @@ BACKSTORY_MAX_WORDS = 400
 BACKSTORY_MAX_CHARS = 2400
 SESSION_TTL_SECONDS = int(os.getenv("STRATEGIUM_SESSION_TTL_SECONDS", str(60 * 60 * 24 * 7)))
 MAX_JSON_BODY_BYTES = 1024 * 1024
+REACH_MAX_NODES = 500
+REACH_MAX_EDGES = 2000
+REACH_MAX_DIRECTIVES = 500
+REACH_STATUSES = {
+    "unassigned", "distributed", "recruiting", "deployed", "completed", "failed", "lapsed"
+}
+PAGE_PATHS = {"/", "/reach"}
 
 SECURITY_LOG = logging.getLogger("strategium.security")
 
@@ -201,8 +212,118 @@ def _validate_members(payload: Any) -> list[dict[str, Any]]:
             or not member.get("name")
         ):
             continue
+        member = dict(member)
+        member["awards"] = _validate_awards(member.get("awards"))
         members.append(member)
     return members
+
+
+def _validate_awards(value: Any) -> list[dict[str, str]]:
+    awards = []
+    for award in _list(value, MAX_AWARDS_PER_MEMBER):
+        if not isinstance(award, dict):
+            continue
+        name = _text(award.get("name"), 80)
+        ribbon = _text(award.get("ribbon"), 80)
+        if not name:
+            continue
+        if _ribbon_path(ribbon) is None:
+            SECURITY_LOG.warning("award dropped: ribbon image %r not found in %s", ribbon, RIBBONS_DIR)
+            continue
+        awards.append({"name": name, "ribbon": ribbon})
+    return awards
+
+
+def _ribbon_path(name: str) -> Path | None:
+    if not name.endswith(".png") or "/" in name or "\\" in name or name.startswith("."):
+        return None
+    candidate = (RIBBONS_DIR / name).resolve()
+    if candidate.parent != RIBBONS_DIR.resolve() or not candidate.is_file():
+        return None
+    return candidate
+
+
+def _text(value: Any, limit: int = 120) -> str:
+    return value.strip()[:limit] if isinstance(value, str) else ""
+
+
+def _number(value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0.0
+    return float(value) if abs(value) < 1e6 else 0.0
+
+
+def _list(value: Any, limit: int) -> list[Any]:
+    return value[:limit] if isinstance(value, list) else []
+
+
+def _text_list(value: Any, limit: int = 20, length: int = 120) -> list[str]:
+    return [item for item in (_text(v, length) for v in _list(value, limit)) if item]
+
+
+def _validate_reach(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("reach must be an object")
+    nodes = []
+    for node in _list(payload.get("nodes"), REACH_MAX_NODES):
+        if isinstance(node, dict) and _text(node.get("id")):
+            nodes.append({
+                "id": _text(node.get("id")),
+                "type": _text(node.get("type"), 40),
+                "region": _text(node.get("region"), 60),
+                "x": _number(node.get("x")),
+                "y": _number(node.get("y")),
+                "gamePlanet": node.get("gamePlanet") is True,
+            })
+    node_ids = {node["id"] for node in nodes}
+    edges = []
+    for edge in _list(payload.get("edges"), REACH_MAX_EDGES):
+        if not isinstance(edge, dict):
+            continue
+        source, target = _text(edge.get("source")), _text(edge.get("target"))
+        if source in node_ids and target in node_ids:
+            edges.append({"source": source, "target": target, "proximity": _text(edge.get("proximity"), 20)})
+    directives = []
+    for item in _list(payload.get("directives"), REACH_MAX_DIRECTIVES):
+        if not isinstance(item, dict):
+            continue
+        status = _text(item.get("status"), 20)
+        node = _text(item.get("node"))
+        if status not in REACH_STATUSES or node not in node_ids:
+            continue
+        company = item.get("company")
+        stratagems = item.get("stratagems") if isinstance(item.get("stratagems"), dict) else {}
+        directives.append({
+            "id": _text(item.get("id"), 40),
+            "code": _text(item.get("code"), 40),
+            "name": _text(item.get("name")),
+            "node": node,
+            "worldType": _text(item.get("worldType"), 40),
+            "mission": _text(item.get("mission")),
+            "mode": _text(item.get("mode"), 40),
+            "classification": _text(item.get("classification"), 60),
+            "requirementTier": _text(item.get("requirementTier"), 40),
+            "requiredRoles": _text_list(item.get("requiredRoles")),
+            "stratagems": {
+                "positive": _text_list(stratagems.get("positive")),
+                "negative": _text_list(stratagems.get("negative")),
+            },
+            "intelLapse": item.get("intelLapse") is True,
+            "briefing": _text(item.get("briefing"), 2000),
+            "status": status,
+            "company": company if isinstance(company, int) and not isinstance(company, bool) and 1 <= company <= 5 else None,
+            "killTeam": _text(item.get("killTeam")) or None,
+            "participants": [p for p in _text_list(item.get("participants"), 50, 24) if p.isdigit()],
+            "generatedAt": _text(item.get("generatedAt"), 40) or None,
+            "deadline": _text(item.get("deadline"), 40) or None,
+            "completedAt": _text(item.get("completedAt"), 40) or None,
+        })
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "directives": directives,
+        "rep": max(-2.0, min(2.0, _number(payload.get("rep")))),
+    }
 
 
 def _backstory_error(text: str) -> str | None:
@@ -282,7 +403,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         self._send(HTTPStatus.NO_CONTENT, {})
 
     def do_HEAD(self) -> None:
-        if urllib.parse.urlparse(self.path).path == "/":
+        if urllib.parse.urlparse(self.path).path in PAGE_PATHS:
             body = (ROOT / "jericho-strategium.html").read_bytes()
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -294,12 +415,18 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == "/":
+        if parsed.path in PAGE_PATHS:
             self._send_page()
         elif parsed.path == "/health":
             self._send(HTTPStatus.OK, {"ok": True})
         elif parsed.path == "/api/roster":
             self._send(HTTPStatus.OK, self._merged_roster())
+        elif parsed.path == "/api/reach":
+            with _LOCK:
+                reach = _load_json(REACH_PATH, {})
+            self._send(HTTPStatus.OK, reach if isinstance(reach, dict) else {}, {"Cache-Control": "no-cache"})
+        elif parsed.path.startswith(RIBBON_URL_PREFIX):
+            self._send_ribbon(urllib.parse.unquote(parsed.path[len(RIBBON_URL_PREFIX):]))
         elif parsed.path == "/api/auth/discord/start":
             self._discord_start()
         elif parsed.path == "/api/auth/logout":
@@ -318,6 +445,20 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._get_backstory()
         else:
             self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+
+    def _send_ribbon(self, name: str) -> None:
+        path = _ribbon_path(name)
+        if path is None:
+            self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+            return
+        body = path.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(body)
 
     def _send_page(self) -> None:
         body = (ROOT / "jericho-strategium.html").read_bytes()
@@ -396,8 +537,16 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 if isinstance(payload.get("directiveStats"), dict)
                 else {},
             }
+            reach = None
+            if "reach" in payload:
+                try:
+                    reach = {**_validate_reach(payload["reach"]), "generatedAt": _text(payload.get("generatedAt"), 40) or None}
+                except ValueError as error:
+                    SECURITY_LOG.warning("reach snapshot skipped: %s client=%s", error, self.client_address[0])
             with _LOCK:
                 _save_json(ROSTER_PATH, snapshot)
+                if reach is not None:
+                    _save_json(REACH_PATH, reach)
             self._send(HTTPStatus.OK, {"ok": True, "memberCount": len(members)})
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as error:
             SECURITY_LOG.warning("roster snapshot rejected: %s client=%s", error, self.client_address[0])

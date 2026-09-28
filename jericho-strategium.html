@@ -180,7 +180,7 @@
   .map-command::before, .map-command::after, .map-node::before, .map-node::after,
   .map-branch::before, .map-branch::after, .company-slot::before { display: none; }
   .map-node .formation-plate, .map-node .company-plate {
-    width: 100%; min-width: 0; max-width: none; height: 92px; padding: 10px 9px 11px;
+    width: 100%; min-width: 0; max-width: none; height: 100%; min-height: 92px; padding: 10px 9px 11px;
   }
   .map-node .formation-plate-label, .map-node .company-plate-label { font-size: 12px; }
   .map-node .formation-plate-lead, .map-node .company-plate-captain { font-size: 10px; }
@@ -245,7 +245,8 @@
     display: block; max-width: 900px; margin: 0 auto; padding: 8px 0 4px;
   }
   .fortress-map::before { display: none; }
-  .map-top, .map-middle, .map-company-row { display: grid; align-items: start; gap: 16px; }
+  .map-top, .map-middle, .map-company-row { display: grid; align-items: stretch; gap: 16px; }
+  .map-node .company-plate-count, .map-node .formation-plate-count { margin-top: auto; }
   .map-top { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .map-middle { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 18px; }
   .map-company-row { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 62px; }
@@ -265,9 +266,9 @@
   .map-connectors { display: block; }
   .map-top > .map-node, .map-top > .map-command { min-width: 0; }
   .map-top .formation-plate, .map-top .map-command .plate {
-    width: 100%; min-width: 0; max-width: none; height: 92px; padding: 10px 9px 11px;
+    width: 100%; min-width: 0; max-width: none; height: 100%; min-height: 92px; padding: 10px 9px 11px;
   }
-  .map-top .map-command { height: 97px; display: flex; justify-content: center; }
+  .map-top .map-command { min-height: 97px; display: flex; justify-content: center; }
   .map-top .map-command .plate.size-lg {
     width: 50%; min-width: 0; height: 92px; padding: 10px 9px 11px; align-self: center;
   }
@@ -639,6 +640,44 @@
   .modal-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 23px; color: var(--white); margin-bottom: 14px; }
   .modal-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); color: var(--green-dim); }
   .modal-row span:last-child { color: var(--white); }
+  .modal-link {
+    background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: var(--gold);
+    border-bottom: 1px dotted var(--gold-dim); transition: color 0.15s, border-color 0.15s;
+  }
+  .modal-link:hover { color: var(--white); border-bottom-color: var(--gold); }
+
+  .command-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .honours-panel { min-width: 0; margin-bottom: 24px; }
+  .ribbon-rack {
+    display: flex; flex-wrap: wrap; gap: 8px; padding: 12px;
+    border: 1px solid var(--border-dim); background: rgba(79,214,122,0.015);
+  }
+  .ribbon {
+    position: relative; padding: 0; border: 1px solid rgba(0,0,0,0.7); background: #000; cursor: help;
+    line-height: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.6); transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .ribbon img { width: 108px; height: auto; display: block; }
+  .ribbon:hover, .ribbon:focus-visible { transform: translateY(-2px); box-shadow: 0 0 10px rgba(207,174,104,0.4); z-index: 5; }
+  .ribbon-tip {
+    display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    z-index: 10; width: max-content; min-width: 200px; max-width: 270px; pointer-events: none;
+    background: rgba(6,9,6,0.97); border: 1px solid var(--gold-dim); padding: 8px 10px;
+    font-size: 11px; line-height: 1.55; text-align: left; white-space: normal; color: var(--green-dim);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+  .ribbon:hover .ribbon-tip, .ribbon:focus .ribbon-tip, .ribbon.open .ribbon-tip { display: block; }
+  .ribbon-tip-name { display: block; font-family: 'Cinzel', serif; color: var(--gold); font-size: 12.5px; margin-bottom: 4px; }
+  .ribbon-tip-lore { display: block; font-style: italic; color: var(--green-dim); margin-bottom: 8px; padding-bottom: 7px; border-bottom: 1px solid var(--border-dim); }
+  .ribbon-tip-label { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold-dim); margin-bottom: 2px; }
+  .ribbon-tip ul { margin: 0; padding: 0; list-style: none; }
+  .ribbon-tip li { color: var(--white); }
+  .ribbon-tip li span { color: var(--green-faint); font-size: 10px; }
+  .ribbon-tip-more { color: var(--green-faint) !important; font-style: italic; }
+  .honours-note { font-size: 10px; color: var(--green-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; text-align: right; }
+  @media (max-width: 760px) {
+    .command-row { grid-template-columns: 1fr; gap: 0; }
+    .ribbon-tip { max-width: min(270px, calc(100vw - 16px)); }
+  }
   .modal-stats { margin-top: 16px; border-top: 1px solid var(--border-dim); padding-top: 10px; }
   .modal-stats-label { color: var(--gold); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
   .service-years-value { color: var(--white); font-size: 14px; letter-spacing: 0.04em; }
@@ -675,8 +714,141 @@
     .dropcap { font-size: 32px; }
   }
 
+  .site-nav { display: flex; gap: 4px; }
+  .site-nav a {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none;
+    color: var(--green-dim); padding: 6px 12px; border: 1px solid var(--border-dim); transition: all 0.15s;
+  }
+  .site-nav a:hover { color: var(--green); border-color: var(--green-dim); }
+  .site-nav a.active { color: var(--gold); border-color: var(--gold-dim); background: rgba(207,174,104,0.06); }
+
+  .reach-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .reach-stat { border: 1px solid var(--border-dim); background: var(--panel); padding: 10px 12px; }
+  .reach-stat-value { font-family: 'Cinzel', serif; font-size: 20px; color: var(--white); }
+  .reach-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold-dim); margin-top: 2px; }
+
+  .reach-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .reach-chip {
+    background: transparent; border: 1px solid var(--border-dim); color: var(--green-faint);
+    padding: 4px 10px; cursor: pointer; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    display: inline-flex; gap: 6px; align-items: center; transition: all 0.15s;
+  }
+  .reach-chip[aria-pressed="true"] { color: var(--white); border-color: var(--chip-color); background: rgba(255,255,255,0.03); }
+  .reach-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--chip-color); opacity: 0.4; }
+  .reach-chip[aria-pressed="true"] .reach-chip-dot { opacity: 1; box-shadow: 0 0 6px var(--chip-color); }
+  .reach-select {
+    background: #060a06; border: 1px solid var(--border-dim); color: var(--green);
+    font-family: inherit; font-size: 11px; padding: 4px 8px; margin-left: auto;
+  }
+  .reach-sync { font-size: 10px; color: var(--green-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .reach-viewport {
+    position: relative; height: min(72vh, 680px); min-height: 380px; overflow: hidden;
+    border: 1px solid var(--border); touch-action: none; cursor: grab; user-select: none;
+    background: radial-gradient(ellipse at 50% 45%, #0b130f 0%, #050806 60%, #020302 100%);
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
+  }
+  .reach-viewport.dragging { cursor: grabbing; }
+  .reach-svg { width: 100%; height: 100%; display: block; }
+  .reach-grid line { stroke: rgba(79,214,122,0.05); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .reach-edge { stroke: rgba(79,214,122,0.14); stroke-width: 1; vector-effect: non-scaling-stroke; transition: stroke 0.15s; }
+  .reach-edge.medium { stroke: rgba(79,214,122,0.08); stroke-dasharray: 3 4; }
+  .reach-edge.far { stroke-dasharray: 1 5; }
+  .reach-edge.lit { stroke: rgba(207,174,104,0.75); stroke-dasharray: none; }
+  .reach-region-label {
+    font-family: 'Cinzel', serif; font-size: 20px; letter-spacing: 0.32em;
+    fill: rgba(207,174,104,0.26); text-anchor: middle; text-transform: uppercase; pointer-events: none;
+  }
+  .reach-planet { cursor: pointer; outline: none; }
+  .reach-svg.zoomed .reach-region-label { opacity: 0.45; }
+  .reach-planet-body { stroke: rgba(255,255,255,0.2); stroke-width: 0.6; vector-effect: non-scaling-stroke; }
+  .reach-planet:hover .reach-planet-body, .reach-planet:focus-visible .reach-planet-body,
+  .reach-planet.selected .reach-planet-body { stroke: var(--gold); stroke-width: 1.6; }
+  .reach-theatre { fill: none; stroke: rgba(207,174,104,0.6); stroke-width: 0.8; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; }
+  .reach-ring { fill: none; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+  .reach-ring.history { opacity: 0.5; }
+  .reach-pulse {
+    fill: none; stroke-width: 1.2; vector-effect: non-scaling-stroke;
+    transform-box: fill-box; transform-origin: center; animation: reachPulse 2.4s ease-out infinite;
+  }
+  @keyframes reachPulse { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(2.8); opacity: 0; } }
+  .reach-badge rect { fill: #140d06; stroke: var(--gold); stroke-width: 0.8; vector-effect: non-scaling-stroke; }
+  .reach-badge text { fill: var(--gold); font-size: 7px; font-family: 'Share Tech Mono', monospace; }
+  .reach-label {
+    font-size: calc(var(--k, 1) * 10.5px); fill: rgba(242,237,224,0.62); pointer-events: none;
+    dominant-baseline: hanging; text-anchor: middle; opacity: 0; transition: opacity 0.2s;
+    paint-order: stroke; stroke: #030504; stroke-width: calc(var(--k, 1) * 3px); stroke-linejoin: round;
+  }
+  .reach-label.always, .reach-svg.zoomed .reach-label { opacity: 1; }
+  .reach-label tspan.sub { fill: var(--gold); font-size: 0.85em; letter-spacing: 0.1em; }
+  .reach-planet:hover .reach-label, .reach-planet:focus-visible .reach-label, .reach-planet.selected .reach-label { opacity: 1; fill: var(--white); }
+
+  .reach-controls { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 4px; z-index: 2; }
+  .reach-controls .icon-btn { background: rgba(6,9,6,0.9); }
+  .reach-legend {
+    position: absolute; left: 12px; bottom: 12px; z-index: 2; display: grid; gap: 4px;
+    font-size: 10px; color: var(--green-dim); background: rgba(6,9,6,0.88);
+    border: 1px solid var(--border-dim); padding: 8px 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .reach-legend-item { display: flex; align-items: center; gap: 7px; }
+  .reach-legend-swatch { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--swatch); flex-shrink: 0; }
+  .reach-hint { position: absolute; right: 12px; bottom: 10px; font-size: 10px; color: var(--green-faint); pointer-events: none; }
+  .reach-tooltip {
+    position: absolute; z-index: 3; pointer-events: none; min-width: 170px; max-width: 240px;
+    background: rgba(6,9,6,0.95); border: 1px solid var(--border); padding: 8px 10px;
+    font-size: 11px; color: var(--green-dim); line-height: 1.5;
+  }
+  .reach-tooltip[hidden] { display: none; }
+  .reach-tooltip-name { font-family: 'Cinzel', serif; color: var(--white); font-size: 13px; }
+  .reach-tooltip-line { display: flex; align-items: center; gap: 6px; }
+  .reach-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dot); flex-shrink: 0; }
+  .reach-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; color: var(--green-dim); font-size: 12px; padding: 20px; line-height: 1.8;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  .reach-row { cursor: pointer; transition: background 0.12s; }
+  .reach-row:hover td, .reach-row:focus-visible td { background: rgba(79,214,122,0.06); }
+  .status-tag {
+    display: inline-block; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;
+    border: 1px solid var(--status-color); color: var(--status-color); padding: 1px 6px;
+  }
+  .directive-card {
+    border: 1px solid var(--border-dim); border-left: 3px solid var(--status-color);
+    background: rgba(79,214,122,0.02); padding: 12px 14px; margin-top: 12px;
+  }
+  .directive-card.history { opacity: 0.65; }
+  .directive-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 6px; }
+  .directive-card-title { font-family: 'Cinzel', serif; color: var(--white); font-size: 14px; }
+  .directive-card .modal-row { font-size: 12px; padding: 5px 0; }
+  .directive-section-label { font-size: 10px; color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 12px; }
+  .directive-briefing { font-size: 12px; line-height: 1.6; color: var(--green-dim); margin: 10px 0 0; font-style: italic; }
+  .brother-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .brother-chip {
+    background: transparent; border: 1px solid var(--border-dim); color: var(--white);
+    font-family: inherit; font-size: 11px; padding: 3px 8px; cursor: pointer;
+  }
+  .brother-chip:hover { border-color: var(--gold); color: var(--gold); }
+  .brother-chip.unknown { color: var(--green-faint); cursor: default; font-style: italic; }
+  .strat-list { font-size: 11.5px; margin: 4px 0 0; padding-left: 0; list-style: none; line-height: 1.6; }
+  .strat-pos { color: var(--green); }
+  .strat-neg { color: var(--red); }
+
+  @media (max-width: 600px) {
+    .header { flex-wrap: wrap; }
+    .site-nav { order: 3; width: 100%; }
+    .site-nav a { flex: 1; text-align: center; }
+    .reach-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .reach-legend, .reach-hint { display: none; }
+    .reach-select { margin-left: 0; }
+    .reach-table th:nth-child(4), .reach-table td:nth-child(4),
+    .reach-table th:nth-child(6), .reach-table td:nth-child(6) { display: none; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    .reach-pulse { animation: none; opacity: 0.5; }
   }
 
   :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
@@ -698,6 +870,10 @@
           <div class="header-sub">Cogitator-Pattern MK.IV &middot; Strategium Access</div>
         </div>
       </div>
+      <nav class="site-nav" aria-label="Strategium sections">
+        <a href="/" data-page="fortress">Fortress</a>
+        <a href="/reach" data-page="reach">Reach Map</a>
+      </nav>
       <div class="header-right">
         <div id="auth-container"></div>
         <button id="search-btn" class="icon-btn" title="Search the roster" aria-label="Search">&#8981;</button>
@@ -723,6 +899,13 @@
       <h2 class="overlay-title">Search // Roster</h2>
       <input id="search-input" class="field-input" type="text" placeholder="name, rank, or chapter of origin..." autocomplete="off">
       <div id="search-results" class="search-results"></div>
+    </div>
+  </div>
+
+  <div id="planet-modal" class="overlay">
+    <div class="overlay-panel panel-wide">
+      <button id="planet-modal-close" class="overlay-close" aria-label="Close">✕</button>
+      <div id="planet-modal-body"></div>
     </div>
   </div>
 
@@ -820,6 +1003,31 @@ const COMPANY_LORE = {
 };
 
 const FORMATION_LEAD_RANKS = Object.values(FORMATIONS).map(f => f.lead);
+
+// Mirrors the bot's RANK_TIERS (highest first); ranks sharing a tier sort by name.
+const RANK_TIERS = [
+  ["watch_master"],
+  ["blade_master", "chief_apothecary", "forgemaster", "high_chaplain", "huntmaster", "venerable_dreadnought", "void_warden", "watch_captain"],
+  ["first_blade", "honored_dreadnought", "dreadnought", "kill_marine", "apothecary", "chaplain", "librarian", "watch_lieutenant", "techmarine"],
+  ["veteran_sergeant"],
+  ["watch_sergeant"],
+  ["blade_guard", "oathsworn"],
+  ["watch_veteran"],
+  ["watch_brother"]
+];
+const RANK_TIER_INDEX = Object.fromEntries(RANK_TIERS.flatMap((ranks, tier) => ranks.map(rank => [rank, tier])));
+
+function sortByRank(members) {
+  return [...members].sort((a, b) =>
+    (RANK_TIER_INDEX[a.rank] ?? RANK_TIERS.length) - (RANK_TIER_INDEX[b.rank] ?? RANK_TIERS.length) ||
+    displayName(a.name).localeCompare(displayName(b.name))
+  );
+}
+
+function formationEquerries(key) {
+  const f = FORMATIONS[key];
+  return sortByRank(state.members.filter(m => m.equerry && m.rank !== f.lead && (m.formation === key || f.ranks.includes(m.rank))));
+}
 const FORMATION_MEMBER_RANKS = Object.values(FORMATIONS).flatMap(f => f.ranks).concat(["venerable_dreadnought"]);
 
 const COMPANY_COMMAND_RANKS = ["watch_captain", "watch_lieutenant"];
@@ -1119,6 +1327,7 @@ function generateSampleRoster() {
 /* ---------------------------------------------------------------------- */
 
 const state = {
+  page: "fortress",    // 'fortress' | 'reach'
   view: "strategium",   // 'strategium' | 'company' | 'killteam' | 'formation'
   companyId: null,
   killTeamId: null,
@@ -1128,7 +1337,15 @@ const state = {
   directiveStats: { companies: {}, killTeams: {}, formations: {}, fortress: {} },
   dataStatus: "sample",  // 'sample' | 'live' | 'error'
   dataSourceUrl: "",
-  auth: { authenticated: false, user: null, csrf: null }
+  auth: { authenticated: false, user: null, csrf: null },
+  reach: null,
+  reachStatus: "idle",  // 'idle' | 'live' | 'empty' | 'error'
+  reachBase: null,
+  reachView: null,
+  reachAdj: new Map(),
+  reachFilters: { statuses: new Set(["deployed", "recruiting", "distributed", "unassigned", "completed", "failed", "lapsed"]), company: "all" },
+  reachSuppressClick: false,
+  selectedPlanet: null
 };
 
 const BACKSTORY_MAX_WORDS = 400;
@@ -1322,7 +1539,7 @@ function killTeamDetail(companyId, killTeam) {
   const targetName = catalogEntry ? catalogEntry.name : killTeam;
   const roster = state.members.filter(m => m.company === companyId && (m.killTeam === killTeam || m.killTeamName === targetName || m.killTeam === targetName));
   const lead = roster.find(m => KILL_TEAM_LEAD_RANKS.includes(m.rank)) || null;
-  const rest = roster.filter(m => m !== lead);
+  const rest = sortByRank(roster.filter(m => m !== lead));
   const name = catalogEntry ? catalogEntry.name : (roster.find(m => m.killTeamName)?.killTeamName || killTeam);
   return { lead, rest, name };
 }
@@ -1382,18 +1599,113 @@ function serviceStudsHtml(member) {
   return `<span class="stud-display">${[...pips].map(pip => `<span class="stud-pip ${pip === "●" ? "auramite" : "plasteel"}" aria-hidden="true">${pip}</span>`).join("")}</span>`;
 }
 
+function unitLink(label, attrs) {
+  return `<button class="modal-link" type="button" ${attrs}>${escapeHtml(label)} &rsaquo;</button>`;
+}
+
+function formationForRank(rank) {
+  return Object.keys(FORMATIONS).find(key => FORMATIONS[key].lead === rank || FORMATIONS[key].ranks.includes(rank)) || null;
+}
+
 function locationRows(member) {
   if (member.rank === "watch_master") {
     return `<div class="modal-row"><span>Assignment</span><span>Watch Master of Watch Fortress Jericho</span></div>`;
   }
+  const rows = [];
   if (member.company) {
-    return `<div class="modal-row"><span>Company</span><span>Company ${escapeHtml(COMPANY_NAMES[member.company])}</span></div>
-      ${member.killTeam ? `<div class="modal-row"><span>Kill-team</span><span>${escapeHtml(member.killTeam)}</span></div>` : ""}`;
+    rows.push(`<div class="modal-row"><span>Company</span><span>${unitLink(`Company ${COMPANY_NAMES[member.company]}`, `data-nav="company" data-company="${Number(member.company)}"`)}</span></div>`);
+    const teamId = member.killTeam || member.killTeamName;
+    if (teamId) {
+      const teamName = member.killTeamName || killTeamDetail(member.company, teamId).name;
+      rows.push(`<div class="modal-row"><span>Kill-team</span><span>${unitLink(teamName, `data-nav="killteam" data-company="${Number(member.company)}" data-killteam="${escapeHtml(teamId)}"`)}</span></div>`);
+    }
+  } else if (member.formation && FORMATIONS[member.formation]) {
+    rows.push(`<div class="modal-row"><span>Formation</span><span>${unitLink(FORMATIONS[member.formation].name, `data-nav="formation" data-formation="${escapeHtml(member.formation)}"`)}</span></div>`);
   }
-  if (member.formation) {
-    return `<div class="modal-row"><span>Formation</span><span>${escapeHtml(FORMATIONS[member.formation] ? FORMATIONS[member.formation].name : member.formation)}</span></div>`;
+  const equerryOf = member.equerry ? (member.formation || formationForRank(member.rank)) : null;
+  if (equerryOf && FORMATIONS[equerryOf]) {
+    rows.push(`<div class="modal-row"><span>Equerry of</span><span>${unitLink(FORMATIONS[equerryOf].name, `data-nav="formation" data-formation="${escapeHtml(equerryOf)}"`)}</span></div>`);
   }
-  return `<div class="modal-row"><span>Assignment</span><span>Fortress-wide</span></div>`;
+  return rows.join("") || `<div class="modal-row"><span>Assignment</span><span>Fortress-wide</span></div>`;
+}
+
+function ribbonOrder(file) {
+  const match = /^(\d+)([a-z]*)-/.exec(file) || [];
+  return [Number(match[1] ?? 999), match[2] || ""];
+}
+
+const TERMINUS_SLAYER_LORE = "Awarded for verified kills against every class of Terminus threat, each further award marking another combat class mastered.";
+const RIBBON_LORE = {
+  "1-Order Omega.png": "A fellowship few enter. Its members endured the Watch's highest difficulty and emerged carrying their brothers with them.",
+  "2-Crux Terminatus.png": "The highest honour of Watch Fortress Jericho. Its bearers may don the venerated Terminator plate and guide junior brothers in times of doubt.",
+  "3-Clandestine Ops Medal.png": "Given for operations the Watch does not speak of openly. The record is sealed; the deed is not forgotten.",
+  "3a-Distinguished Clandestine Ops Medal.png": "The deeper mark of the Watch's unspoken work, reserved for those whose covert operations were carried to a flawless end.",
+  "4-Black Reef Campaign Medal.png": "Bestowed upon those who answered every call of the Black Reef Persecution, from first incursion to final accounting.",
+  "4a-Distinguished Black Reef Campaign Medal.png": "Honours those who saw the Black Reef Persecution through as the heart of a Kill Team, leaving no brother behind.",
+  "5-Herisor Defense Medal.png": "Awarded to those who stood the line in the defense of Herisor and held it.",
+  "5a-Distinguished Herisor Defense Medal.png": "The distinguished mark of Herisor's defenders, for service that went beyond holding the line.",
+  "5b-Distinguished Herisor Defense Medal with Valor.png": "Herisor's highest honour, bearing the device of valor for deeds that turned the defense itself.",
+  "6-Octavian Operation Medal.png": "For those who completed every required operation of the Octavian Incident, fought in isolation beneath the Shadow in the Warp.",
+  "6a-Distinguished Octavian Operation Medal.png": "Records not only that the Octavian campaign was completed, but that not a single brother fell incapacitated along the way.",
+  "7-Kadaku Campaign Medal.png": "Bestowed upon those who completed every operation of the Leviathan Protocol on Kadaku and held the swarm at bay.",
+  "7a-Distinguished Kadaku Campaign Medal.png": "The deeper honour of Kadaku, for warriors whose campaign against Leviathan was carried with distinction.",
+  "8-SOK-G Service Medal.png": "Special Operations Kill-Group: Pipehitter. The Watch Master's hidden blade, drawn when defeat was assured and victory was taken anyway.",
+  "8a-Distinguished SOK-G Service Medal.png": "Once may be fortune. The Distinguished Pipehitter has made a pattern of the impossible.",
+  "9-Order of the Aquiline Brotherhood.png": "Two brothers, every mission, absolute difficulty. Awarded to those who faced the Watch's hardest battles with exactly one brother at their side.",
+  "10-Terminus Slayer 1st Award.png": TERMINUS_SLAYER_LORE,
+  "10a-Terminus Slayer 2nd Award.png": TERMINUS_SLAYER_LORE,
+  "10b-Terminus Slayer 3rd Award.png": TERMINUS_SLAYER_LORE,
+  "10c-Terminus Slayer 4th Award.png": TERMINUS_SLAYER_LORE,
+  "10d-Terminus Slayer 5th Award.png": TERMINUS_SLAYER_LORE,
+  "10e-Terminus Slayer 6th Award.png": TERMINUS_SLAYER_LORE,
+  "10f-Master Terminus Slayer Medal.png": "The Watch's highest individual combat honour: verified Terminus kills across every class and every threat the Long Watch has faced.",
+  "11-Crimson Laurels Medal.png": "It is said the Laurels are crimson not through metallurgy, but from the oceans of blood it took to earn them.",
+  "12-Black Laurels Medal.png": "Earned not by the warrior who claims the killing blow, but by the one who ensured every brother was still standing when it fell.",
+  "13-Apothecarion Service Medal.png": "Honours those who preserved the sacred gene-seed of the fallen in the heart of battle, so the Watch's future endures.",
+  "14-Ardent Raider Ribbon.png": "Bestowed upon those who delivered the Watch's greatest advantage: knowledge of the enemy, torn from Xenos hands."
+};
+
+function unitHonoursHtml(members, title) {
+  const byRibbon = new Map();
+  members.forEach(m => (m.awards || []).forEach(award => {
+    if (!award || !award.ribbon) return;
+    if (!byRibbon.has(award.ribbon)) byRibbon.set(award.ribbon, { name: award.name, ribbon: award.ribbon, holders: [] });
+    byRibbon.get(award.ribbon).holders.push(m);
+  }));
+  if (!byRibbon.size) return "";
+  const ribbons = [...byRibbon.values()].sort((a, b) => {
+    const [an, as] = ribbonOrder(a.ribbon);
+    const [bn, bs] = ribbonOrder(b.ribbon);
+    return an - bn || as.localeCompare(bs);
+  });
+  const awarded = ribbons.reduce((sum, r) => sum + r.holders.length, 0);
+  const items = ribbons.map((r, i) => {
+    const holders = sortByRank(r.holders);
+    const names = holders.slice(0, 12).map(m => `<li>${escapeHtml(displayName(m.name))} <span>${escapeHtml(RANK_LABELS[m.rank] || "")}</span></li>`).join("");
+    const more = holders.length > 12 ? `<li class="ribbon-tip-more">and ${holders.length - 12} more</li>` : "";
+    const tipId = `ribbon-tip-${i}`;
+    return `
+      <button class="ribbon" type="button" aria-label="${escapeHtml(r.name)}" aria-describedby="${tipId}" aria-expanded="false">
+        <img src="${apiUrl(`/assets/ribbons/${encodeURIComponent(r.ribbon)}`)}" alt="" loading="lazy" width="108" height="31">
+        <span class="ribbon-tip" role="tooltip" id="${tipId}">
+          <span class="ribbon-tip-name">${escapeHtml(r.name)}</span>
+          ${RIBBON_LORE[r.ribbon] ? `<span class="ribbon-tip-lore">${escapeHtml(RIBBON_LORE[r.ribbon])}</span>` : ""}
+          <span class="ribbon-tip-label">Earned by ${holders.length} brother${holders.length === 1 ? "" : "s"}</span>
+          <ul>${names}${more}</ul>
+        </span>
+      </button>`;
+  }).join("");
+  return `
+    <aside class="honours-panel">
+      <div class="tier-label">${escapeHtml(title)}</div>
+      <div class="ribbon-rack">${items}</div>
+      <div class="honours-note">${ribbons.length} distinct honour${ribbons.length === 1 ? "" : "s"} &middot; ${awarded} awarded</div>
+    </aside>`;
+}
+
+function commandSectionHtml(label, tierHtml, honoursHtml) {
+  const command = `<div class="command-block"><div class="tier-label">${label}</div>${tierHtml}</div>`;
+  return honoursHtml ? `<div class="command-row">${command}${honoursHtml}</div>` : command;
 }
 
 function plateHtml({ id, member, name, rankLabel, sub, accent, vacant, size }) {
@@ -1411,6 +1723,10 @@ function plateHtml({ id, member, name, rankLabel, sub, accent, vacant, size }) {
 
 function renderBreadcrumb() {
   const el = document.getElementById("breadcrumb");
+  if (state.page === "reach") {
+    el.innerHTML = `<span class="crumb crumb-current">Jericho Reach</span><span class="crumb-sep">&rsaquo;</span><span class="crumb">Ordo Xenos Strike Directives</span>`;
+    return;
+  }
   const parts = [`<button class="crumb" data-nav="strategium">Strategium</button>`];
   if (state.view === "company" || state.view === "killteam") {
     parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
@@ -1456,6 +1772,7 @@ function renderStrategium() {
   const formationHtml = key => {
     const f = FORMATIONS[key];
     const lead = state.members.find(m => m.rank === f.lead);
+    const equerries = formationEquerries(key);
     const count = state.members.filter(m => m.formation === key).length;
     const isUnformed = count === 0 && !lead;
     return `
@@ -1463,6 +1780,7 @@ function renderStrategium() {
       <button class="formation-plate ${isUnformed ? 'unit-unformed' : ''}" data-nav="formation" data-formation="${key}" type="button" style="--formation-accent:${FORMATION_COLORS[key]}">
         <span class="formation-plate-label">${escapeHtml(f.name)}</span>
         ${lead ? `<span class="formation-plate-lead">${RANK_LABELS[lead.rank]} ${escapeHtml(displayName(lead.name))}</span>` : ""}
+        ${equerries.map(e => `<span class="formation-plate-lead">Equerry ${escapeHtml(displayName(e.name))}</span>`).join("")}
         ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Cadre Dormant &mdash;</span>` : `<span class="formation-plate-count">${count} sworn</span>`}
         <span class="formation-plate-blurb">${escapeHtml(FORMATION_LORE[key] || "This formation serves the Watch according to its own discipline and mandate.")}</span>
       </button>
@@ -1575,7 +1893,8 @@ function renderCompany(companyId) {
   const count = state.members.filter(m => m.company === companyId).length;
   const isUnformed = count === 0 && !cmd.length;
 
-  const teams = killTeamsForCompany(companyId).map(t => {
+  const teamList = killTeamsForCompany(companyId);
+  const teams = teamList.map(t => {
     const leadName = t.lead ? t.lead.name : "Unassigned";
     const directive = (state.directiveStats && state.directiveStats.killTeams && state.directiveStats.killTeams[t.name]) || {};
     return `
@@ -1611,8 +1930,8 @@ function renderCompany(companyId) {
         <span>Strike Directives: <strong>${companyDirective.completed || companyDirective.completions_28d || 0}</strong> completed &middot; <strong>${Number(companyDirective.rep_earned || companyDirective.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
       </div>` : ""}
     <p class="company-lore">${escapeHtml(COMPANY_LORE[companyId] || "This company serves the Fortress wherever the Vigil calls.")}</p>
-    ${cmdHtml ? `<div class="tier-label">Company Command</div><div class="tier tier-company-command tree-row">${cmdHtml}</div>` : ""}
-    ${teams ? `<div class="tier-label">Kill Teams (${teams.length})</div><div class="tier tier-killteams tree-row">${teams}</div>` : ""}
+    ${cmdHtml ? commandSectionHtml("Company Command", `<div class="tier tier-company-command tree-row">${cmdHtml}</div>`, unitHonoursHtml(state.members.filter(m => m.company === companyId), "Honours of the Company")) : ""}
+    ${teams ? `<div class="tier-label">Kill Teams (${teamList.length})</div><div class="tier tier-killteams tree-row">${teams}</div>` : ""}
   `;
 }
 
@@ -1620,14 +1939,18 @@ function renderFormation(key) {
   const f = FORMATIONS[key];
   const members = formationMembers(key);
   const lead = members.find(m => m.rank === f.lead) || null;
-  const rest = members.filter(m => m !== lead);
+  const equerries = formationEquerries(key);
+  const rest = sortByRank(members.filter(m => m !== lead && !equerries.includes(m)));
   const directive = state.directiveStats.formations[key] || {};
   const isDormant = members.length === 0;
 
-  const leadHtml = lead ? plateHtml({
+  const leadHtml = [lead ? plateHtml({
     id: lead.id, member: lead, name: lead.name,
     rankLabel: RANK_LABELS[lead.rank], accent: "gold", vacant: false, size: "md"
-  }) : "";
+  }) : "", ...equerries.map(equerry => plateHtml({
+    id: equerry.id, member: equerry, name: equerry.name,
+    rankLabel: `Equerry \u00b7 ${RANK_LABELS[equerry.rank] || equerry.rank}`, accent: "steel", vacant: false, size: "md"
+  }))].join("");
 
   const rows = rest.map(m => `
     <tr class="roster-row" data-member="${m.id}">
@@ -1649,7 +1972,7 @@ function renderFormation(key) {
         <span class="directive-tier-tag">${escapeHtml(directive.tier || 'Sworn')}</span>
         <span>Strike Directives: <strong>${directive.completed || directive.completions_28d || 0}</strong> completed &middot; <strong>${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
       </div>` : ""}
-    ${leadHtml ? `<div class="tier-label">Cadre Leadership</div><div class="tier tier-formation-lead">${leadHtml}</div>` : ""}
+    ${leadHtml ? commandSectionHtml("Cadre Leadership", `<div class="tier tier-formation-lead">${leadHtml}</div>`, unitHonoursHtml([...new Set([...members, ...equerries])], "Honours of the Cadre")) : ""}
     <div class="tier-label">Formation Roster (${rest.length})</div>
     <table class="roster-table">
       <thead><tr><th>Name</th><th>Rank</th><th>Chapter of Origin</th></tr></thead>
@@ -1683,8 +2006,7 @@ function renderKillTeam(companyId, killTeam) {
         <span class="directive-tier-tag">${escapeHtml(directive.tier || 'Unproven')}</span>
         <span>Strike Directives: <strong>${directive.completed || directive.completions_28d || 0}</strong> completed &middot; <strong>${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
       </div>` : ""}
-    <div class="tier-label">Command</div>
-    <div class="tier tier-killteam-lead">${leadHtml}</div>
+    ${commandSectionHtml("Command", `<div class="tier tier-killteam-lead">${leadHtml}</div>`, unitHonoursHtml([lead, ...rest].filter(Boolean), "Honours of the Kill-team"))}
     <div class="tier-label">Roster (${rest.length})</div>
     <table class="roster-table">
       <thead><tr><th>Name</th><th>Rank</th><th>Chapter of Origin</th></tr></thead>
@@ -1695,7 +2017,9 @@ function renderKillTeam(companyId, killTeam) {
 
 function render(originPct, direction) {
   renderBreadcrumb();
-  if (state.view === "strategium") renderStrategium();
+  updateSiteNav();
+  if (state.page === "reach") renderReach();
+  else if (state.view === "strategium") renderStrategium();
   else if (state.view === "company") renderCompany(state.companyId);
   else if (state.view === "killteam") renderKillTeam(state.companyId, state.killTeamId);
   else if (state.view === "formation") renderFormation(state.formationId);
@@ -1717,6 +2041,11 @@ function render(originPct, direction) {
 function updateStatusBadge() {
   const slateCount = document.getElementById("slate-count");
   if (slateCount) {
+    if (state.page === "reach") {
+      slateCount.textContent = "ACTIVE DIRECTIVES: " + activeReachDirectives().length;
+      slateCount.style.display = "";
+      return;
+    }
     slateCount.textContent = "ASTARTES ON RECORD: " + fortressTotal();
     slateCount.style.display = state.view === "strategium" ? "" : "none";
   }
@@ -1918,6 +2247,805 @@ function closeMemberModal() {
 }
 
 /* ---------------------------------------------------------------------- */
+/* Jericho Reach star chart                                               */
+/* ---------------------------------------------------------------------- */
+
+const REACH_REFRESH_MS = 5 * 60 * 1000;
+const REACH_STATUS = {
+  deployed: { label: "Deployed", color: "#e05c4f", rank: 0, active: true },
+  recruiting: { label: "Recruiting", color: "#cfae68", rank: 1, active: true },
+  distributed: { label: "Distributed", color: "#4fd67a", rank: 2, active: true },
+  unassigned: { label: "Unassigned", color: "#2f8a52", rank: 3, active: true },
+  completed: { label: "Completed", color: "#8fbf9a", rank: 4, active: false },
+  failed: { label: "Failed", color: "#b86a60", rank: 5, active: false },
+  lapsed: { label: "Lapsed", color: "#7d857d", rank: 6, active: false }
+};
+const REACH_FILTER_CHIPS = [
+  { key: "deployed", label: "Deployed", statuses: ["deployed"] },
+  { key: "recruiting", label: "Recruiting", statuses: ["recruiting"] },
+  { key: "distributed", label: "Distributed", statuses: ["distributed"] },
+  { key: "unassigned", label: "Unassigned", statuses: ["unassigned"] },
+  { key: "history", label: "Last 7 days", statuses: ["completed", "failed", "lapsed"] }
+];
+const WORLD_STYLES = {
+  dead_world: { color: "#7b837c", r: 3.6 },
+  agri_world: { color: "#6fbf5a", r: 5 },
+  hive_world: { color: "#d99a45", r: 6.5 },
+  war_world: { color: "#d4553f", r: 6 },
+  shrine_world: { color: "#e3c373", r: 5.5 },
+  forge_world: { color: "#e07a2e", r: 6.5 },
+  feral_world: { color: "#9ccf4f", r: 5 },
+  mining_world: { color: "#a8825a", r: 5 },
+  frontier_world: { color: "#4fb3a8", r: 5 },
+  pleasure_world: { color: "#d77fb0", r: 5 },
+  penal_world: { color: "#8e6fc4", r: 5 },
+  fortress_world: { color: "#7fa2c9", r: 6.5 },
+  special: { color: "#b58cff", r: 6 },
+  watch_station: { color: "#cfae68", r: 7 }
+};
+const REGION_COLORS = {
+  contested: "#b8453a",
+  acheros_salient: "#3f7fb0",
+  orpheus_salient: "#3fae8a",
+  canis_salient: "#8a5fc4",
+  slinnar_drift: "#2f8f9d",
+  hadex: "#b07a3f",
+  iron_collar: "#6f7f94",
+  quarantined: "#9d3f6f",
+  cellebos_warzone: "#c4553f",
+  black_reef: "#4a5a70"
+};
+
+const WORLD_ART = {
+  dead_world: { base: ["#b5b9b1", "#6b716b", "#262a26"], atmo: "#9aa39a", detail: "craters" },
+  agri_world: { base: ["#d9e39a", "#6f9a45", "#23401a"], atmo: "#bfe39a", detail: "bands", accents: ["#d6c56a", "#9cc25e", "#4f7a33"] },
+  hive_world: { base: ["#9a9284", "#4f4a42", "#161411"], atmo: "#d99a45", detail: "lights", accents: ["#ffcc66"] },
+  war_world: { base: ["#d88a62", "#7d3322", "#260d08"], atmo: "#ff7a4f", detail: "scorch", accents: ["#ffb347"] },
+  shrine_world: { base: ["#fbeec4", "#c9a45a", "#4d3a18"], atmo: "#ffe6a3", detail: "bands", accents: ["#fff4d0", "#e0bd6a", "#a8823c"] },
+  forge_world: { base: ["#7a685c", "#35291f", "#0e0906"], atmo: "#ff8a3d", detail: "lava", accents: ["#ff7a2e"] },
+  feral_world: { base: ["#6fb0de", "#2f6a9a", "#0c2133"], atmo: "#9fe0ff", detail: "continents", accents: ["#5f9a3a"] },
+  mining_world: { base: ["#d4b08a", "#7d5a3a", "#26190e"], atmo: "#d8b58a", detail: "canyons", ring: "#c9b08a" },
+  frontier_world: { base: ["#6fd0d6", "#1f7a8a", "#08262b"], atmo: "#8ff0f0", detail: "continents", accents: ["#b8a46a"] },
+  pleasure_world: { base: ["#f7c8e6", "#b05a95", "#33122b"], atmo: "#ffc4ea", detail: "swirl", accents: ["#ffe0f4"] },
+  penal_world: { base: ["#cfc8e8", "#6a5f99", "#1c1733"], atmo: "#c4b8ff", detail: "ice", accents: ["#f2f0ff"] },
+  fortress_world: { base: ["#c8d8ec", "#5f7fa6", "#141e2e"], atmo: "#a8c8ff", detail: "grid", accents: ["#dfe8ff"] },
+  special: { base: ["#e2cbff", "#7a4fc4", "#1a0b33"], atmo: "#c49cff", detail: "swirl", accents: ["#f0e4ff"], ring: "#b58cff" }
+};
+
+function planetSurfaceSvg(type, art, rand) {
+  const f = n => n.toFixed(3);
+  const pt = (spread = 0.9) => [(rand() * 2 - 1) * spread, (rand() * 2 - 1) * spread];
+  const accent = i => art.accents[i % art.accents.length];
+  const out = [];
+  const caps = color => out.push(
+    `<ellipse cx="0" cy="-0.95" rx="0.55" ry="0.2" fill="${color}" opacity="0.75"/>`,
+    `<ellipse cx="0" cy="0.97" rx="0.45" ry="0.15" fill="${color}" opacity="0.6"/>`
+  );
+  const blob = (cx, cy, size, color, opacity) => {
+    for (let i = 0; i < 4; i++) {
+      out.push(`<circle cx="${f(cx + (rand() - 0.5) * size)}" cy="${f(cy + (rand() - 0.5) * size * 0.7)}" r="${f(size * (0.35 + rand() * 0.35))}" fill="${color}" opacity="${opacity}"/>`);
+    }
+  };
+  switch (art.detail) {
+    case "craters":
+      for (let i = 0; i < 14; i++) {
+        const [cx, cy] = pt();
+        const r = 0.05 + rand() * 0.2;
+        out.push(`<circle cx="${f(cx)}" cy="${f(cy)}" r="${f(r)}" fill="${art.base[2]}" opacity="0.35" stroke="${art.base[0]}" stroke-opacity="0.35" stroke-width="0.025"/>`);
+      }
+      break;
+    case "bands":
+      for (let i = 0; i < 7; i++) {
+        const y = -1 + i * 0.3 + rand() * 0.1;
+        const h = 0.1 + rand() * 0.18;
+        const wave = (rand() - 0.5) * 0.2;
+        out.push(`<path d="M -1.2 ${f(y)} Q 0 ${f(y + wave)} 1.2 ${f(y)} L 1.2 ${f(y + h)} Q 0 ${f(y + h + wave)} -1.2 ${f(y + h)} Z" fill="${accent(i)}" opacity="0.5"/>`);
+      }
+      break;
+    case "lights":
+      for (let i = 0; i < 4; i++) {
+        const y = -0.8 + i * 0.5;
+        out.push(`<rect x="-1.2" y="${f(y)}" width="2.4" height="${f(0.12 + rand() * 0.1)}" fill="${art.base[0]}" opacity="0.18"/>`);
+      }
+      for (let i = 0; i < 60; i++) {
+        const [cx, cy] = pt(0.95);
+        out.push(`<circle cx="${f(cx)}" cy="${f(cy)}" r="${f(0.012 + rand() * 0.035)}" fill="${accent(0)}" opacity="${f(0.4 + rand() * 0.6)}"/>`);
+      }
+      break;
+    case "scorch":
+      for (let i = 0; i < 6; i++) {
+        const [cx, cy] = pt();
+        blob(cx, cy, 0.35 + rand() * 0.3, "#1a0805", 0.35);
+      }
+      for (let i = 0; i < 16; i++) {
+        const [cx, cy] = pt();
+        out.push(`<circle cx="${f(cx)}" cy="${f(cy)}" r="${f(0.015 + rand() * 0.04)}" fill="${accent(0)}" opacity="0.85"/>`);
+      }
+      break;
+    case "lava":
+      for (let i = 0; i < 7; i++) {
+        let [x, y] = pt();
+        let d = `M ${f(x)} ${f(y)}`;
+        for (let s = 0; s < 4; s++) {
+          x += (rand() - 0.5) * 0.6;
+          y += (rand() - 0.5) * 0.6;
+          d += ` L ${f(x)} ${f(y)}`;
+        }
+        out.push(`<path d="${d}" fill="none" stroke="${accent(0)}" stroke-width="${f(0.03 + rand() * 0.04)}" stroke-linecap="round" opacity="0.9"/>`);
+      }
+      break;
+    case "continents":
+      for (let i = 0; i < 6; i++) {
+        const [cx, cy] = pt(0.8);
+        blob(cx, cy, 0.3 + rand() * 0.35, accent(0), 0.85);
+      }
+      caps("#f2f6ff");
+      break;
+    case "canyons":
+      for (let i = 0; i < 6; i++) {
+        const y = -0.9 + i * 0.35 + rand() * 0.1;
+        out.push(`<path d="M -1.1 ${f(y)} C -0.4 ${f(y + (rand() - 0.5) * 0.4)} 0.4 ${f(y + (rand() - 0.5) * 0.4)} 1.1 ${f(y)}" fill="none" stroke="${art.base[2]}" stroke-width="${f(0.03 + rand() * 0.05)}" opacity="0.55"/>`);
+      }
+      break;
+    case "swirl":
+      for (let i = 0; i < 5; i++) {
+        const rx = 0.4 + rand() * 0.6;
+        out.push(`<ellipse cx="${f((rand() - 0.5) * 0.4)}" cy="${f((rand() - 0.5) * 0.6)}" rx="${f(rx)}" ry="${f(rx * (0.25 + rand() * 0.3))}" fill="none" stroke="${accent(0)}" stroke-width="${f(0.06 + rand() * 0.08)}" opacity="0.35" transform="rotate(${f(rand() * 40 - 20)})"/>`);
+      }
+      break;
+    case "ice":
+      for (let i = 0; i < 9; i++) {
+        const [x1, y1] = pt();
+        const [x2, y2] = pt();
+        out.push(`<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="${accent(0)}" stroke-width="0.025" opacity="0.5"/>`);
+      }
+      caps(accent(0));
+      break;
+    case "grid":
+      [0.25, 0.55, 0.85].forEach(ry => out.push(`<ellipse cx="0" cy="0" rx="1" ry="${ry}" fill="none" stroke="${accent(0)}" stroke-width="0.025" opacity="0.35"/>`));
+      [0.35, 0.7].forEach(rx => out.push(`<ellipse cx="0" cy="0" rx="${rx}" ry="1" fill="none" stroke="${accent(0)}" stroke-width="0.025" opacity="0.35"/>`));
+      for (let i = 0; i < 10; i++) {
+        const [cx, cy] = pt(0.8);
+        out.push(`<rect x="${f(cx)}" y="${f(cy)}" width="0.08" height="0.08" fill="${accent(0)}" opacity="0.6"/>`);
+      }
+      break;
+  }
+  return `<g id="surf-${type}"><circle r="1" fill="url(#base-${type})"/><g clip-path="url(#unit-clip)">${out.join("")}</g></g>`;
+}
+
+function reachPlanetDefs() {
+  const rand = mulberry32(7331);
+  const defs = [
+    `<clipPath id="unit-clip"><circle r="1"/></clipPath>`,
+    `<radialGradient id="planet-shade" cx="0.3" cy="0.28" r="0.95"><stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/><stop offset="0.4" stop-color="#ffffff" stop-opacity="0"/><stop offset="0.75" stop-color="#000000" stop-opacity="0.45"/><stop offset="1" stop-color="#000000" stop-opacity="0.85"/></radialGradient>`,
+    `<g id="station"><circle r="1.15" fill="#140f06" stroke="#cfae68" stroke-width="0.12"/><circle r="0.7" fill="none" stroke="#cfae68" stroke-width="0.08" stroke-dasharray="0.25 0.12"/>${[0, 45, 90, 135].map(a => `<line x1="-1.5" y1="0" x2="1.5" y2="0" stroke="#cfae68" stroke-width="0.08" transform="rotate(${a})"/>`).join("")}<circle r="0.32" fill="#f2d58a"/><circle r="0.14" fill="#fff6d8"/></g>`
+  ];
+  Object.entries(WORLD_ART).forEach(([type, art]) => {
+    defs.push(`<radialGradient id="base-${type}" cx="0.4" cy="0.4" r="0.7"><stop offset="0" stop-color="${art.base[0]}"/><stop offset="0.55" stop-color="${art.base[1]}"/><stop offset="1" stop-color="${art.base[2]}"/></radialGradient>`);
+    defs.push(`<radialGradient id="atmo-${type}"><stop offset="0.78" stop-color="${art.atmo}" stop-opacity="0"/><stop offset="0.84" stop-color="${art.atmo}" stop-opacity="0.5"/><stop offset="1" stop-color="${art.atmo}" stop-opacity="0"/></radialGradient>`);
+    defs.push(planetSurfaceSvg(type, art, rand));
+  });
+  return defs.join("");
+}
+
+function planetArtSvg(node, r) {
+  const { x, y } = node;
+  if (node.type === "watch_station") {
+    return `<use href="#station" transform="translate(${x} ${y}) scale(${r})"/>`;
+  }
+  const type = WORLD_ART[node.type] ? node.type : "dead_world";
+  const art = WORLD_ART[type];
+  const seed = hashStr(node.id);
+  const spin = seed % 360;
+  const flip = seed % 2 ? -1 : 1;
+  const ring = art.ring ? `<g transform="translate(${x} ${y}) rotate(-18) scale(${r})">` : "";
+  return [
+    `<circle cx="${x}" cy="${y}" r="${r * 1.25}" fill="url(#atmo-${type})"/>`,
+    ring ? `${ring}<ellipse rx="1.9" ry="0.42" fill="none" stroke="${art.ring}" stroke-width="0.14" opacity="0.45"/></g>` : "",
+    `<use href="#surf-${type}" transform="translate(${x} ${y}) rotate(${spin}) scale(${r * flip} ${r})"/>`,
+    `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#planet-shade)"/>`,
+    ring ? `${ring}<path d="M -1.9 0 A 1.9 0.42 0 0 0 1.9 0" fill="none" stroke="${art.ring}" stroke-width="0.14" opacity="0.7"/></g>` : ""
+  ].join("");
+}
+
+function titleCase(value) {
+  return String(value || "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function worldStyle(type) {
+  return WORLD_STYLES[type] || WORLD_STYLES.dead_world;
+}
+
+function mulberry32(seed) {
+  return () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function relativeTime(iso) {
+  const ms = Date.parse(iso || "");
+  if (!Number.isFinite(ms)) return "";
+  const diff = ms - Date.now();
+  const mins = Math.round(Math.abs(diff) / 60000);
+  const days = Math.floor(mins / 1440);
+  const hours = Math.floor((mins % 1440) / 60);
+  const span = days ? `${days}d ${hours}h` : hours ? `${hours}h ${mins % 60}m` : `${mins}m`;
+  return diff >= 0 ? `in ${span}` : `${span} ago`;
+}
+
+function pageFromLocation() {
+  return window.location.pathname.replace(/\/+$/, "") === "/reach" ? "reach" : "fortress";
+}
+
+function updateSiteNav() {
+  document.querySelectorAll(".site-nav [data-page]").forEach(link => {
+    const active = link.dataset.page === state.page;
+    link.classList.toggle("active", active);
+    if (active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+}
+
+async function setPage(page, push) {
+  if (page === state.page) {
+    if (page === "fortress" && push) navigate("strategium", {}, null, "out");
+    return;
+  }
+  state.page = page;
+  closePlanetModal();
+  if (push && window.location.protocol.startsWith("http")) {
+    history.pushState({ page }, "", page === "reach" ? "/reach" : "/");
+  }
+  if (page === "reach" && state.reachStatus === "idle") await loadReach();
+  render(null, "out");
+}
+
+async function loadReach() {
+  if (!window.location.protocol.startsWith("http")) {
+    state.reachStatus = "error";
+    return;
+  }
+  try {
+    const resp = await fetch(apiUrl("/api/reach"), { cache: "no-cache" });
+    if (!resp.ok) throw new Error("bad response");
+    const json = await resp.json();
+    const valid = json && Array.isArray(json.nodes) && Array.isArray(json.edges) && Array.isArray(json.directives);
+    state.reach = valid ? json : null;
+    state.reachStatus = valid && json.nodes.length ? "live" : "empty";
+  } catch (e) {
+    console.error("Reach chart fetch failed", e);
+    state.reachStatus = "error";
+  }
+}
+
+async function refreshReach() {
+  if (state.page !== "reach" || document.visibilityState !== "visible") return;
+  if (document.querySelector(".reach-viewport.dragging")) return;
+  await loadReach();
+  renderReach();
+  updateStatusBadge();
+}
+
+function activeReachDirectives() {
+  return ((state.reach && state.reach.directives) || []).filter(d => REACH_STATUS[d.status] && REACH_STATUS[d.status].active);
+}
+
+function visibleReachDirectives() {
+  const { statuses, company } = state.reachFilters;
+  return ((state.reach && state.reach.directives) || []).filter(d =>
+    REACH_STATUS[d.status] && statuses.has(d.status) &&
+    (company === "all" || String(d.company) === company)
+  );
+}
+
+function sortDirectives(list) {
+  return [...list].sort((a, b) =>
+    REACH_STATUS[a.status].rank - REACH_STATUS[b.status].rank ||
+    (Date.parse(a.deadline || "") || 0) - (Date.parse(b.deadline || "") || 0)
+  );
+}
+
+function deployedBrotherIds(list) {
+  return new Set(list.filter(d => d.status === "deployed").flatMap(d => d.participants || []));
+}
+
+function assignedLabel(d) {
+  if (!d.company) return "Awaiting distribution";
+  return `Company ${COMPANY_NAMES[d.company]}${d.killTeam ? " \u00b7 " + d.killTeam : ""}`;
+}
+
+function toggleReachFilter(key) {
+  const chip = REACH_FILTER_CHIPS.find(c => c.key === key);
+  if (!chip) return;
+  const statuses = state.reachFilters.statuses;
+  const enable = !chip.statuses.every(s => statuses.has(s));
+  chip.statuses.forEach(s => enable ? statuses.add(s) : statuses.delete(s));
+  renderReach();
+}
+
+function reachBounds(nodes) {
+  const xs = nodes.map(n => n.x);
+  const ys = nodes.map(n => n.y);
+  const pad = 70;
+  const x = Math.min(...xs) - pad;
+  const y = Math.min(...ys) - pad;
+  return { x, y, w: Math.max(...xs) + pad - x, h: Math.max(...ys) + pad - y };
+}
+
+function reachBackdropSvg(b, nodes) {
+  const rand = mulberry32(1983);
+  const stars = [];
+  for (let i = 0; i < 560; i++) {
+    const r = rand() < 0.93 ? 0.3 + rand() * 0.7 : 1 + rand() * 1.1;
+    const sx = b.x - b.w * 0.5 + rand() * b.w * 2;
+    const sy = b.y - b.h * 0.5 + rand() * b.h * 2;
+    stars.push(`<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${r.toFixed(2)}" opacity="${(0.2 + rand() * 0.6).toFixed(2)}"/>`);
+  }
+
+  const grid = [];
+  for (let gx = Math.floor((b.x - b.w) / 100) * 100; gx <= b.x + b.w * 2; gx += 100) {
+    grid.push(`<line x1="${gx}" y1="${b.y - b.h}" x2="${gx}" y2="${b.y + b.h * 2}"/>`);
+  }
+  for (let gy = Math.floor((b.y - b.h) / 100) * 100; gy <= b.y + b.h * 2; gy += 100) {
+    grid.push(`<line x1="${b.x - b.w}" y1="${gy}" x2="${b.x + b.w * 2}" y2="${gy}"/>`);
+  }
+
+  const groups = {};
+  nodes.forEach(n => { (groups[n.region || "uncharted"] ||= []).push(n); });
+  const defs = [];
+  const clouds = [];
+  const labels = [];
+  const placed = [];
+  Object.entries(groups).sort((a, b) => b[1].length - a[1].length).forEach(([region, list], i) => {
+    const color = REGION_COLORS[region] || "#2f8a52";
+    const cx = list.reduce((s, n) => s + n.x, 0) / list.length;
+    const cy = list.reduce((s, n) => s + n.y, 0) / list.length;
+    const sx = Math.sqrt(list.reduce((s, n) => s + (n.x - cx) ** 2, 0) / list.length);
+    const sy = Math.sqrt(list.reduce((s, n) => s + (n.y - cy) ** 2, 0) / list.length);
+    const rx = Math.max(70, sx * 1.9 + 40);
+    const ry = Math.max(60, sy * 1.9 + 40);
+    defs.push(`<radialGradient id="neb-${i}"><stop offset="0" stop-color="${color}" stop-opacity="0.26"/><stop offset="0.55" stop-color="${color}" stop-opacity="0.09"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`);
+    clouds.push(`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#neb-${i})"/>`);
+    const ox = cx + (rand() - 0.5) * rx;
+    const oy = cy + (rand() - 0.5) * ry;
+    clouds.push(`<ellipse cx="${ox}" cy="${oy}" rx="${rx * 0.6}" ry="${ry * 0.7}" fill="url(#neb-${i})" transform="rotate(${(rand() * 60 - 30).toFixed(1)} ${ox} ${oy})"/>`);
+    const name = titleCase(region);
+    const halfW = name.length * 10.5;
+    const spot = [cy - ry * 0.6, cy + ry * 0.6, cy, cy - ry, cy + ry]
+      .map(ly => ({ x1: cx - halfW, x2: cx + halfW, y1: ly - 20, y2: ly + 6, y: ly }))
+      .find(box => !placed.some(p => box.x1 < p.x2 && box.x2 > p.x1 && box.y1 < p.y2 && box.y2 > p.y1));
+    if (spot) {
+      placed.push(spot);
+      labels.push(`<text class="reach-region-label" x="${cx}" y="${spot.y}">${escapeHtml(name)}</text>`);
+    }
+  });
+
+  return {
+    defs: defs.join(""),
+    layers: `<g class="reach-grid">${grid.join("")}</g><g class="reach-nebulae">${clouds.join("")}</g><g fill="#dfe8dc">${stars.join("")}</g>`,
+    labels: `<g>${labels.join("")}</g>`
+  };
+}
+
+function reachPlanetSvg(node, list) {
+  const { r } = worldStyle(node.type);
+  const { x, y } = node;
+  const top = list.length ? sortDirectives(list)[0] : null;
+  const status = top && top.status;
+  const color = top && REACH_STATUS[status].color;
+  const brothers = deployedBrotherIds(list).size;
+  const isFortress = node.type === "watch_station";
+  const parts = [];
+  if (top) parts.push(`<circle cx="${x}" cy="${y}" r="${r * 4.2}" fill="url(#halo-${status})"/>`);
+  if (status === "deployed" || status === "recruiting") {
+    parts.push(`<circle class="reach-pulse" cx="${x}" cy="${y}" r="${r + 4}" stroke="${color}"/>`);
+  }
+  parts.push(`<circle cx="${x}" cy="${y}" r="${r + 10}" fill="transparent"/>`);
+  parts.push(planetArtSvg(node, r));
+  parts.push(`<circle class="reach-planet-body" cx="${x}" cy="${y}" r="${r}" fill="none"/>`);
+  if (node.gamePlanet) parts.push(`<circle class="reach-theatre" cx="${x}" cy="${y}" r="${r + 2.6}"/>`);
+  if (top) {
+    const dash = status === "unassigned" ? ` stroke-dasharray="2 2"` : "";
+    parts.push(`<circle class="reach-ring${REACH_STATUS[status].active ? "" : " history"}" cx="${x}" cy="${y}" r="${r + 4.5}" stroke="${color}"${dash}/>`);
+  }
+  if (brothers) {
+    const width = 12 + String(brothers).length * 4.5;
+    parts.push(`<g class="reach-badge"><rect x="${x + r + 2}" y="${y - r - 10}" width="${width}" height="9" rx="1.5"/><text x="${x + r + 4}" y="${y - r - 3.2}">\u2694${brothers}</text></g>`);
+  }
+  const always = list.length || node.gamePlanet || isFortress ? " always" : "";
+  const sub = isFortress ? `<tspan class="sub" x="${x}" dy="1.2em">Watch Fortress</tspan>` : "";
+  parts.push(`<text class="reach-label${always}" x="${x}" y="${y + r + (isFortress ? r : 0) + 4}">${escapeHtml(node.id)}${sub}</text>`);
+  const aria = `${node.id}, ${titleCase(node.type)}${list.length ? `, ${list.length} directive${list.length === 1 ? "" : "s"}` : ""}`;
+  const selected = state.selectedPlanet === node.id ? " selected" : "";
+  return `<g class="reach-planet${selected}" data-planet="${escapeHtml(node.id)}" role="button" tabindex="0" aria-label="${escapeHtml(aria)}">${parts.join("")}</g>`;
+}
+
+function reachSvg(reach, directives) {
+  const nodeById = new Map(reach.nodes.map(n => [n.id, n]));
+  const byNode = new Map();
+  directives.forEach(d => { if (!byNode.has(d.node)) byNode.set(d.node, []); byNode.get(d.node).push(d); });
+
+  state.reachAdj = new Map();
+  const edges = reach.edges.map((edge, i) => {
+    const a = nodeById.get(edge.source);
+    const b = nodeById.get(edge.target);
+    if (!a || !b) return "";
+    [edge.source, edge.target].forEach(id => {
+      if (!state.reachAdj.has(id)) state.reachAdj.set(id, []);
+      state.reachAdj.get(id).push(i);
+    });
+    const prox = ["close", "medium", "far"].includes(edge.proximity) ? edge.proximity : "medium";
+    return `<line class="reach-edge ${prox}" data-edge="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`;
+  }).join("");
+
+  const backdrop = reachBackdropSvg(state.reachBase, reach.nodes);
+  const worldDefs = reachPlanetDefs();
+  const haloDefs = Object.entries(REACH_STATUS).map(([key, s]) =>
+    `<radialGradient id="halo-${key}"><stop offset="0" stop-color="${s.color}" stop-opacity="${s.active ? 0.45 : 0.18}"/><stop offset="1" stop-color="${s.color}" stop-opacity="0"/></radialGradient>`
+  ).join("");
+  // Busy worlds render last so their halos and badges sit above quiet neighbours.
+  const planets = [...reach.nodes]
+    .sort((a, b) => (byNode.get(a.id) || []).length - (byNode.get(b.id) || []).length)
+    .map(n => reachPlanetSvg(n, byNode.get(n.id) || []))
+    .join("");
+
+  return `
+    <svg id="reach-svg" class="reach-svg" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Star chart of the Jericho Reach">
+      <defs>${worldDefs}${haloDefs}${backdrop.defs}</defs>
+      ${backdrop.layers}
+      <g>${edges}</g>
+      ${backdrop.labels}
+      <g>${planets}</g>
+    </svg>`;
+}
+
+function renderReach() {
+  const app = document.getElementById("app");
+  if (state.reachStatus !== "live" || !state.reach) {
+    const message = state.reachStatus === "error"
+      ? "&gt; Cogitator link severed<br>The Reach chart could not be retrieved from the Strategium."
+      : "&gt; Awaiting astropathic relay<br>No star chart has been received from the Servitor yet.";
+    app.innerHTML = `<div class="reach-viewport"><div class="reach-empty">${message}</div></div>`;
+    return;
+  }
+  const reach = state.reach;
+  state.reachBase = reachBounds(reach.nodes);
+  const directives = visibleReachDirectives();
+  const active = activeReachDirectives();
+  const contested = new Set(active.map(d => d.node)).size;
+  const rep = Number(reach.rep) || 0;
+  const { statuses, company } = state.reachFilters;
+
+  const chips = REACH_FILTER_CHIPS.map(chip => {
+    const pressed = chip.statuses.every(s => statuses.has(s));
+    const color = REACH_STATUS[chip.statuses[0]].color;
+    return `<button class="reach-chip" type="button" data-reach-filter="${chip.key}" aria-pressed="${pressed}" style="--chip-color:${color}"><span class="reach-chip-dot"></span>${chip.label}</button>`;
+  }).join("");
+  const companyOptions = [`<option value="all">All companies</option>`]
+    .concat(Object.entries(COMPANY_NAMES).map(([id, name]) => `<option value="${id}" ${company === id ? "selected" : ""}>Company ${name}</option>`))
+    .join("");
+
+  const legend = Object.entries(REACH_STATUS).filter(([, s]) => s.active)
+    .map(([, s]) => `<div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:${s.color}"></span>${s.label}</div>`)
+    .join("");
+
+  const deployments = sortDirectives(directives.filter(d => REACH_STATUS[d.status].active));
+  const rows = deployments.map(d => {
+    const s = REACH_STATUS[d.status];
+    return `
+      <tr class="reach-row" data-planet="${escapeHtml(d.node)}" tabindex="0">
+        <td class="roster-name">${escapeHtml(d.code)}${d.name ? ` &middot; ${escapeHtml(d.name)}` : ""}</td>
+        <td>${escapeHtml(d.node)}</td>
+        <td><span class="status-tag" style="--status-color:${s.color}">${s.label}</span></td>
+        <td class="roster-rank">${escapeHtml(assignedLabel(d))}</td>
+        <td>${(d.participants || []).length}</td>
+        <td class="roster-chapter">${escapeHtml(relativeTime(d.deadline) || "\u2014")}</td>
+      </tr>`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="reach-summary">
+      <div class="reach-stat"><div class="reach-stat-value">${active.length}</div><div class="reach-stat-label">Active Directives</div></div>
+      <div class="reach-stat"><div class="reach-stat-value">${deployedBrotherIds(active).size}</div><div class="reach-stat-label">Brothers in the Field</div></div>
+      <div class="reach-stat"><div class="reach-stat-value">${contested}</div><div class="reach-stat-label">Contested Worlds</div></div>
+      <div class="reach-stat"><div class="reach-stat-value">${rep >= 0 ? "+" : ""}${rep.toFixed(2)}</div><div class="reach-stat-label">Ordo Xenos Standing</div></div>
+    </div>
+    <div class="reach-toolbar">
+      ${chips}
+      <select class="reach-select" data-reach-company aria-label="Filter by company">${companyOptions}</select>
+    </div>
+    <div class="reach-viewport" id="reach-viewport">
+      ${reachSvg(reach, directives)}
+      <div class="reach-controls">
+        <button class="icon-btn" type="button" data-reach-zoom="in" aria-label="Zoom in">+</button>
+        <button class="icon-btn" type="button" data-reach-zoom="out" aria-label="Zoom out">&minus;</button>
+        <button class="icon-btn" type="button" data-reach-zoom="reset" aria-label="Reset view">&#8634;</button>
+      </div>
+      <div class="reach-legend" aria-hidden="true">
+        ${legend}
+        <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:var(--gold);border-style:dashed"></span>Active theatre</div>
+        <div class="reach-legend-item"><span style="color:var(--gold)">&#9876;</span>Brothers deployed</div>
+      </div>
+      <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))} &middot; ` : ""}drag to pan &middot; click then scroll to zoom</div>
+      <div class="reach-tooltip" id="reach-tooltip" hidden></div>
+    </div>
+    <div class="tier-label" style="margin-top:26px">Active Deployments (${deployments.length})</div>
+    <table class="roster-table reach-table">
+      <thead><tr><th>Directive</th><th>World</th><th>Status</th><th>Assigned</th><th>Brothers</th><th>Deadline</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="6" class="roster-empty">No active directives match the current filters.</td></tr>`}</tbody>
+    </table>
+  `;
+  setupReachViewport();
+}
+
+function reachFitWidth(rect) {
+  const b = state.reachBase;
+  return Math.max(b.w, b.h * rect.width / rect.height);
+}
+
+function applyReachView() {
+  const svg = document.getElementById("reach-svg");
+  if (!svg || !state.reachBase) return;
+  const rect = svg.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const b = state.reachBase;
+  const fitW = reachFitWidth(rect);
+  const v = state.reachView || (state.reachView = { cx: b.x + b.w / 2, cy: b.y + b.h / 2, w: fitW });
+  v.w = Math.min(fitW * 1.2, Math.max(fitW / 16, v.w));
+  v.cx = Math.min(b.x + b.w, Math.max(b.x, v.cx));
+  v.cy = Math.min(b.y + b.h, Math.max(b.y, v.cy));
+  const h = v.w * rect.height / rect.width;
+  svg.setAttribute("viewBox", `${v.cx - v.w / 2} ${v.cy - h / 2} ${v.w} ${h}`);
+  svg.style.setProperty("--k", (v.w / rect.width).toFixed(4));
+  svg.classList.toggle("zoomed", fitW / v.w > 1.8);
+}
+
+function zoomReachAt(factor, clientX, clientY) {
+  const svg = document.getElementById("reach-svg");
+  if (!svg || !state.reachView) return;
+  const rect = svg.getBoundingClientRect();
+  const v = state.reachView;
+  const h = v.w * rect.height / rect.width;
+  const px = v.cx - v.w / 2 + ((clientX - rect.left) / rect.width) * v.w;
+  const py = v.cy - h / 2 + ((clientY - rect.top) / rect.height) * h;
+  const fitW = reachFitWidth(rect);
+  const nextW = Math.min(fitW * 1.2, Math.max(fitW / 16, v.w * factor));
+  const scale = nextW / v.w;
+  v.cx = px - (px - v.cx) * scale;
+  v.cy = py - (py - v.cy) * scale;
+  v.w = nextW;
+  applyReachView();
+}
+
+function lightReachEdges(id, on) {
+  const edges = document.querySelectorAll("#reach-svg .reach-edge");
+  (state.reachAdj.get(id) || []).forEach(i => { if (edges[i]) edges[i].classList.toggle("lit", on); });
+}
+
+function showReachTooltip(id, e) {
+  const tip = document.getElementById("reach-tooltip");
+  const node = state.reach && state.reach.nodes.find(n => n.id === id);
+  if (!tip || !node) return;
+  const list = sortDirectives(visibleReachDirectives().filter(d => d.node === id));
+  const brothers = deployedBrotherIds(list).size;
+  const lines = list.slice(0, 4).map(d =>
+    `<div class="reach-tooltip-line"><span class="reach-dot" style="--dot:${REACH_STATUS[d.status].color}"></span>${escapeHtml(d.code)} &middot; ${REACH_STATUS[d.status].label}</div>`
+  ).join("");
+  tip.innerHTML = `
+    <div class="reach-tooltip-name">${escapeHtml(node.id)}</div>
+    <div>${escapeHtml(titleCase(node.type))} &middot; ${escapeHtml(titleCase(node.region))}</div>
+    ${lines || `<div style="color:var(--green-faint)">No directives recorded</div>`}
+    ${list.length > 4 ? `<div>+${list.length - 4} more</div>` : ""}
+    ${brothers ? `<div style="color:var(--gold)">&#9876; ${brothers} brother${brothers === 1 ? "" : "s"} deployed</div>` : ""}`;
+  tip.hidden = false;
+  moveReachTooltip(e);
+}
+
+function moveReachTooltip(e) {
+  const tip = document.getElementById("reach-tooltip");
+  const vp = document.getElementById("reach-viewport");
+  if (!tip || tip.hidden || !vp) return;
+  const rect = vp.getBoundingClientRect();
+  let left = e.clientX - rect.left + 14;
+  let top = e.clientY - rect.top + 14;
+  if (left + tip.offsetWidth > rect.width - 8) left = e.clientX - rect.left - tip.offsetWidth - 14;
+  if (top + tip.offsetHeight > rect.height - 8) top = e.clientY - rect.top - tip.offsetHeight - 14;
+  tip.style.left = `${Math.max(4, left)}px`;
+  tip.style.top = `${Math.max(4, top)}px`;
+}
+
+function hideReachTooltip() {
+  const tip = document.getElementById("reach-tooltip");
+  if (tip) tip.hidden = true;
+}
+
+function setupReachViewport() {
+  const vp = document.getElementById("reach-viewport");
+  const svg = document.getElementById("reach-svg");
+  if (!vp || !svg) return;
+  applyReachView();
+  document.getElementById("app").addEventListener("animationend", applyReachView, { once: true });
+
+  const pointers = new Map();
+  let moved = 0;
+  let engaged = false;
+
+  vp.addEventListener("pointerdown", e => {
+    engaged = true;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (e.target.closest(".reach-controls")) return;
+    if (!pointers.size) moved = 0;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  });
+
+  vp.addEventListener("pointermove", e => {
+    const prev = pointers.get(e.pointerId);
+    if (!prev) { moveReachTooltip(e); return; }
+    const rect = svg.getBoundingClientRect();
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const before = Math.hypot(a.x - b.x, a.y - b.y);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const [c, d] = [...pointers.values()];
+      const after = Math.hypot(c.x - d.x, c.y - d.y);
+      moved += 10;
+      if (before && after) zoomReachAt(before / after, (c.x + d.x) / 2, (c.y + d.y) / 2);
+      return;
+    }
+    const dx = e.clientX - prev.x;
+    const dy = e.clientY - prev.y;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved += Math.abs(dx) + Math.abs(dy);
+    if (moved <= 5) return;
+    // Capture only once dragging so a plain tap still reaches the planet.
+    if (!vp.hasPointerCapture(e.pointerId)) {
+      vp.setPointerCapture(e.pointerId);
+      vp.classList.add("dragging");
+      hideReachTooltip();
+    }
+    const v = state.reachView;
+    v.cx -= dx * v.w / rect.width;
+    v.cy -= dy * v.w / rect.width;
+    applyReachView();
+  });
+
+  const endPointer = e => {
+    if (!pointers.delete(e.pointerId)) return;
+    if (moved > 5) {
+      state.reachSuppressClick = true;
+      setTimeout(() => { state.reachSuppressClick = false; }, 0);
+    }
+    if (!pointers.size) vp.classList.remove("dragging");
+  };
+  vp.addEventListener("pointerup", endPointer);
+  vp.addEventListener("pointercancel", endPointer);
+
+  vp.addEventListener("pointerleave", () => { if (!pointers.size) engaged = false; });
+  vp.addEventListener("wheel", e => {
+    // Leave page scrolling alone until the chart is engaged; trackpad pinch arrives with ctrlKey.
+    if (!engaged && !e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    zoomReachAt(Math.exp(e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015)), e.clientX, e.clientY);
+  }, { passive: false });
+
+  vp.querySelector(".reach-controls").addEventListener("click", e => {
+    const btn = e.target.closest("[data-reach-zoom]");
+    if (!btn) return;
+    const rect = svg.getBoundingClientRect();
+    const mode = btn.dataset.reachZoom;
+    if (mode === "reset") {
+      state.reachView = null;
+      applyReachView();
+    } else {
+      zoomReachAt(mode === "in" ? 0.7 : 1 / 0.7, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+  });
+
+  svg.addEventListener("pointerover", e => {
+    const g = e.target.closest(".reach-planet");
+    if (!g || vp.classList.contains("dragging")) return;
+    showReachTooltip(g.dataset.planet, e);
+    lightReachEdges(g.dataset.planet, true);
+  });
+  svg.addEventListener("pointerout", e => {
+    const g = e.target.closest(".reach-planet");
+    if (!g || (e.relatedTarget && g.contains(e.relatedTarget))) return;
+    hideReachTooltip();
+    lightReachEdges(g.dataset.planet, false);
+  });
+  svg.addEventListener("focusin", e => {
+    const g = e.target.closest(".reach-planet");
+    if (g) lightReachEdges(g.dataset.planet, true);
+  });
+  svg.addEventListener("focusout", e => {
+    const g = e.target.closest(".reach-planet");
+    if (g) lightReachEdges(g.dataset.planet, false);
+  });
+}
+
+function directiveCardHtml(d) {
+  const s = REACH_STATUS[d.status];
+  const rows = [
+    ["Mission", [d.mission, d.mode].filter(Boolean).join(" \u00b7 ")],
+    ["Assigned", assignedLabel(d)],
+    ["Rank Required", (d.requiredRoles || []).join(", ")],
+    ["Classification", titleCase(d.classification)],
+    [s.active ? "Deadline" : "Closed", relativeTime(s.active ? d.deadline : (d.completedAt || d.deadline))]
+  ].filter(([, value]) => value);
+  const known = sortByRank((d.participants || []).map(findMember).filter(Boolean));
+  const unknownCount = (d.participants || []).length - known.length;
+  const brothers = known.map(m =>
+    `<button class="brother-chip" type="button" data-member="${escapeHtml(m.id)}">${escapeHtml(displayName(m.name))}</button>`
+  ).join("") + (unknownCount ? `<span class="brother-chip unknown">${unknownCount} unlisted brother${unknownCount === 1 ? "" : "s"}</span>` : "");
+  const strats = d.stratagems || {};
+  const positive = (strats.positive || []).concat(d.intelLapse ? ["Intelligence Lapse (forced)"] : []);
+  const negative = strats.negative || [];
+  const stratHtml = positive.length || negative.length ? `
+    <div class="directive-section-label">Stratagems</div>
+    <ul class="strat-list">
+      ${positive.map(n => `<li class="strat-pos">+ ${escapeHtml(n)}</li>`).join("")}
+      ${negative.map(n => `<li class="strat-neg">&minus; ${escapeHtml(n)}</li>`).join("")}
+    </ul>` : "";
+  return `
+    <div class="directive-card${s.active ? "" : " history"}" style="--status-color:${s.color}">
+      <div class="directive-card-head">
+        <span class="directive-card-title">${escapeHtml(d.code)}${d.name ? ` &middot; ${escapeHtml(d.name)}` : ""}</span>
+        <span class="status-tag">${s.label}</span>
+      </div>
+      ${rows.map(([label, value]) => `<div class="modal-row"><span>${label}</span><span>${escapeHtml(value)}</span></div>`).join("")}
+      ${brothers ? `<div class="directive-section-label">${d.status === "deployed" ? "Brothers Deployed" : "Brothers Sworn"}</div><div class="brother-chips">${brothers}</div>` : ""}
+      ${stratHtml}
+      ${d.briefing ? `<p class="directive-briefing">${escapeHtml(d.briefing)}</p>` : ""}
+    </div>`;
+}
+
+function openPlanetModal(id, center) {
+  const node = state.reach && state.reach.nodes.find(n => n.id === id);
+  if (!node) return;
+  state.selectedPlanet = id;
+  hideReachTooltip();
+  document.querySelectorAll("#reach-svg .reach-planet").forEach(g => g.classList.toggle("selected", g.dataset.planet === id));
+  if (center && state.reachView) {
+    state.reachView.cx = node.x;
+    state.reachView.cy = node.y;
+    applyReachView();
+  }
+
+  const list = sortDirectives(state.reach.directives.filter(d => d.node === id && REACH_STATUS[d.status]));
+  const neighbours = [...new Set((state.reachAdj.get(id) || []).map(i => {
+    const edge = state.reach.edges[i];
+    return edge.source === id ? edge.target : edge.source;
+  }))].sort();
+  const meta = [titleCase(node.type), titleCase(node.region)];
+  if (node.gamePlanet) meta.push("Active Theatre");
+
+  document.getElementById("planet-modal-body").innerHTML = `
+    <div class="modal-rank">${escapeHtml(meta.join(" \u00b7 "))}</div>
+    <div class="modal-name">${escapeHtml(node.id)}</div>
+    ${list.length ? list.map(directiveCardHtml).join("") : `<div class="search-hint">No Ordo Xenos directives recorded on this world.</div>`}
+    ${neighbours.length ? `
+      <div class="directive-section-label">Warp Routes</div>
+      <div class="brother-chips">${neighbours.map(n => `<button class="brother-chip" type="button" data-planet="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join("")}</div>` : ""}
+  `;
+  const overlay = document.getElementById("planet-modal");
+  const panel = overlay.querySelector(".overlay-panel");
+  overlay.classList.add("open");
+  panel.classList.remove("unfurl");
+  void panel.offsetWidth;
+  panel.classList.add("unfurl");
+}
+
+function closePlanetModal() {
+  document.getElementById("planet-modal").classList.remove("open");
+  if (!state.selectedPlanet) return;
+  state.selectedPlanet = null;
+  document.querySelectorAll("#reach-svg .reach-planet.selected").forEach(g => g.classList.remove("selected"));
+}
+
+/* ---------------------------------------------------------------------- */
 /* Search                                                                 */
 /* ---------------------------------------------------------------------- */
 
@@ -1934,11 +3062,11 @@ function renderSearchResults(query) {
     resultsEl.innerHTML = `<div class="search-hint">Search by name, rank, or Chapter of origin.</div>`;
     return;
   }
-  const matches = state.members.filter(m =>
+  const matches = sortByRank(state.members.filter(m =>
     m.name.toLowerCase().includes(q) ||
     (RANK_LABELS[m.rank] || "").toLowerCase().includes(q) ||
     (m.chapter || "").toLowerCase().includes(q)
-  ).slice(0, 24);
+  )).slice(0, 24);
 
   if (!matches.length) {
     resultsEl.innerHTML = `<div class="search-hint">No battle-brothers match that search.</div>`;
@@ -1973,8 +3101,60 @@ function closeSearch() {
 /* ---------------------------------------------------------------------- */
 
 function wireEvents() {
-  window.addEventListener("resize", () => requestAnimationFrame(drawMapConnectors));
+  window.addEventListener("resize", () => requestAnimationFrame(() => { drawMapConnectors(); applyReachView(); }));
+  window.addEventListener("popstate", () => setPage(pageFromLocation(), false));
+  const clampRibbonTip = (e) => {
+    const ribbon = e.target.closest && e.target.closest(".ribbon");
+    const tip = ribbon && ribbon.querySelector(".ribbon-tip");
+    if (!tip) return;
+    tip.style.marginLeft = "0px";
+    const rect = tip.getBoundingClientRect();
+    if (!rect.width) return;
+    const overflowRight = rect.right - (window.innerWidth - 8);
+    if (rect.left < 8) tip.style.marginLeft = `${8 - rect.left}px`;
+    else if (overflowRight > 0) tip.style.marginLeft = `${-overflowRight}px`;
+  };
+  document.addEventListener("mouseover", clampRibbonTip);
+  document.addEventListener("focusin", clampRibbonTip);
+  // iOS Safari doesn't focus buttons on tap, so tapping toggles the tooltip explicitly.
+  document.addEventListener("click", (e) => {
+    const ribbon = e.target.closest(".ribbon");
+    document.querySelectorAll(".ribbon.open").forEach(open => {
+      if (open !== ribbon) {
+        open.classList.remove("open");
+        open.setAttribute("aria-expanded", "false");
+      }
+    });
+    if (!ribbon) return;
+    const isOpen = ribbon.classList.toggle("open");
+    ribbon.setAttribute("aria-expanded", String(isOpen));
+    clampRibbonTip(e);
+  });
+  document.body.addEventListener("change", (e) => {
+    const select = e.target.closest("[data-reach-company]");
+    if (select) {
+      state.reachFilters.company = select.value;
+      renderReach();
+    }
+  });
   document.body.addEventListener("click", (e) => {
+    const pageLink = e.target.closest("[data-page]");
+    if (pageLink) {
+      e.preventDefault();
+      setPage(pageLink.dataset.page, true);
+      return;
+    }
+    const filterBtn = e.target.closest("[data-reach-filter]");
+    if (filterBtn) {
+      toggleReachFilter(filterBtn.dataset.reachFilter);
+      return;
+    }
+    const planetEl = e.target.closest("[data-planet]");
+    if (planetEl) {
+      if (state.reachSuppressClick) return;
+      openPlanetModal(planetEl.dataset.planet, !planetEl.closest("#reach-svg"));
+      return;
+    }
     const navBtn = e.target.closest("[data-nav]");
     if (navBtn) {
       const view = navBtn.dataset.nav;
@@ -1983,6 +3163,17 @@ function wireEvents() {
         killTeamId: navBtn.dataset.killteam || null,
         formationId: navBtn.dataset.formation || null
       };
+      if (navBtn.closest(".overlay")) {
+        closeMemberModal();
+        closePlanetModal();
+        closeSearch();
+        if (state.page !== "fortress") {
+          state.page = "fortress";
+          if (window.location.protocol.startsWith("http")) history.pushState({ page: "fortress" }, "", "/");
+        }
+        navigate(view, params, null, "out");
+        return;
+      }
       const isBreadcrumb = navBtn.classList.contains("crumb");
       navigate(view, params, isBreadcrumb ? null : navBtn, isBreadcrumb ? "out" : "in");
       return;
@@ -2002,9 +3193,25 @@ function wireEvents() {
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      const memberOpen = document.getElementById("member-modal").classList.contains("open");
+      document.querySelectorAll(".ribbon.open").forEach(open => {
+        open.classList.remove("open");
+        open.setAttribute("aria-expanded", "false");
+      });
       closeMemberModal();
       closeSearch();
+      if (!memberOpen) closePlanetModal();
+      return;
     }
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches(".reach-planet, .reach-row")) {
+      e.preventDefault();
+      openPlanetModal(e.target.dataset.planet, e.target.classList.contains("reach-row"));
+    }
+  });
+
+  document.getElementById("planet-modal-close").addEventListener("click", closePlanetModal);
+  document.getElementById("planet-modal").addEventListener("click", (e) => {
+    if (e.target.id === "planet-modal") closePlanetModal();
   });
 
   document.getElementById("member-modal-close").addEventListener("click", closeMemberModal);
@@ -2028,10 +3235,12 @@ function wireEvents() {
 
 async function init() {
   wireEvents();
+  state.page = pageFromLocation();
   await loadSavedSettings();
-  await loadData();
+  await Promise.all([loadData(), state.page === "reach" ? loadReach() : null]);
   await loadAuth();
   render();
+  setInterval(refreshReach, REACH_REFRESH_MS);
 }
 
 init();
