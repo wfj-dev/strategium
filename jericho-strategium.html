@@ -665,7 +665,7 @@
     font-size: 11px; line-height: 1.55; text-align: left; white-space: normal; color: var(--green-dim);
     box-shadow: 0 8px 24px rgba(0,0,0,0.6);
   }
-  .ribbon:hover .ribbon-tip, .ribbon:focus .ribbon-tip { display: block; }
+  .ribbon:hover .ribbon-tip, .ribbon:focus .ribbon-tip, .ribbon.open .ribbon-tip { display: block; }
   .ribbon-tip-name { display: block; font-family: 'Cinzel', serif; color: var(--gold); font-size: 12.5px; margin-bottom: 4px; }
   .ribbon-tip-lore { display: block; font-style: italic; color: var(--green-dim); margin-bottom: 8px; padding-bottom: 7px; border-bottom: 1px solid var(--border-dim); }
   .ribbon-tip-label { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold-dim); margin-bottom: 2px; }
@@ -1024,9 +1024,9 @@ function sortByRank(members) {
   );
 }
 
-function formationEquerry(key) {
+function formationEquerries(key) {
   const f = FORMATIONS[key];
-  return state.members.find(m => m.equerry && m.rank !== f.lead && (m.formation === key || f.ranks.includes(m.rank))) || null;
+  return sortByRank(state.members.filter(m => m.equerry && m.rank !== f.lead && (m.formation === key || f.ranks.includes(m.rank))));
 }
 const FORMATION_MEMBER_RANKS = Object.values(FORMATIONS).flatMap(f => f.ranks).concat(["venerable_dreadnought"]);
 
@@ -1679,15 +1679,15 @@ function unitHonoursHtml(members, title) {
     return an - bn || as.localeCompare(bs);
   });
   const awarded = ribbons.reduce((sum, r) => sum + r.holders.length, 0);
-  const items = ribbons.map(r => {
+  const items = ribbons.map((r, i) => {
     const holders = sortByRank(r.holders);
     const names = holders.slice(0, 12).map(m => `<li>${escapeHtml(displayName(m.name))} <span>${escapeHtml(RANK_LABELS[m.rank] || "")}</span></li>`).join("");
     const more = holders.length > 12 ? `<li class="ribbon-tip-more">and ${holders.length - 12} more</li>` : "";
-    const aria = `${r.name}: ${holders.length} brother${holders.length === 1 ? "" : "s"}`;
+    const tipId = `ribbon-tip-${i}`;
     return `
-      <button class="ribbon" type="button" aria-label="${escapeHtml(aria)}">
+      <button class="ribbon" type="button" aria-label="${escapeHtml(r.name)}" aria-describedby="${tipId}" aria-expanded="false">
         <img src="${apiUrl(`/assets/ribbons/${encodeURIComponent(r.ribbon)}`)}" alt="" loading="lazy" width="108" height="31">
-        <span class="ribbon-tip" role="tooltip">
+        <span class="ribbon-tip" role="tooltip" id="${tipId}">
           <span class="ribbon-tip-name">${escapeHtml(r.name)}</span>
           ${RIBBON_LORE[r.ribbon] ? `<span class="ribbon-tip-lore">${escapeHtml(RIBBON_LORE[r.ribbon])}</span>` : ""}
           <span class="ribbon-tip-label">Earned by ${holders.length} brother${holders.length === 1 ? "" : "s"}</span>
@@ -1772,7 +1772,7 @@ function renderStrategium() {
   const formationHtml = key => {
     const f = FORMATIONS[key];
     const lead = state.members.find(m => m.rank === f.lead);
-    const equerry = formationEquerry(key);
+    const equerries = formationEquerries(key);
     const count = state.members.filter(m => m.formation === key).length;
     const isUnformed = count === 0 && !lead;
     return `
@@ -1780,7 +1780,7 @@ function renderStrategium() {
       <button class="formation-plate ${isUnformed ? 'unit-unformed' : ''}" data-nav="formation" data-formation="${key}" type="button" style="--formation-accent:${FORMATION_COLORS[key]}">
         <span class="formation-plate-label">${escapeHtml(f.name)}</span>
         ${lead ? `<span class="formation-plate-lead">${RANK_LABELS[lead.rank]} ${escapeHtml(displayName(lead.name))}</span>` : ""}
-        ${equerry ? `<span class="formation-plate-lead">Equerry ${escapeHtml(displayName(equerry.name))}</span>` : ""}
+        ${equerries.map(e => `<span class="formation-plate-lead">Equerry ${escapeHtml(displayName(e.name))}</span>`).join("")}
         ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Cadre Dormant &mdash;</span>` : `<span class="formation-plate-count">${count} sworn</span>`}
         <span class="formation-plate-blurb">${escapeHtml(FORMATION_LORE[key] || "This formation serves the Watch according to its own discipline and mandate.")}</span>
       </button>
@@ -1939,18 +1939,18 @@ function renderFormation(key) {
   const f = FORMATIONS[key];
   const members = formationMembers(key);
   const lead = members.find(m => m.rank === f.lead) || null;
-  const equerry = formationEquerry(key);
-  const rest = sortByRank(members.filter(m => m !== lead && m !== equerry));
+  const equerries = formationEquerries(key);
+  const rest = sortByRank(members.filter(m => m !== lead && !equerries.includes(m)));
   const directive = state.directiveStats.formations[key] || {};
   const isDormant = members.length === 0;
 
   const leadHtml = [lead ? plateHtml({
     id: lead.id, member: lead, name: lead.name,
     rankLabel: RANK_LABELS[lead.rank], accent: "gold", vacant: false, size: "md"
-  }) : "", equerry ? plateHtml({
+  }) : "", ...equerries.map(equerry => plateHtml({
     id: equerry.id, member: equerry, name: equerry.name,
     rankLabel: `Equerry \u00b7 ${RANK_LABELS[equerry.rank] || equerry.rank}`, accent: "steel", vacant: false, size: "md"
-  }) : ""].join("");
+  }))].join("");
 
   const rows = rest.map(m => `
     <tr class="roster-row" data-member="${m.id}">
@@ -1972,7 +1972,7 @@ function renderFormation(key) {
         <span class="directive-tier-tag">${escapeHtml(directive.tier || 'Sworn')}</span>
         <span>Strike Directives: <strong>${directive.completed || directive.completions_28d || 0}</strong> completed &middot; <strong>${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
       </div>` : ""}
-    ${leadHtml ? commandSectionHtml("Cadre Leadership", `<div class="tier tier-formation-lead">${leadHtml}</div>`, unitHonoursHtml([...new Set([...members, equerry].filter(Boolean))], "Honours of the Cadre")) : ""}
+    ${leadHtml ? commandSectionHtml("Cadre Leadership", `<div class="tier tier-formation-lead">${leadHtml}</div>`, unitHonoursHtml([...new Set([...members, ...equerries])], "Honours of the Cadre")) : ""}
     <div class="tier-label">Formation Roster (${rest.length})</div>
     <table class="roster-table">
       <thead><tr><th>Name</th><th>Rank</th><th>Chapter of Origin</th></tr></thead>
@@ -2549,7 +2549,7 @@ function sortDirectives(list) {
 }
 
 function deployedBrotherIds(list) {
-  return new Set(list.filter(d => d.status === "deployed" || d.status === "recruiting").flatMap(d => d.participants || []));
+  return new Set(list.filter(d => d.status === "deployed").flatMap(d => d.participants || []));
 }
 
 function assignedLabel(d) {
@@ -3116,6 +3116,20 @@ function wireEvents() {
   };
   document.addEventListener("mouseover", clampRibbonTip);
   document.addEventListener("focusin", clampRibbonTip);
+  // iOS Safari doesn't focus buttons on tap, so tapping toggles the tooltip explicitly.
+  document.addEventListener("click", (e) => {
+    const ribbon = e.target.closest(".ribbon");
+    document.querySelectorAll(".ribbon.open").forEach(open => {
+      if (open !== ribbon) {
+        open.classList.remove("open");
+        open.setAttribute("aria-expanded", "false");
+      }
+    });
+    if (!ribbon) return;
+    const isOpen = ribbon.classList.toggle("open");
+    ribbon.setAttribute("aria-expanded", String(isOpen));
+    clampRibbonTip(e);
+  });
   document.body.addEventListener("change", (e) => {
     const select = e.target.closest("[data-reach-company]");
     if (select) {
@@ -3180,6 +3194,10 @@ function wireEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       const memberOpen = document.getElementById("member-modal").classList.contains("open");
+      document.querySelectorAll(".ribbon.open").forEach(open => {
+        open.classList.remove("open");
+        open.setAttribute("aria-expanded", "false");
+      });
       closeMemberModal();
       closeSearch();
       if (!memberOpen) closePlanetModal();
