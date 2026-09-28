@@ -9,6 +9,7 @@ import http.cookies
 import json
 import logging
 import os
+import re
 import secrets
 import threading
 import time
@@ -51,6 +52,12 @@ BACKSTORIES_PATH = DATA_DIR / "backstories.json"
 REACH_PATH = DATA_DIR / "reach_snapshot.json"
 RIBBONS_DIR = ROOT / "assets" / "ribbons"
 RIBBON_URL_PREFIX = "/assets/ribbons/"
+PAULDRONS_DIR = ROOT / "assets" / "Painted Pauldrons" / "Completed"
+PAULDRON_URL_PREFIX = "/assets/pauldrons/"
+AMBIENCE_PATH = ROOT / "assets" / "ambience" / "fortress-ambience.mp3"
+AMBIENCE_URL = "/assets/ambience/fortress-ambience.mp3"
+RECORD_WALL_PATH = ROOT / "assets" / "record of blood wall.png"
+RECORD_WALL_URL = "/assets/record-of-blood-wall.png"
 MAX_AWARDS_PER_MEMBER = 40
 HOST = os.getenv("STRATEGIUM_HOST", "127.0.0.1")
 PORT = int(os.getenv("STRATEGIUM_PORT", "8787"))
@@ -74,7 +81,7 @@ REACH_MAX_DIRECTIVES = 500
 REACH_STATUSES = {
     "unassigned", "distributed", "recruiting", "deployed", "completed", "failed", "lapsed"
 }
-PAGE_PATHS = {"/", "/reach"}
+PAGE_PATHS = {"/", "/reach", "/record-of-blood"}
 
 SECURITY_LOG = logging.getLogger("strategium.security")
 
@@ -243,6 +250,15 @@ def _ribbon_path(name: str) -> Path | None:
     return candidate
 
 
+def _pauldron_path(name: str) -> Path | None:
+    if not re.fullmatch(r"[A-Za-z][A-Za-z ]*\.png", name):
+        return None
+    candidate = (PAULDRONS_DIR / name).resolve()
+    if candidate.parent != PAULDRONS_DIR.resolve() or not candidate.is_file():
+        return None
+    return candidate
+
+
 def _text(value: Any, limit: int = 120) -> str:
     return value.strip()[:limit] if isinstance(value, str) else ""
 
@@ -403,13 +419,23 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         self._send(HTTPStatus.NO_CONTENT, {})
 
     def do_HEAD(self) -> None:
-        if urllib.parse.urlparse(self.path).path in PAGE_PATHS:
+        path = urllib.parse.urlparse(self.path).path
+        if path in PAGE_PATHS:
             body = (ROOT / "jericho-strategium.html").read_bytes()
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
+            return
+        if path.startswith(PAULDRON_URL_PREFIX):
+            self._send_media(_pauldron_path(urllib.parse.unquote(path[len(PAULDRON_URL_PREFIX):])), head=True)
+            return
+        if path == AMBIENCE_URL:
+            self._send_media(AMBIENCE_PATH if AMBIENCE_PATH.is_file() else None, head=True)
+            return
+        if path == RECORD_WALL_URL:
+            self._send_media(RECORD_WALL_PATH if RECORD_WALL_PATH.is_file() else None, head=True)
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -427,6 +453,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.OK, reach if isinstance(reach, dict) else {}, {"Cache-Control": "no-cache"})
         elif parsed.path.startswith(RIBBON_URL_PREFIX):
             self._send_ribbon(urllib.parse.unquote(parsed.path[len(RIBBON_URL_PREFIX):]))
+        elif parsed.path.startswith(PAULDRON_URL_PREFIX):
+            self._send_media(_pauldron_path(urllib.parse.unquote(parsed.path[len(PAULDRON_URL_PREFIX):])))
+        elif parsed.path == AMBIENCE_URL:
+            self._send_media(AMBIENCE_PATH if AMBIENCE_PATH.is_file() else None)
+        elif parsed.path == RECORD_WALL_URL:
+            self._send_media(RECORD_WALL_PATH if RECORD_WALL_PATH.is_file() else None)
         elif parsed.path == "/api/auth/discord/start":
             self._discord_start()
         elif parsed.path == "/api/auth/logout":
@@ -459,6 +491,20 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_media(self, path: Path | None, head: bool = False) -> None:
+        if path is None:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        mime = {".png": "image/png", ".webp": "image/webp", ".mp3": "audio/mpeg"}[path.suffix]
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(path.stat().st_size))
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        if not head:
+            self.wfile.write(path.read_bytes())
 
     def _send_page(self) -> None:
         body = (ROOT / "jericho-strategium.html").read_bytes()

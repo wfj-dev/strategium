@@ -1,5 +1,12 @@
 import time
+import threading
+import urllib.error
+import urllib.request
+from http.server import ThreadingHTTPServer
 
+import pytest
+
+import server
 from server import (
     BACKSTORY_MAX_CHARS,
     BACKSTORY_MAX_WORDS,
@@ -8,6 +15,7 @@ from server import (
     _origin_matches,
     _request_is_secure,
     _ribbon_path,
+    _pauldron_path,
     _session_user,
     _session_value,
     _validate_awards,
@@ -118,6 +126,76 @@ def test_ribbon_path_rejects_traversal_and_non_png() -> None:
         "missing.png",
     ]:
         assert _ribbon_path(name) is None
+
+
+@pytest.fixture
+def local_site():
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.StrategiumHandler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{httpd.server_port}"
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        thread.join()
+
+
+def test_record_of_blood_direct_route(local_site) -> None:
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + "/record-of-blood", method=method)) as response:
+            assert response.status == 200
+            assert response.headers["Content-Type"] == "text/html; charset=utf-8"
+            assert (b"Record of Blood" in response.read()) is (method == "GET")
+
+
+def test_record_wall_is_served_only_at_fixed_path(local_site, tmp_path, monkeypatch) -> None:
+    wall = tmp_path / "record of blood wall.png"
+    monkeypatch.setattr(server, "RECORD_WALL_PATH", wall)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.RECORD_WALL_URL)
+    assert error.value.code == 404
+    wall.write_bytes(b"wall")
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + server.RECORD_WALL_URL, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/png"
+            assert response.headers["Content-Length"] == "4"
+            assert response.read() == (b"wall" if method == "GET" else b"")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + "/assets/record-of-blood-wall.png/other")
+    assert error.value.code == 404
+
+
+def test_pauldron_assets_are_allowlisted(local_site, tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "PAULDRONS_DIR", tmp_path)
+    (tmp_path / "Blood Angels.png").write_bytes(b"image")
+    (tmp_path / "Hawk Lords.png").write_bytes(b"png")
+    assert _pauldron_path("Blood Angels.png") == tmp_path / "Blood Angels.png"
+    for name, mime in (("Blood Angels.png", "image/png"), ("Hawk Lords.png", "image/png")):
+        for method in ("GET", "HEAD"):
+            with urllib.request.urlopen(urllib.request.Request(local_site + "/assets/pauldrons/" + urllib.parse.quote(name), method=method)) as response:
+                assert response.headers["Content-Type"] == mime
+                assert response.headers["X-Content-Type-Options"] == "nosniff"
+                assert bool(response.read()) is (method == "GET")
+    for name in ("../server.py", "test.svg", "Blood Angels.png/extra", "missing.png", "%2e%2e%2fserver.py"):
+        assert _pauldron_path(urllib.parse.unquote(name)) is None
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(local_site + "/assets/pauldrons/" + name.replace(" ", "%20"))
+        assert error.value.code == 404
+
+
+def test_ambience_is_optional_and_served_from_fixed_path(local_site, tmp_path, monkeypatch) -> None:
+    track = tmp_path / "fortress-ambience.mp3"
+    monkeypatch.setattr(server, "AMBIENCE_PATH", track)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.AMBIENCE_URL)
+    assert error.value.code == 404
+    track.write_bytes(b"audio")
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + server.AMBIENCE_URL, method=method)) as response:
+            assert response.headers["Content-Type"] == "audio/mpeg"
+            assert response.headers["Content-Length"] == "5"
+            assert response.read() == (b"audio" if method == "GET" else b"")
 
 
 def test_awards_validation_keeps_only_known_ribbons() -> None:
