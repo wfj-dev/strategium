@@ -70,6 +70,27 @@ INQUISITORIAL_ROSETTE_PATH = ROOT / "assets" / "Inquisitorial_Rosette.png"
 INQUISITORIAL_ROSETTE_URL = "/assets/inquisitorial-rosette.png"
 FORTRESS_MAP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.png"
 FORTRESS_MAP_URL = "/assets/watch-fortress-jericho-map.png"
+FORTRESS_HOVER_MASK_PATH = ROOT / "assets" / "atlas-hover-mask.png"
+FORTRESS_HOVER_MASK_URL = "/assets/atlas-hover-mask.png"
+FORTRESS_LAYERS_DIR = ROOT / "assets" / "Jericho Fortress Layers"
+FORTRESS_LAYER_URL_PREFIX = "/assets/fortress-layers/"
+FORTRESS_LAYERS = {
+    "strategium": "1-Strategium.png",
+    "armory": "2-Armory.png",
+    "apothecarion": "3-Apothecarion.png",
+    "reclusiam": "4-Reclusiam.png",
+    "black-vault": "5-Black Vault.png",
+    "librarius": "6-Librarius.png",
+    "dueling-grounds": "7-Dueling Grounds.png",
+    "company-primus": "8-Primus Company Hall.png",
+    "company-secundus": "9-Secundus Company Hall.png",
+    "company-tertius": "10-Tertius Company Hall.png",
+    "company-quartus": "11-Quartus Company Hall.png",
+    "company-quintus": "12-Quintus Company Hall.png",
+    "flight-deck": "13-Flight Deck.png",
+    "vehicle-bays": "14-Vehicle Bays.png",
+    "astropathic-choir": "15-Astropathic Choir.png",
+}
 FORMATION_SYMBOLS = {
     "armory": "Armory.png",
     "apothecarion": "Apothecarion.png",
@@ -473,6 +494,15 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if path == FORTRESS_MAP_URL:
             self._send_media(FORTRESS_MAP_PATH if FORTRESS_MAP_PATH.is_file() else None, head=True)
             return
+        if path == FORTRESS_HOVER_MASK_URL:
+            self._send_media(FORTRESS_HOVER_MASK_PATH if FORTRESS_HOVER_MASK_PATH.is_file() else None, head=True)
+            return
+        if path.startswith(FORTRESS_LAYER_URL_PREFIX):
+            key = path[len(FORTRESS_LAYER_URL_PREFIX):].removesuffix(".png")
+            filename = FORTRESS_LAYERS.get(key)
+            layer = FORTRESS_LAYERS_DIR / filename if filename else None
+            self._send_media(layer if layer and layer.is_file() else None, head=True)
+            return
         if path.startswith(FORMATION_SYMBOL_URL_PREFIX):
             key = path[len(FORMATION_SYMBOL_URL_PREFIX):].removesuffix(".png")
             filename = FORMATION_SYMBOLS.get(key)
@@ -518,6 +548,13 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send_media(INQUISITORIAL_ROSETTE_PATH if INQUISITORIAL_ROSETTE_PATH.is_file() else None)
         elif parsed.path == FORTRESS_MAP_URL:
             self._send_media(FORTRESS_MAP_PATH if FORTRESS_MAP_PATH.is_file() else None)
+        elif parsed.path == FORTRESS_HOVER_MASK_URL:
+            self._send_media(FORTRESS_HOVER_MASK_PATH if FORTRESS_HOVER_MASK_PATH.is_file() else None)
+        elif parsed.path.startswith(FORTRESS_LAYER_URL_PREFIX):
+            key = parsed.path[len(FORTRESS_LAYER_URL_PREFIX):].removesuffix(".png")
+            filename = FORTRESS_LAYERS.get(key)
+            layer = FORTRESS_LAYERS_DIR / filename if filename else None
+            self._send_media(layer if layer and layer.is_file() else None)
         elif parsed.path.startswith(FORMATION_SYMBOL_URL_PREFIX):
             key = parsed.path[len(FORMATION_SYMBOL_URL_PREFIX):].removesuffix(".png")
             filename = FORMATION_SYMBOLS.get(key)

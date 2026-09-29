@@ -254,6 +254,37 @@ def test_fortress_map_is_served_only_at_fixed_path(local_site, tmp_path, monkeyp
     assert error.value.code == 404
 
 
+def test_fortress_highlight_layers_are_allowlisted(local_site, tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "FORTRESS_LAYERS_DIR", tmp_path)
+    for key, filename in server.FORTRESS_LAYERS.items():
+        (tmp_path / filename).write_bytes(key.encode("ascii"))
+        for method in ("GET", "HEAD"):
+            url = local_site + server.FORTRESS_LAYER_URL_PREFIX + key + ".png"
+            with urllib.request.urlopen(urllib.request.Request(url, method=method)) as response:
+                assert response.headers["Content-Type"] == "image/png"
+                assert response.read() == (key.encode("ascii") if method == "GET" else b"")
+    for path in ("unknown.png", "../server.py", "armory.png/extra"):
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(local_site + server.FORTRESS_LAYER_URL_PREFIX + path)
+        assert error.value.code == 404
+
+
+def test_fortress_hover_mask_is_served_only_at_fixed_path(local_site, tmp_path, monkeypatch) -> None:
+    mask = tmp_path / "atlas-hover-mask.png"
+    monkeypatch.setattr(server, "FORTRESS_HOVER_MASK_PATH", mask)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.FORTRESS_HOVER_MASK_URL)
+    assert error.value.code == 404
+    mask.write_bytes(b"mask")
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + server.FORTRESS_HOVER_MASK_URL, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/png"
+            assert response.read() == (b"mask" if method == "GET" else b"")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.FORTRESS_HOVER_MASK_URL + "/other")
+    assert error.value.code == 404
+
+
 def test_pauldron_assets_are_allowlisted(local_site, tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(server, "PAULDRONS_DIR", tmp_path)
     (tmp_path / "Blood Angels.png").write_bytes(b"image")
