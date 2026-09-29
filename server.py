@@ -21,6 +21,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from geography import load_geography
+
 ROOT = Path(__file__).resolve().parent
 CHAPTERS_REFERENCE_PATH = Path(
     os.getenv(
@@ -56,6 +58,7 @@ DATA_DIR = ROOT / "data"
 ROSTER_PATH = DATA_DIR / "roster_snapshot.json"
 BACKSTORIES_PATH = DATA_DIR / "backstories.json"
 REACH_PATH = DATA_DIR / "reach_snapshot.json"
+GEOGRAPHY_PATH = DATA_DIR / "reach_geography.json"
 RIBBONS_DIR = ROOT / "assets" / "ribbons"
 RIBBON_URL_PREFIX = "/assets/ribbons/"
 PAULDRONS_DIR = ROOT / "assets" / "Painted Pauldrons" / "Completed"
@@ -68,6 +71,8 @@ JERICHO_SYMBOL_PATH = ROOT / "assets" / "jericho symbol.png"
 JERICHO_SYMBOL_URL = "/assets/jericho-symbol.png"
 INQUISITORIAL_ROSETTE_PATH = ROOT / "assets" / "Inquisitorial_Rosette.png"
 INQUISITORIAL_ROSETTE_URL = "/assets/inquisitorial-rosette.png"
+DISCORD_MARK_PATH = ROOT / "assets" / "discord-mark.svg"
+DISCORD_MARK_URL = "/assets/discord-mark.svg"
 FORTRESS_MAP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.png"
 FORTRESS_MAP_URL = "/assets/watch-fortress-jericho-map.png"
 FORTRESS_HOVER_MASK_PATH = ROOT / "assets" / "atlas-hover-mask.png"
@@ -110,6 +115,7 @@ DISCORD_CLIENT_ID = os.getenv("DISCORD_OAUTH_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_OAUTH_CLIENT_SECRET", "")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_OAUTH_REDIRECT_URI", "")
 DISCORD_GUILD_ID = os.getenv("DISCORD_GUILD_ID", "")
+DISCORD_INVITE_URL = os.getenv("STRATEGIUM_DISCORD_INVITE_URL", "")
 ALLOWED_ORIGIN = os.getenv("STRATEGIUM_ALLOWED_ORIGIN", "http://127.0.0.1:8787").rstrip(
     "/"
 )
@@ -129,6 +135,7 @@ PAGE_PATHS = {"/", "/reach", "/record-of-blood"}
 SECURITY_LOG = logging.getLogger("strategium.security")
 
 _LOCK = threading.RLock()
+_GEOGRAPHY_CACHE: tuple[Path, int, int, bytes] | None = None
 
 
 def _normalize_origin(value: str) -> str:
@@ -155,6 +162,28 @@ def _origin_matches(request_origin: str, allowed_origin: str) -> bool:
     request_value = _normalize_origin(request_origin)
     allowed_value = _normalize_origin(allowed_origin)
     return bool(request_value and allowed_value and request_value == allowed_value)
+
+
+def _discord_invite_url(value: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(value.strip())
+        port = parsed.port
+    except ValueError:
+        return ""
+    if parsed.scheme != "https" or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        return ""
+    if port not in (None, 443):
+        return ""
+    host = (parsed.hostname or "").lower()
+    if host == "discord.gg":
+        valid_path = re.fullmatch(r"/[A-Za-z0-9-]+/?", parsed.path)
+    elif host == "discord.com":
+        valid_path = re.fullmatch(r"/invite/[A-Za-z0-9-]+/?", parsed.path)
+    else:
+        return ""
+    return value.strip().rstrip("/") if valid_path else ""
 
 
 def _request_is_secure(headers: Any) -> bool:
@@ -191,6 +220,16 @@ def _save_json(path: Path, value: Any) -> None:
 
 def _json_bytes(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def _geography_bytes() -> bytes:
+    global _GEOGRAPHY_CACHE
+    with _LOCK:
+        stat = GEOGRAPHY_PATH.stat()
+        key = (GEOGRAPHY_PATH, stat.st_mtime_ns, stat.st_size)
+        if _GEOGRAPHY_CACHE is None or _GEOGRAPHY_CACHE[:3] != key:
+            _GEOGRAPHY_CACHE = (*key, _json_bytes(load_geography(GEOGRAPHY_PATH)))
+        return _GEOGRAPHY_CACHE[3]
 
 
 def _signature(body: bytes) -> str:
@@ -410,7 +449,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
     def _send(
         self, status: int, payload: Any, headers: dict[str, str] | None = None
     ) -> None:
-        body = _json_bytes(payload)
+        body = payload if isinstance(payload, bytes) else _json_bytes(payload)
         request_origin = self.headers.get("Origin", "")
         if request_origin and not _origin_matches(request_origin, ALLOWED_ORIGIN):
             cors_origin = None
@@ -491,6 +530,9 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if path == INQUISITORIAL_ROSETTE_URL:
             self._send_media(INQUISITORIAL_ROSETTE_PATH if INQUISITORIAL_ROSETTE_PATH.is_file() else None, head=True)
             return
+        if path == DISCORD_MARK_URL:
+            self._send_media(DISCORD_MARK_PATH if DISCORD_MARK_PATH.is_file() else None, head=True)
+            return
         if path == FORTRESS_MAP_URL:
             self._send_media(FORTRESS_MAP_PATH if FORTRESS_MAP_PATH.is_file() else None, head=True)
             return
@@ -534,6 +576,18 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             with _LOCK:
                 reach = _load_json(REACH_PATH, {})
             self._send(HTTPStatus.OK, reach if isinstance(reach, dict) else {}, {"Cache-Control": "no-cache"})
+        elif parsed.path == "/api/geography":
+            try:
+                self._send(HTTPStatus.OK, _geography_bytes(), {"Cache-Control": "no-cache"})
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                SECURITY_LOG.exception("geography read failed")
+                self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "geography_unavailable"})
+        elif parsed.path == "/api/site-config":
+            self._send(
+                HTTPStatus.OK,
+                {"discordInviteUrl": _discord_invite_url(DISCORD_INVITE_URL)},
+                {"Cache-Control": "no-cache"},
+            )
         elif parsed.path.startswith(RIBBON_URL_PREFIX):
             self._send_ribbon(urllib.parse.unquote(parsed.path[len(RIBBON_URL_PREFIX):]))
         elif parsed.path.startswith(PAULDRON_URL_PREFIX):
@@ -546,6 +600,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send_media(JERICHO_SYMBOL_PATH if JERICHO_SYMBOL_PATH.is_file() else None)
         elif parsed.path == INQUISITORIAL_ROSETTE_URL:
             self._send_media(INQUISITORIAL_ROSETTE_PATH if INQUISITORIAL_ROSETTE_PATH.is_file() else None)
+        elif parsed.path == DISCORD_MARK_URL:
+            self._send_media(DISCORD_MARK_PATH if DISCORD_MARK_PATH.is_file() else None)
         elif parsed.path == FORTRESS_MAP_URL:
             self._send_media(FORTRESS_MAP_PATH if FORTRESS_MAP_PATH.is_file() else None)
         elif parsed.path == FORTRESS_HOVER_MASK_URL:
@@ -597,7 +653,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if path is None:
             self.send_error(HTTPStatus.NOT_FOUND)
             return
-        mime = {".png": "image/png", ".webp": "image/webp", ".mp3": "audio/mpeg"}[path.suffix]
+        mime = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".mp3": "audio/mpeg"}[path.suffix]
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(path.stat().st_size))

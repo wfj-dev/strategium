@@ -1,3 +1,4 @@
+import json
 import threading
 import time
 import urllib.error
@@ -12,6 +13,7 @@ from server import (
     BACKSTORY_MAX_WORDS,
     _backstory_error,
     _cookie_flags,
+    _discord_invite_url,
     _origin_matches,
     _pauldron_path,
     _request_is_secure,
@@ -39,6 +41,24 @@ def test_request_is_secure_uses_forwarded_proto() -> None:
     headers = {"X-Forwarded-Proto": "https"}
     assert _request_is_secure(headers)
     assert not _request_is_secure({"X-Forwarded-Proto": "http"})
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("https://discord.gg/example", "https://discord.gg/example"),
+        ("https://discord.com/invite/example", "https://discord.com/invite/example"),
+        ("https://discord.gg/B5pkZhcHzK", "https://discord.gg/B5pkZhcHzK"),
+        ("http://discord.gg/example", ""),
+        ("https://discord.gg:bad/example", ""),
+        ("https://discord.gg:99999/example", ""),
+        ("https://evil.example/invite/example", ""),
+        ("javascript:alert(1)", ""),
+        ("", ""),
+    ],
+)
+def test_discord_invite_url_accepts_only_discord_https_invites(value: str, expected: str) -> None:
+    assert _discord_invite_url(value) == expected
 
 
 def test_session_contains_expiry_and_csrf_token() -> None:
@@ -149,6 +169,54 @@ def test_record_of_blood_direct_route(local_site) -> None:
             assert (b"Record of Blood" in response.read()) is (method == "GET")
 
 
+def test_geography_api_serves_validated_hierarchy(local_site) -> None:
+    with urllib.request.urlopen(local_site + "/api/geography") as response:
+        payload = json.loads(response.read())
+
+    assert response.status == 200
+    assert payload["schemaVersion"] == 1
+    assert len(payload["sectors"]) == 7
+    assert payload["landmarks"]["fortressBodyId"] == "watch_fortress_jericho"
+
+
+def test_geography_api_caches_and_reloads_validated_data(local_site, tmp_path, monkeypatch) -> None:
+    geography_path = tmp_path / "reach_geography.json"
+    original_data = server.GEOGRAPHY_PATH.read_bytes()
+    geography_path.write_bytes(original_data)
+    monkeypatch.setattr(server, "GEOGRAPHY_PATH", geography_path)
+    original_load = server.load_geography
+    loads = []
+
+    def counted_load(path):
+        loads.append(path)
+        return original_load(path)
+
+    monkeypatch.setattr(server, "load_geography", counted_load)
+    for _ in range(2):
+        with urllib.request.urlopen(local_site + "/api/geography") as response:
+            assert json.loads(response.read())["schemaVersion"] == 1
+    assert loads == [geography_path]
+
+    geography_path.write_text('{"schemaVersion":2}', encoding="utf-8")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + "/api/geography")
+    assert error.value.code == 503
+
+    geography_path.write_bytes(original_data)
+    with urllib.request.urlopen(local_site + "/api/geography") as response:
+        assert json.loads(response.read())["schemaVersion"] == 1
+    assert loads == [geography_path] * 3
+
+
+def test_site_config_exposes_sanitized_discord_invite(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "DISCORD_INVITE_URL", "https://discord.gg/example")
+    with urllib.request.urlopen(local_site + "/api/site-config") as response:
+        payload = json.loads(response.read())
+
+    assert response.status == 200
+    assert payload == {"discordInviteUrl": "https://discord.gg/example"}
+
+
 def test_chapter_lore_endpoint_returns_only_named_summaries(local_site, tmp_path, monkeypatch) -> None:
     reference = tmp_path / "chapters.json"
     reference.write_text(
@@ -211,6 +279,20 @@ def test_inquisitorial_rosette_is_served_only_at_fixed_path(local_site, tmp_path
             assert response.read() == (b"rosette" if method == "GET" else b"")
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(local_site + server.INQUISITORIAL_ROSETTE_URL + "/other")
+    assert error.value.code == 404
+
+
+def test_discord_mark_is_served_only_at_fixed_path(local_site, tmp_path, monkeypatch) -> None:
+    mark = tmp_path / "discord-mark.svg"
+    monkeypatch.setattr(server, "DISCORD_MARK_PATH", mark)
+    mark.write_bytes(b"<svg></svg>")
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + server.DISCORD_MARK_URL, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/svg+xml"
+            assert response.headers["X-Content-Type-Options"] == "nosniff"
+            assert response.read() == (b"<svg></svg>" if method == "GET" else b"")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.DISCORD_MARK_URL + "/other")
     assert error.value.code == 404
 
 
