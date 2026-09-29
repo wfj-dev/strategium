@@ -179,6 +179,35 @@ def test_geography_api_serves_validated_hierarchy(local_site) -> None:
     assert payload["landmarks"]["fortressBodyId"] == "watch_fortress_jericho"
 
 
+def test_geography_api_caches_and_reloads_validated_data(local_site, tmp_path, monkeypatch) -> None:
+    geography_path = tmp_path / "reach_geography.json"
+    original_data = server.GEOGRAPHY_PATH.read_bytes()
+    geography_path.write_bytes(original_data)
+    monkeypatch.setattr(server, "GEOGRAPHY_PATH", geography_path)
+    original_load = server.load_geography
+    loads = []
+
+    def counted_load(path):
+        loads.append(path)
+        return original_load(path)
+
+    monkeypatch.setattr(server, "load_geography", counted_load)
+    for _ in range(2):
+        with urllib.request.urlopen(local_site + "/api/geography") as response:
+            assert json.loads(response.read())["schemaVersion"] == 1
+    assert loads == [geography_path]
+
+    geography_path.write_text('{"schemaVersion":2}', encoding="utf-8")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + "/api/geography")
+    assert error.value.code == 503
+
+    geography_path.write_bytes(original_data)
+    with urllib.request.urlopen(local_site + "/api/geography") as response:
+        assert json.loads(response.read())["schemaVersion"] == 1
+    assert loads == [geography_path] * 3
+
+
 def test_site_config_exposes_sanitized_discord_invite(local_site, monkeypatch) -> None:
     monkeypatch.setattr(server, "DISCORD_INVITE_URL", "https://discord.gg/example")
     with urllib.request.urlopen(local_site + "/api/site-config") as response:
