@@ -21,6 +21,14 @@ python3 server.py
 
 Then open `http://127.0.0.1:8787/`. The backend automatically loads `.env`, serves the page, receives signed bot snapshots, serves merged roster data, and owns authenticated backstory edits.
 
+To show the compact Discord join mark beside authentication, set a permanent invite in `.env`:
+
+```bash
+STRATEGIUM_DISCORD_INVITE_URL=https://discord.gg/your-invite
+```
+
+Only HTTPS `discord.gg/<code>` and `discord.com/invite/<code>` URLs are accepted. The control remains hidden when the setting is absent or invalid.
+
 ## Live Roster Data
 
 The live app loads roster data from its same-origin `/api/roster` endpoint. The Discord bot publishes signed snapshots to the backend's internal `/internal/roster/snapshot` endpoint; browser clients never receive bot credentials.
@@ -28,6 +36,33 @@ The live app loads roster data from its same-origin `/api/roster` endpoint. The 
 ## Record of Blood
 
 The interface is framed as an Ordo Xenos analyst's Cogitator for investigating activity in the Jericho Reach. The main channels are **Personnel Docket**, **Sector Operations**, and **Chapter Origins**; the shared Return control restores the previous view and focus where possible.
+
+Sector Operations now reads the versioned hierarchy in `data/reach_geography.json` from `/api/geography` and renders it as one persistent HTML5 Canvas scene. The camera uses floating-point world coordinates with smooth cursor-centered wheel zoom and click-drag panning; no view replacement or semantic zoom jump occurs. Canvas dimensions track device-pixel ratio, while sectors, stars, routes, orbits, planets, labels, and nebulae are redrawn as vectors every frame. Detail fades continuously according to camera scale, and sector names use screen-space sizing and collision handling so they remain readable while zoomed out.
+
+At minimum zoom the irregular Reach silhouette is fitted almost edge-to-edge and cannot be shrunk into a floating map rectangle. Chart-space X coordinates are widened during generation to suit the operational viewport; canonical route costs remain unchanged. Sector borders are deliberately thin and ambient. Hover hit testing prioritizes visible bodies, then system stars, then sector polygons, applying a gold signal highlight and terminal tooltip without changing camera state.
+
+Map geometry is latent by default, matching the Fortress Atlas interaction language: sector borders, local warp routes, and orbital tracks are revealed only for the hovered sector/system/body. Hover starts a green leader-line draw into a fixed terminal callout, while remaining on the same target preserves the line and telemetry instead of restarting it. The Fortress Atlas itself uses sequenced pointer lookups, a small hit-mask neighborhood fallback, and DOM-aware idempotency so Black Vault hover cannot leave stale state with a cleared leader.
+
+Sector names and system counts are also latent: the default strategic field shows no sector labels or boundaries. Hovering a sector reveals its name, count, boundary, leader and callout in terminal green rather than gold. System/body hover uses the same green signal language.
+
+Celestial vectors vary deterministically by body ID and type. Stars use plausible natural stellar classes—blue-white, white, yellow-white, orange, and red—with varied corona and pulse. Planets use differing gradients, atmospheres, rings, bands, craters, landmasses or grid treatments. Regeneration preserves those appearances. Nebula fields use dozens of layered elliptical clouds with different sizes, aspect ratios, rotations, colors, drift speeds, and pulse phases across the Reach.
+
+On screens at 600 px or narrower, the Canvas is replaced by a tap-first Sector Navigator. Each collapsible sector lists all systems and modeled body counts; selecting a system opens the same authoritative body/route dossier used by the desktop map. This avoids forcing precision pan/zoom gestures into the mobile workflow.
+
+The geography contains seven normalized macro-sectors clipped into one irregular, non-overlapping puzzle-piece Reach silhouette. Watch Fortress Jericho is a distinct southern Canis/Black Reef landmark rather than an alias for the central Erioch watch station. Every generated system has an explicit central star and three to five non-stellar bodies; supplemental bodies are deterministic and marked `homebrew`. The canonical Recidious system contains Recidious Primary, Kadaku, Avarax, and Demerium rather than representing those planets as separate systems.
+
+The map retains an animated star/nebula backdrop and resolves luminous system stars, warp routes, orbit tracks, planetary bodies, and body labels progressively as the camera approaches. Visible route density is reduced without removing routes from campaign pathfinding.
+
+The interface uses restrained terminal ambience across every page: an infrequent 36-second raster sweep, persistent scanlines, occasional signal flicker, brief low-amplitude phosphor dips on terminal text, nebular drift, and gentle planetary signal breathing. These layers never accept pointer input. `prefers-reduced-motion: reduce` removes moving sweeps and text flicker, then freezes the remaining treatment to a faint static scanline.
+
+Regenerate the hierarchy from the bot's legacy Reach graph after an intentional source-map update:
+
+```bash
+.venv/bin/python scripts/build_reach_geography.py       # validate and preview counts
+.venv/bin/python scripts/build_reach_geography.py --write
+```
+
+The builder preserves every legacy location as a system/primary body, normalizes legacy status regions into sector subregions, adds Fortress Jericho, assigns explicit baseline transit hours to routes, validates all references, and writes atomically. Chart coordinates are layout hints only; they are not lore distances or light-year measurements.
 
 The root route opens with a skippable, session-scoped Cogitator startup and simulated Inquisitorial credential check, then reveals the interactive Watch Fortress Jericho atlas. Pointer hit testing uses the green-outline pixel mask in `assets/atlas-hover-mask.png`, generated from the aligned section exports by running `python3 scripts/build_atlas_hover_mask.py`; keyboard navigation uses the SVG section paths. Hovered sections swap to their corresponding full-canvas highlights from `assets/Jericho Fortress Layers/` and show a terminal-style lore callout. Specialist and company locations open their existing dossiers, while flight locations open Sector Operations. On narrow screens the atlas preserves readable detail through horizontal panning. The base atlas is served at `/assets/watch-fortress-jericho-map.png`, the hit mask at `/assets/atlas-hover-mask.png`, and section states through the fixed allowlist at `/assets/fortress-layers/<layer>.png`; `assets/jericho map with legend.png` remains a development reference.
 
