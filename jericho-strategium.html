@@ -34,6 +34,12 @@
     min-height: 100vh;
   }
 
+  body::before {
+    content: ""; position: fixed; z-index: 90; inset: -30% 0; pointer-events: none;
+    background: linear-gradient(180deg, transparent 0 46%, rgba(96,255,139,.035) 49%, rgba(181,255,198,.055) 50%, rgba(96,255,139,.025) 52%, transparent 55% 100%);
+    transform: translateY(-58%); mix-blend-mode: screen; animation: terminal-raster-sweep 36s linear infinite;
+  }
+
   h1, h2, .display { font-family: 'Cinzel', serif; }
   button { font-family: inherit; }
 
@@ -53,7 +59,7 @@
   .header-title {
     font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px;
     letter-spacing: 0.04em; text-transform: uppercase; color: var(--gold);
-    margin: 0; line-height: 1.1;
+    margin: 0; line-height: 1.1; text-shadow: 0 0 16px rgba(207,174,104,.12);
   }
   .header-sub {
     font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.14em;
@@ -79,6 +85,16 @@
   .auth-btn:hover { background: rgba(207,174,104,0.1); border-color: var(--gold); }
   .auth-btn-logout { border-color: var(--border-dim); color: var(--green-dim); font-size: 10px; padding: 3px 7px; margin-left: 4px; }
   .auth-btn-logout:hover { border-color: var(--red-dim); color: var(--red); background: rgba(224,92,79,0.08); }
+  .discord-join {
+    display: inline-flex; width: 32px; height: 32px; flex: 0 0 32px; align-items: center; justify-content: center;
+    border: 1px solid rgba(88,101,242,.72); background: rgba(88,101,242,.08); color: #8b95ff;
+    transition: border-color .15s, background .15s, box-shadow .15s, transform .15s;
+  }
+  .discord-join[hidden] { display: none; }
+  .discord-join img { display: block; width: 18px; height: 18px; filter: saturate(.8) brightness(1.25); }
+  .discord-join:hover, .discord-join:focus-visible {
+    border-color: #8b95ff; background: rgba(88,101,242,.18); box-shadow: 0 0 12px rgba(88,101,242,.28); transform: translateY(-1px);
+  }
 
   .icon-btn {
     background: transparent; border: 1px solid var(--border-dim); color: var(--green-dim);
@@ -107,6 +123,9 @@
   .slate-corner { position: absolute; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
   .slate-corner.tl { top: 10px; left: 18px; color: var(--green-dim); }
   .slate-corner.tr { top: 10px; right: 18px; color: var(--gold-dim); }
+  .slate-corner, #breadcrumb, .term-line, .reach-map-level { animation: terminal-text-flicker 14s steps(1,end) infinite; }
+  .term-line:nth-child(3n) { animation-delay: -4.5s; }
+  .term-line:nth-child(4n) { animation-delay: -9s; }
 
   #breadcrumb {
     display: flex; align-items: center; gap: 6px; font-size: 12px;
@@ -166,8 +185,23 @@
   .atlas-callout-kicker { color: var(--green-faint); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
   .atlas-callout h2 { margin: 3px 0 4px; color: var(--green); font: 700 13px 'Share Tech Mono', monospace; letter-spacing: .06em; text-transform: uppercase; text-shadow: 0 0 8px rgba(79,214,122,.25); }
   .atlas-callout p { margin: 0; color: #8bb88b; font-size: 9px; line-height: 1.4; }
-  body::after { content: ""; position: fixed; z-index: 4; inset: 0; pointer-events: none; opacity: .018; background: repeating-linear-gradient(0deg, rgba(105,202,104,.16) 0 1px, transparent 1px 4px); animation: terminal-signal-flicker 18s steps(1,end) infinite; }
-  @keyframes terminal-signal-flicker { 0%, 94%, 95%, 100% { opacity: .018; } 94.2%, 94.4% { opacity: .045; } 95.2% { opacity: .014; } }
+  body::after {
+    content: ""; position: fixed; z-index: 91; inset: 0; pointer-events: none; opacity: .026;
+    background: repeating-linear-gradient(0deg, rgba(105,202,104,.2) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 1px, transparent 1px 7px);
+    animation: terminal-signal-flicker 13s steps(1,end) infinite;
+  }
+  @keyframes terminal-raster-sweep { from { transform: translateY(-58%); } to { transform: translateY(58%); } }
+  @keyframes terminal-text-flicker {
+    0%, 72%, 72.7%, 91%, 91.45%, 100% { opacity: 1; text-shadow: none; }
+    72.15% { opacity: .86; text-shadow: 0 0 5px rgba(79,214,122,.18); }
+    72.32%, 91.18% { opacity: .94; text-shadow: 0 0 7px rgba(79,214,122,.24); }
+  }
+  @keyframes terminal-signal-flicker {
+    0%, 16%, 16.4%, 52%, 52.5%, 89%, 89.6%, 100% { opacity: .026; transform: translateX(0); }
+    16.1% { opacity: .055; transform: translateX(.7px); }
+    16.25% { opacity: .016; transform: translateX(-.5px); }
+    52.15%, 89.2% { opacity: .043; transform: translateX(.4px); }
+  }
   .atlas-status { position: fixed; z-index: 12; left: 16px; bottom: 14px; display: flex; gap: 8px; align-items: center; padding: 5px 8px; border: 1px solid rgba(79,214,122,.25); background: rgba(3,7,5,.86); color: var(--green-dim); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
   .atlas-status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 7px var(--green); }
 
@@ -898,11 +932,113 @@
   }
   .reach-viewport.dragging { cursor: grabbing; }
   .reach-svg { width: 100%; height: 100%; display: block; }
+  .reach-canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  .reach-viewport.dragging .reach-canvas { cursor: grabbing; }
+  .reach-canvas-status {
+    position: absolute; left: 12px; top: 56px; z-index: 2; pointer-events: none;
+    color: var(--green-faint); font-size: 8px; text-transform: uppercase; letter-spacing: .08em;
+  }
+  .reach-canvas-tooltip {
+    position: absolute; z-index: 4; right: 12px; bottom: 12px; width: min(230px, calc(100% - 24px)); min-height: 58px; pointer-events: none;
+    border: 1px solid rgba(79,214,122,.55); border-left: 2px solid var(--green);
+    background: rgba(2,8,4,.94); box-shadow: 0 8px 24px rgba(0,0,0,.55), inset 0 0 18px rgba(79,214,122,.035);
+    padding: 7px 9px; color: var(--green-dim); font-size: 9px; line-height: 1.45; text-transform: uppercase;
+  }
+  .reach-canvas-tooltip[hidden] { display: none; }
+  .reach-canvas-tooltip.pending { visibility: hidden; }
+  .reach-canvas-tooltip strong { display: block; color: var(--white); font: 11px 'Share Tech Mono', monospace; letter-spacing: 0; }
+  .reach-canvas-tooltip.loading { animation: canvas-callout-load 180ms steps(1,end) infinite; }
+  @keyframes canvas-callout-load { 0%, 100% { opacity: 1; } 50% { opacity: .72; } }
+  .canvas-callout-loading { display: block; animation: canvas-callout-hide .01s .65s steps(1,end) forwards; }
+  .canvas-callout-data { display: block; opacity: 0; animation: canvas-callout-show .01s .65s steps(1,end) forwards; }
+  @keyframes canvas-callout-hide { to { visibility: hidden; height: 0; overflow: hidden; } }
+  @keyframes canvas-callout-show { to { opacity: 1; } }
+  .reach-desktop-index { margin-top: 8px; border-top: 1px solid var(--border-dim); }
+  .reach-desktop-index > summary {
+    width: fit-content; padding: 10px 4px; color: var(--green); cursor: pointer;
+    text-transform: uppercase; font-size: 11px;
+  }
+  .reach-desktop-index > summary:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
+  .reach-desktop-index .reach-mobile-nav { display: block; max-height: 320px; overflow-y: auto; }
+  .reach-mobile-nav { display: none; }
+  .reach-mobile-sector { border-top: 1px solid var(--border-dim); }
+  .reach-mobile-sector:last-child { border-bottom: 1px solid var(--border-dim); }
+  .reach-mobile-sector summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 4px;
+    color: var(--green); cursor: pointer; list-style: none; text-transform: uppercase; font-size: 11px;
+  }
+  .reach-mobile-sector summary::-webkit-details-marker { display: none; }
+  .reach-mobile-sector summary::before { content: "+"; color: var(--gold); width: 12px; }
+  .reach-mobile-sector[open] summary::before { content: "−"; }
+  .reach-mobile-sector summary span:first-of-type { flex: 1; }
+  .reach-mobile-sector summary small { color: var(--green-faint); font-size: 8px; white-space: nowrap; }
+  .reach-mobile-systems { display: grid; gap: 1px; padding: 0 0 10px 16px; }
+  .reach-mobile-system {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+    border: 0; border-left: 1px solid var(--border-dim); background: rgba(79,214,122,.025);
+    color: var(--white); padding: 9px 10px; text-align: left; cursor: pointer;
+  }
+  .reach-mobile-system:hover, .reach-mobile-system:focus-visible { border-left-color: var(--gold); background: rgba(79,214,122,.08); }
+  .reach-mobile-system small { color: var(--green-dim); font-size: 8px; text-transform: uppercase; }
   .reach-grid line { stroke: rgba(79,214,122,0.05); stroke-width: 1; vector-effect: non-scaling-stroke; }
   .reach-edge { stroke: rgba(79,214,122,0.14); stroke-width: 1; vector-effect: non-scaling-stroke; transition: stroke 0.15s; }
   .reach-edge.medium { stroke: rgba(79,214,122,0.08); stroke-dasharray: 3 4; }
   .reach-edge.far { stroke-dasharray: 1 5; }
   .reach-edge.lit { stroke: rgba(207,174,104,0.75); stroke-dasharray: none; }
+  .reach-sector { cursor: pointer; outline: none; }
+  .reach-sector-hit { fill: rgba(0,0,0,.001); stroke: none; pointer-events: all; }
+  .reach-sector-boundary {
+    fill: none; stroke: rgba(79,214,122,0.52); stroke-width: 1.2;
+    vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 2px rgba(79,214,122,.18)); transition: fill 0.16s, stroke 0.16s;
+  }
+  .reach-sector:hover .reach-sector-boundary, .reach-sector:focus-visible .reach-sector-boundary {
+    fill: rgba(79,214,122,0.035); stroke: var(--gold);
+  }
+  .reach-sector-name {
+    fill: var(--green); font-family: 'Cinzel', serif; font-size: 16px; text-anchor: middle;
+    letter-spacing: 0; pointer-events: none; paint-order: stroke; stroke: #030504; stroke-width: 4px;
+  }
+  .reach-sector-count {
+    fill: var(--green-faint); font-size: 8px; text-anchor: middle; pointer-events: none; letter-spacing: 0;
+  }
+  .reach-overview-systems { pointer-events: none; }
+  .reach-overview-star { fill: #b9efb1; opacity: .68; filter: drop-shadow(0 0 3px rgba(79,214,122,.6)); animation: overview-star-flicker 9s steps(1,end) infinite; animation-delay: var(--star-delay); }
+  .reach-overview-orbit { fill: none; stroke: rgba(79,214,122,.2); stroke-width: .6; vector-effect: non-scaling-stroke; }
+  @keyframes overview-star-flicker { 0%, 61%, 62%, 100% { opacity: .68; } 61.3% { opacity: .28; } 61.65% { opacity: .9; } }
+  .reach-system { cursor: pointer; outline: none; }
+  .reach-system-core {
+    fill: #0b170f; stroke: var(--green-dim); stroke-width: 1.1; vector-effect: non-scaling-stroke;
+    transition: fill 0.15s, stroke 0.15s;
+  }
+  .reach-system:hover .reach-system-core, .reach-system:focus-visible .reach-system-core {
+    fill: rgba(207,174,104,0.2); stroke: var(--gold);
+  }
+  .reach-system.landmark .reach-system-core { fill: #241d0d; stroke: var(--gold); stroke-width: 1.7; }
+  .reach-system.has-art .reach-system-core { fill: none; }
+  .reach-system-art { animation: system-signal-breathe 7s ease-in-out infinite; }
+  .reach-system-star { fill: #d8f6c8; stroke: var(--green); stroke-width: .6; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 5px rgba(177,255,193,.75)); }
+  .reach-system-orbit { fill: none; stroke: rgba(79,214,122,.24); stroke-width: .7; vector-effect: non-scaling-stroke; }
+  .reach-system-orbit.detail { stroke: rgba(79,214,122,.34); stroke-dasharray: 2 2; }
+  .reach-body { cursor: pointer; outline: none; }
+  .reach-body-hit { fill: transparent; }
+  .reach-body:hover .reach-planet-body, .reach-body:focus-visible .reach-planet-body { stroke: var(--gold); stroke-width: 1.5; }
+  .reach-body-label { fill: var(--white); font-size: 8px; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #030504; stroke-width: 3px; letter-spacing: 0; }
+  .reach-svg.semantic-enter { animation: reach-semantic-enter 320ms cubic-bezier(.18,.76,.3,1); }
+  @keyframes reach-semantic-enter { from { opacity: .1; transform: scale(.82); } to { opacity: 1; transform: scale(1); } }
+  .reach-nebulae { pointer-events: none; transform-box: fill-box; transform-origin: center; animation: nebula-signal-drift 22s ease-in-out infinite; }
+  @keyframes system-signal-breathe { 0%, 100% { opacity: .94; filter: brightness(.96); } 50% { opacity: 1; filter: brightness(1.09); } }
+  @keyframes nebula-signal-drift { 0%, 100% { opacity: .72; transform: scale(1); } 50% { opacity: .92; transform: scale(1.012); } }
+  .reach-system-label {
+    fill: rgba(242,237,224,0.72); font-size: 9px; text-anchor: middle; pointer-events: none;
+    paint-order: stroke; stroke: #030504; stroke-width: 3px; letter-spacing: 0;
+  }
+  .reach-system-sub { fill: var(--gold-dim); font-size: 7px; }
+  .reach-map-level {
+    position: absolute; left: 12px; top: 12px; z-index: 2; max-width: calc(100% - 100px);
+    border-left: 2px solid var(--gold-dim); background: rgba(6,9,6,0.9); padding: 7px 10px;
+    color: var(--green-dim); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .reach-map-level strong { display: block; color: var(--white); font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 0; }
   .reach-region-label {
     font-family: 'Cinzel', serif; font-size: 20px; letter-spacing: 0.32em;
     fill: rgba(207,174,104,0.26); text-anchor: middle; text-transform: uppercase; pointer-events: none;
@@ -1051,6 +1187,9 @@
     .slate-corner.tl { top: 9px; left: 18px; right: 18px; overflow: hidden; text-overflow: ellipsis; }
     .slate-corner.tr { top: 25px; left: 18px; right: auto; }
     .reach-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .reach-viewport { display: none; }
+    .reach-desktop-index { display: none; }
+    .reach-mobile-nav { display: block; margin-top: 8px; }
     .reach-legend, .reach-hint { display: none; }
     .reach-select { margin-left: 0; }
     .reach-table th:nth-child(4), .reach-table td:nth-child(4),
@@ -1059,7 +1198,12 @@
 
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    body::before { display: none; }
+    body::after { animation: none; opacity: .018; transform: none; }
+    .slate-corner, #breadcrumb, .term-line, .reach-map-level { animation: none; }
+    .reach-overview-star { animation: none; }
     .reach-pulse { animation: none; opacity: 0.5; }
+    .reach-nebulae, .reach-system-art { animation: none; transform: none; }
     .blood-mount { opacity: 1; }
   }
 
@@ -1125,6 +1269,9 @@
       </nav>
       <div class="header-right">
         <div id="auth-container"></div>
+        <a id="discord-join" class="discord-join" href="#" target="_blank" rel="noopener noreferrer" title="Join the Watch Fortress Discord" aria-label="Join the Watch Fortress Discord" hidden>
+          <img src="/assets/discord-mark.svg" alt="" aria-hidden="true">
+        </a>
         <button id="search-btn" class="icon-btn" title="Search the roster" aria-label="Search">&#8981;</button>
       </div>
     </header>
@@ -1285,6 +1432,7 @@ let atlasHitMask = null;
 let atlasHitMaskPromise = null;
 let activeAtlasLocationId = null;
 let atlasHighlightSequence = 0;
+let atlasPointerSequence = 0;
 
 function loadAtlasHitMask() {
   if (atlasHitMaskPromise) return atlasHitMaskPromise;
@@ -1719,6 +1867,13 @@ const state = {
   auth: { authenticated: false, user: null, csrf: null },
   reach: null,
   reachStatus: "idle",  // 'idle' | 'live' | 'empty' | 'error'
+  geography: null,
+  geographyStatus: "idle",
+  reachMapLevel: "reach", // 'reach' | 'sector' | 'system'
+  selectedSector: null,
+  selectedSystem: null,
+  reachSemanticZoomAt: -Infinity,
+  reachCanvasCamera: null,
   reachBase: null,
   reachView: null,
   reachAdj: new Map(),
@@ -1745,6 +1900,24 @@ function hasStorage() {
 
 async function loadSavedSettings() {
   state.dataSourceUrl = DEFAULT_DATA_SOURCE_URL;
+}
+
+async function loadSiteConfig() {
+  const join = document.getElementById("discord-join");
+  join.hidden = true;
+  if (!window.location.protocol.startsWith("http")) return;
+  try {
+    const response = await fetch(apiUrl("/api/site-config"), { cache: "no-cache" });
+    if (!response.ok) return;
+    const config = await response.json();
+    const invite = new URL(String(config.discordInviteUrl || ""));
+    const discordHost = invite.hostname === "discord.gg" || invite.hostname === "discord.com";
+    if (invite.protocol !== "https:" || !discordHost) return;
+    join.href = invite.href;
+    join.hidden = false;
+  } catch {
+    join.hidden = true;
+  }
 }
 
 async function loadData() {
@@ -2075,10 +2248,6 @@ function locationRows(member) {
   } else if (member.formation && FORMATIONS[member.formation]) {
     rows.push(`<div class="modal-row"><span>Formation</span><span>${unitLink(FORMATIONS[member.formation].name, `data-nav="formation" data-formation="${escapeHtml(member.formation)}"`)}</span></div>`);
   }
-  const equerryOf = member.equerry ? (member.formation || formationForRank(member.rank)) : null;
-  if (equerryOf && FORMATIONS[equerryOf]) {
-    rows.push(`<div class="modal-row"><span>Equerry of</span><span>${unitLink(FORMATIONS[equerryOf].name, `data-nav="formation" data-formation="${escapeHtml(equerryOf)}"`)}</span></div>`);
-  }
   return rows.join("") || `<div class="modal-row"><span>Assignment</span><span>Fortress-wide</span></div>`;
 }
 
@@ -2252,10 +2421,15 @@ function renderLanding() {
   const imageWrap = document.querySelector(".atlas-image-wrap");
   loadAtlasHitMask().catch(error => console.error("Atlas hit mask failed to load", error));
   imageWrap.addEventListener("pointermove", async event => {
+    const pointerSequence = ++atlasPointerSequence;
     const region = await atlasRegionAtPoint(event.clientX, event.clientY);
+    if (pointerSequence !== atlasPointerSequence) return;
     setAtlasHighlight(region, { x: event.clientX, y: event.clientY });
   });
-  imageWrap.addEventListener("pointerleave", () => setAtlasHighlight(null));
+  imageWrap.addEventListener("pointerleave", () => {
+    atlasPointerSequence += 1;
+    setAtlasHighlight(null);
+  });
   imageWrap.addEventListener("click", async event => {
     const region = await atlasRegionAtPoint(event.clientX, event.clientY);
     if (!region) return;
@@ -2272,7 +2446,17 @@ async function atlasRegionAtPoint(clientX, clientY) {
     const x = Math.floor((clientX - rect.left) / rect.width * mask.width);
     const y = Math.floor((clientY - rect.top) / rect.height * mask.height);
     if (x < 0 || y < 0 || x >= mask.width || y >= mask.height) return null;
-    const id = mask.pixels[(y * mask.width + x) * 4];
+    let id = mask.pixels[(y * mask.width + x) * 4];
+    for (let radius = 1; !id && radius <= 4; radius++) {
+      for (let offsetY = -radius; !id && offsetY <= radius; offsetY++) {
+        for (let offsetX = -radius; !id && offsetX <= radius; offsetX++) {
+          const sampleX = x + offsetX;
+          const sampleY = y + offsetY;
+          if (sampleX < 0 || sampleY < 0 || sampleX >= mask.width || sampleY >= mask.height) continue;
+          id = mask.pixels[(sampleY * mask.width + sampleX) * 4];
+        }
+      }
+    }
     if (!id) return null;
     const locationId = String(id).padStart(2, "0");
     return document.querySelector(`[data-atlas-location="${locationId}"]`);
@@ -2283,9 +2467,6 @@ async function atlasRegionAtPoint(clientX, clientY) {
 
 function setAtlasHighlight(region, pointerAnchor = null) {
   const locationId = region?.dataset.atlasLocation || null;
-  if (locationId === activeAtlasLocationId) return;
-  activeAtlasLocationId = locationId;
-  const sequence = ++atlasHighlightSequence;
   const image = document.getElementById("atlas-highlight-layer");
   const callout = document.getElementById("atlas-callout");
   const leaders = document.getElementById("atlas-leaders");
@@ -2293,6 +2474,13 @@ function setAtlasHighlight(region, pointerAnchor = null) {
   const leaderPoint = document.getElementById("atlas-leader-point");
   if (!image || !callout || !leaders || !leaderLine || !leaderPoint) return;
   const layer = region?.dataset.atlasLayer;
+  const source = layer ? `/assets/fortress-layers/${encodeURIComponent(layer)}.png` : "";
+  const visualsMatch = locationId === activeAtlasLocationId && Boolean(locationId && layer) &&
+    image.getAttribute("src") === source && image.classList.contains("visible") &&
+    !callout.hidden && Boolean(leaderLine.getAttribute("d"));
+  if (visualsMatch) return;
+  activeAtlasLocationId = locationId;
+  const sequence = ++atlasHighlightSequence;
   if (!locationId || !layer) {
     image.classList.remove("visible");
     callout.classList.remove("pending", "loading");
@@ -2301,7 +2489,6 @@ function setAtlasHighlight(region, pointerAnchor = null) {
     leaderLine.setAttribute("d", "");
     return;
   }
-  const source = `/assets/fortress-layers/${encodeURIComponent(layer)}.png`;
   if (image.getAttribute("src") !== source) image.src = source;
   image.classList.add("visible");
 
@@ -3530,16 +3717,35 @@ async function loadReach() {
     state.reachStatus = "error";
     return;
   }
-  try {
-    const resp = await fetch(apiUrl("/api/reach"), { cache: "no-cache" });
-    if (!resp.ok) throw new Error("bad response");
-    const json = await resp.json();
+  const [reachResult, geographyResult] = await Promise.allSettled([
+    fetch(apiUrl("/api/reach"), { cache: "no-cache" }).then(async response => {
+      if (!response.ok) throw new Error("bad Reach response");
+      return response.json();
+    }),
+    fetch(apiUrl("/api/geography"), { cache: "no-cache" }).then(async response => {
+      if (!response.ok) throw new Error("bad geography response");
+      return response.json();
+    })
+  ]);
+  if (reachResult.status === "fulfilled") {
+    const json = reachResult.value;
     const valid = json && Array.isArray(json.nodes) && Array.isArray(json.edges) && Array.isArray(json.directives);
     state.reach = valid ? json : null;
     state.reachStatus = valid && json.nodes.length ? "live" : "empty";
-  } catch (e) {
-    console.error("Reach chart fetch failed", e);
+  } else {
+    console.error("Reach chart fetch failed", reachResult.reason);
+    state.reach = null;
     state.reachStatus = "error";
+  }
+  if (geographyResult.status === "fulfilled") {
+    const json = geographyResult.value;
+    const valid = json && Array.isArray(json.sectors) && Array.isArray(json.systems) && Array.isArray(json.bodies) && Array.isArray(json.routes);
+    state.geography = valid ? json : null;
+    state.geographyStatus = valid ? "live" : "empty";
+  } else {
+    console.error("Reach geography fetch failed", geographyResult.reason);
+    state.geography = null;
+    state.geographyStatus = "error";
   }
 }
 
@@ -3724,10 +3930,1062 @@ function reachSvg(reach, directives) {
     </svg>`;
 }
 
+function geographySystemByBody(bodyId) {
+  const body = state.geography && state.geography.bodies.find(item => item.id === bodyId);
+  return body && state.geography.systems.find(system => system.id === body.systemId);
+}
+
+function geographyGridSvg(bounds) {
+  const lines = [];
+  const startX = Math.floor((bounds.x - 100) / 100) * 100;
+  const startY = Math.floor((bounds.y - 100) / 100) * 100;
+  for (let x = startX; x <= bounds.x + bounds.w + 100; x += 100) {
+    lines.push(`<line x1="${x}" y1="${bounds.y - 100}" x2="${x}" y2="${bounds.y + bounds.h + 100}"/>`);
+  }
+  for (let y = startY; y <= bounds.y + bounds.h + 100; y += 100) {
+    lines.push(`<line x1="${bounds.x - 100}" y1="${y}" x2="${bounds.x + bounds.w + 100}" y2="${y}"/>`);
+  }
+  return `<g class="reach-grid">${lines.join("")}</g>`;
+}
+
+function geographySystemSvg(system, showLabel) {
+  const fortressSystem = geographySystemByBody(state.geography.landmarks.fortressBodyId);
+  const eriochSystem = geographySystemByBody(state.geography.landmarks.eriochBodyId);
+  const isFortress = fortressSystem && system.id === fortressSystem.id;
+  const isErioch = eriochSystem && system.id === eriochSystem.id;
+  const landmark = isFortress || isErioch;
+  const primaryBody = state.geography.bodies.find(body => body.id === system.primaryBodyId);
+  const hasArt = Boolean(showLabel && !landmark && primaryBody && WORLD_ART[primaryBody.kind]);
+  const radius = isFortress ? 8 : isErioch ? 6 : hasArt ? worldStyle(primaryBody.kind).r : 3.8;
+  const subtitle = isFortress ? "WATCH FORTRESS" : isErioch ? "WATCH STATION" : "";
+  const orbitRadiusX = hasArt ? radius + 8 : 0;
+  const orbitRadiusY = orbitRadiusX * .42;
+  const orbitAngle = primaryBody ? primaryBody.orbitAngle * Math.PI / 180 : 0;
+  const bodyX = hasArt ? system.x + Math.cos(orbitAngle) * orbitRadiusX : system.x;
+  const bodyY = hasArt ? system.y + Math.sin(orbitAngle) * orbitRadiusY : system.y;
+  const art = hasArt
+    ? `<g class="reach-system-art">${planetArtSvg({ id: primaryBody.id, type: primaryBody.kind, x: bodyX, y: bodyY }, radius)}</g>`
+    : "";
+  return `<g class="reach-system${landmark ? " landmark" : ""}${hasArt ? " has-art" : ""}" data-system="${escapeHtml(system.id)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(system.name)} system">
+    <circle cx="${system.x}" cy="${system.y}" r="${radius + orbitRadiusX + 6}" fill="transparent"/>
+    ${hasArt ? `<ellipse class="reach-system-orbit" cx="${system.x}" cy="${system.y}" rx="${orbitRadiusX}" ry="${orbitRadiusY}"/><circle class="reach-system-star" cx="${system.x}" cy="${system.y}" r="2.2"/>` : ""}
+    ${art}
+    <circle class="reach-system-core" cx="${bodyX}" cy="${bodyY}" r="${radius}"/>
+    ${isFortress ? `<path d="M ${system.x - 5} ${system.y} L ${system.x} ${system.y - 5} L ${system.x + 5} ${system.y} L ${system.x} ${system.y + 5} Z" fill="none" stroke="var(--gold)" stroke-width="1" vector-effect="non-scaling-stroke"/>` : ""}
+    ${showLabel || landmark ? `<text class="reach-system-label" x="${system.x}" y="${system.y + Math.max(radius, orbitRadiusY) + 12}">${escapeHtml(system.name)}${subtitle ? `<tspan class="reach-system-sub" x="${system.x}" dy="1.25em">${subtitle}</tspan>` : ""}</text>` : ""}
+  </g>`;
+}
+
+function geographyBodySvg(body, system, index) {
+  const orbitRadiusX = 32 + index * 24;
+  const orbitRadiusY = orbitRadiusX * .42;
+  const angle = body.orbitAngle * Math.PI / 180;
+  const x = system.x + Math.cos(angle) * orbitRadiusX;
+  const y = system.y + Math.sin(angle) * orbitRadiusY;
+  const artRadius = Math.max(4, Math.min(9, body.displayRadius));
+  const hasArt = Boolean(WORLD_ART[body.kind]);
+  const art = hasArt
+    ? planetArtSvg({ id: body.id, type: body.kind, x, y }, artRadius)
+    : body.kind === "watch_station" || body.kind === "watch_fortress" || body.kind === "void_dock"
+      ? `<circle cx="${x}" cy="${y}" r="${artRadius}" fill="#140f06" stroke="var(--gold)" stroke-width="1" vector-effect="non-scaling-stroke"/><path d="M ${x - artRadius} ${y} L ${x + artRadius} ${y} M ${x} ${y - artRadius} L ${x} ${y + artRadius}" stroke="var(--gold)" stroke-width=".8" vector-effect="non-scaling-stroke"/>`
+      : `<circle cx="${x}" cy="${y}" r="${artRadius}" fill="#101810" stroke="var(--green-dim)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  return `<g class="reach-body" data-body="${escapeHtml(body.id)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(body.name)}">
+    <ellipse class="reach-system-orbit detail" cx="${system.x}" cy="${system.y}" rx="${orbitRadiusX}" ry="${orbitRadiusY}"/>
+    <circle class="reach-body-hit" cx="${x}" cy="${y}" r="${artRadius + 7}"/>
+    <g class="reach-system-art">${art}</g>
+    <circle class="reach-planet-body" cx="${x}" cy="${y}" r="${artRadius}" fill="none"/>
+    <text class="reach-body-label" x="${x}" y="${y + artRadius + 11}">${escapeHtml(body.name)}</text>
+  </g>`;
+}
+
+function geographySystemDetailSvg(system) {
+  const bodies = state.geography.bodies.filter(body => body.systemId === system.id)
+    .sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name));
+  const extent = Math.max(115, 55 + bodies.length * 24);
+  state.reachBase = { x: system.x - extent, y: system.y - extent * .62, w: extent * 2, h: extent * 1.24 };
+  const backdrop = reachBackdropSvg(state.reachBase, [{ ...system, region: system.sectorId }]);
+  return `<svg id="reach-svg" class="reach-svg semantic-enter" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="${escapeHtml(system.name)} planetary system">
+    <defs>${reachPlanetDefs()}${backdrop.defs}</defs>
+    ${backdrop.layers}
+    <g><circle class="reach-system-star" cx="${system.x}" cy="${system.y}" r="6"/><circle cx="${system.x}" cy="${system.y}" r="12" fill="none" stroke="rgba(79,214,122,.12)" stroke-width="1"/></g>
+    <g>${bodies.map((body, index) => geographyBodySvg(body, system, index)).join("")}</g>
+  </svg>`;
+}
+
+function geographySectorDisplaySystems(sectorId) {
+  const systems = state.geography.systems.filter(system => system.sectorId === sectorId);
+  if (!systems.length) return [];
+  const centerX = systems.reduce((sum, system) => sum + system.x, 0) / systems.length;
+  const centerY = systems.reduce((sum, system) => sum + system.y, 0) / systems.length;
+  const spread = 1.65;
+  return systems.map(system => ({
+    ...system,
+    x: centerX + (system.x - centerX) * spread,
+    y: centerY + (system.y - centerY) * spread
+  }));
+}
+
+function geographyOverviewSystemsSvg(sector) {
+  const systemCount = state.geography.systems.filter(system => system.sectorId === sector.id).length;
+  const visibleCount = Math.min(systemCount, 10);
+  const marks = [];
+  for (let index = 0; index < visibleCount; index++) {
+    const angle = (index * 137.508 + hashStr(sector.id) % 90) * Math.PI / 180;
+    const radius = 26 + (index % 4) * 13;
+    const x = sector.label[0] + Math.cos(angle) * radius;
+    const y = sector.label[1] + Math.sin(angle) * radius * .58;
+    if (index % 3 === 0) marks.push(`<ellipse class="reach-overview-orbit" cx="${x}" cy="${y}" rx="6" ry="2.5"/>`);
+    marks.push(`<circle class="reach-overview-star" cx="${x}" cy="${y}" r="${index % 4 === 0 ? 1.8 : 1.15}" style="--star-delay:-${index * .73}s"/>`);
+  }
+  return `<g class="reach-overview-systems">${marks.join("")}</g>`;
+}
+
+function geographySvg() {
+  const geography = state.geography;
+  const selectedSector = geography.sectors.find(sector => sector.id === state.selectedSector);
+  const selectedSystem = geography.systems.find(system => system.id === state.selectedSystem);
+  if (state.reachMapLevel === "system" && selectedSystem) return geographySystemDetailSvg(selectedSystem);
+  const sectorMode = state.reachMapLevel === "sector" && selectedSector;
+  const systems = sectorMode ? geographySectorDisplaySystems(selectedSector.id) : geography.systems;
+  state.reachBase = reachBounds(systems);
+  const backdrop = reachBackdropSvg(state.reachBase, systems.map(system => ({
+    ...system,
+    region: system.sectorId
+  })));
+
+  let routes = "";
+  if (sectorMode) {
+    const visibleIds = new Set(systems.map(system => system.id));
+    const byId = new Map(systems.map(system => [system.id, system]));
+    const candidates = geography.routes.filter(route =>
+      visibleIds.has(route.sourceSystemId) && visibleIds.has(route.targetSystemId)
+    );
+    const displayRouteIds = new Set();
+    systems.forEach(system => {
+      candidates.filter(route => route.sourceSystemId === system.id || route.targetSystemId === system.id)
+        .sort((a, b) => a.baseTransitHours - b.baseTransitHours)
+        .slice(0, 2)
+        .forEach(route => displayRouteIds.add(route.id));
+    });
+    routes = candidates.filter(route => displayRouteIds.has(route.id)).map(route => {
+      const source = byId.get(route.sourceSystemId);
+      const target = byId.get(route.targetSystemId);
+      const riskClass = route.risk === "high" || route.risk === "extreme"
+        ? "far" : route.risk === "moderate" ? "medium" : "close";
+      return `<line class="reach-edge ${riskClass}" x1="${source.x}" y1="${source.y}" x2="${target.x}" y2="${target.y}"/>`;
+    }).join("");
+  }
+
+  const sectors = sectorMode ? "" : geography.sectors.map(sector => {
+    const points = sector.boundary.map(point => point.join(",")).join(" ");
+    const count = geography.systems.filter(system => system.sectorId === sector.id).length;
+    return `<g class="reach-sector" data-sector="${escapeHtml(sector.id)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(sector.name)}, ${count} systems">
+      <polygon class="reach-sector-hit" points="${points}"/>
+      <polygon class="reach-sector-boundary" points="${points}"/>
+      <text class="reach-sector-name" x="${sector.label[0]}" y="${sector.label[1]}">${escapeHtml(sector.name)}</text>
+      <text class="reach-sector-count" x="${sector.label[0]}" y="${sector.label[1] + 14}">${count} CHARTED SYSTEMS</text>
+    </g>`;
+  }).join("");
+
+  const systemLayer = systems.filter(system => sectorMode || system.tags.includes("fortress") || system.tags.includes("watch_station"));
+  const overviewSystems = sectorMode ? "" : geography.sectors.map(geographyOverviewSystemsSvg).join("");
+  return `<svg id="reach-svg" class="reach-svg semantic-enter" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="${sectorMode ? escapeHtml(selectedSector.name) : "Sectors of the Jericho Reach"}">
+    <defs>${reachPlanetDefs()}${backdrop.defs}</defs>
+    ${backdrop.layers}<g>${routes}</g><g>${overviewSystems}</g><g>${sectors}</g><g>${systemLayer.map(system => geographySystemSvg(system, Boolean(sectorMode))).join("")}</g>
+  </svg>`;
+}
+
+function openGeographySystem(systemId) {
+  const geography = state.geography;
+  const system = geography && geography.systems.find(item => item.id === systemId);
+  if (!system) return;
+  const sector = geography.sectors.find(item => item.id === system.sectorId);
+  const bodies = geography.bodies.filter(body => body.systemId === systemId)
+    .sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name));
+  const routes = geography.routes.filter(route => route.sourceSystemId === systemId || route.targetSystemId === systemId);
+  document.getElementById("planet-modal-body").innerHTML = `
+    <div class="modal-rank">${escapeHtml(sector ? sector.name : "Uncharted Sector")} &middot; ${escapeHtml(titleCase(system.classification))}</div>
+    <div class="modal-name">${escapeHtml(system.name)}</div>
+    <div class="directive-section-label">System Bodies</div>
+    ${bodies.map(body => `<div class="modal-row"><span>${escapeHtml(body.name)}</span><span>${escapeHtml(titleCase(body.kind))}${body.battleEligible ? " &middot; Battle eligible" : ""}</span></div>`).join("")}
+    <div class="directive-section-label">Charted Warp Routes</div>
+    <div class="modal-row"><span>Connections</span><span>${routes.length}</span></div>
+    <div class="modal-row"><span>Source Classification</span><span>${escapeHtml(titleCase(system.source))}</span></div>`;
+  const overlay = document.getElementById("planet-modal");
+  const panel = overlay.querySelector(".overlay-panel");
+  overlay.classList.add("open");
+  panel.classList.remove("unfurl");
+  void panel.offsetWidth;
+  panel.classList.add("unfurl");
+}
+
+function canvasClamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+
+function canvasSmoothstep(edge0, edge1, value) {
+  const amount = canvasClamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return amount * amount * (3 - 2 * amount);
+}
+
+function setupGeographyCanvas() {
+  const canvas = document.getElementById("reach-canvas");
+  const viewport = document.getElementById("reach-viewport");
+  const tooltip = document.getElementById("reach-canvas-tooltip");
+  if (!canvas || !viewport || !state.geography) return;
+  const context = canvas.getContext("2d", { alpha: false });
+  const geography = state.geography;
+  const boundaryX = geography.chartBoundary.map(point => point[0]);
+  const boundaryY = geography.chartBoundary.map(point => point[1]);
+  const bounds = {
+    x: Math.min(...boundaryX), y: Math.min(...boundaryY),
+    w: Math.max(...boundaryX) - Math.min(...boundaryX),
+    h: Math.max(...boundaryY) - Math.min(...boundaryY)
+  };
+  const systemsById = new Map(geography.systems.map(system => [system.id, system]));
+  const bodiesBySystem = new Map();
+  geography.bodies.forEach(body => {
+    if (!bodiesBySystem.has(body.systemId)) bodiesBySystem.set(body.systemId, []);
+    bodiesBySystem.get(body.systemId).push(body);
+  });
+  bodiesBySystem.forEach(bodies => bodies.sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name)));
+  const reachNodesByName = new Map((state.reach?.nodes || []).map(node => [node.id, node]));
+  const directivesByWorld = new Map();
+  visibleReachDirectives().forEach(directive => {
+    if (!directivesByWorld.has(directive.node)) directivesByWorld.set(directive.node, []);
+    directivesByWorld.get(directive.node).push(directive);
+  });
+  const directiveMarkers = geography.bodies.map(body => ({
+    body,
+    directives: directivesByWorld.get(body.name) || [],
+    theatre: Boolean(reachNodesByName.get(body.name)?.gamePlanet)
+  })).filter(marker => marker.directives.length || marker.theatre);
+  const systemMarkers = new Map();
+  directiveMarkers.forEach(marker => {
+    if (!systemMarkers.has(marker.body.systemId)) {
+      systemMarkers.set(marker.body.systemId, { systemId: marker.body.systemId, directives: [], theatre: false });
+    }
+    const systemMarker = systemMarkers.get(marker.body.systemId);
+    systemMarker.directives.push(...marker.directives);
+    systemMarker.theatre ||= marker.theatre;
+  });
+  const starRand = mulberry32(44041);
+  const ambientStars = Array.from({ length: 620 }, () => ({
+    x: bounds.x - 100 + starRand() * (bounds.w + 200),
+    y: bounds.y - 100 + starRand() * (bounds.h + 200),
+    radius: .25 + starRand() * 1.15,
+    phase: starRand() * Math.PI * 2
+  }));
+  const nebulaPalette = ["#2f8a52", "#3f7fb0", "#3fae8a", "#8a5fc4", "#b07a3f", "#9d3f6f", "#4a5a70"];
+  const nebulaRand = mulberry32(91337);
+  const nebulaClouds = geography.sectors.flatMap((sector, sectorIndex) =>
+    Array.from({ length: 3 + hashStr(sector.id) % 3 }, (_, cloudIndex) => ({
+      x: sector.label[0] + (nebulaRand() - .5) * 360,
+      y: sector.label[1] + (nebulaRand() - .5) * 260,
+      radiusX: 190 + nebulaRand() * 330,
+      radiusY: 90 + nebulaRand() * 190,
+      rotation: (nebulaRand() - .5) * .9,
+      phase: nebulaRand() * Math.PI * 2,
+      color: nebulaPalette[(sectorIndex + cloudIndex * 2) % nebulaPalette.length],
+      opacity: .08 + nebulaRand() * .12
+    }))
+  );
+  let width = 0;
+  let height = 0;
+  let deviceScale = 1;
+  let pointerId = null;
+  let previousPointer = null;
+  let dragDistance = 0;
+  let animationFrame = 0;
+  let zoomAnchor = null;
+  let hoveredTarget = null;
+  let tooltipResolveTimer = 0;
+
+  function resizeCanvas() {
+    const rectangle = canvas.getBoundingClientRect();
+    width = Math.max(1, rectangle.width);
+    height = Math.max(1, rectangle.height);
+    deviceScale = Math.min(window.devicePixelRatio || 1, 2.5);
+    const pixelWidth = Math.round(width * deviceScale);
+    const pixelHeight = Math.round(height * deviceScale);
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+    const baseZoom = Math.min((width - 8) / bounds.w, (height - 8) / bounds.h);
+    if (!state.reachCanvasCamera) {
+      const centerX = bounds.x + bounds.w / 2;
+      const centerY = bounds.y + bounds.h / 2;
+      state.reachCanvasCamera = {
+        x: centerX, y: centerY, zoom: baseZoom,
+        targetX: centerX, targetY: centerY, targetZoom: baseZoom,
+        baseZoom
+      };
+    } else {
+      const camera = state.reachCanvasCamera;
+      const ratio = camera.zoom / camera.baseZoom;
+      const targetRatio = camera.targetZoom / camera.baseZoom;
+      camera.baseZoom = baseZoom;
+      camera.zoom = baseZoom * ratio;
+      camera.targetZoom = baseZoom * targetRatio;
+    }
+  }
+
+  function worldToScreen(x, y, camera = state.reachCanvasCamera) {
+    return {
+      x: (x - camera.x) * camera.zoom + width / 2,
+      y: (y - camera.y) * camera.zoom + height / 2
+    };
+  }
+
+  function screenToWorld(x, y, camera = state.reachCanvasCamera) {
+    return {
+      x: camera.x + (x - width / 2) / camera.zoom,
+      y: camera.y + (y - height / 2) / camera.zoom
+    };
+  }
+
+  function tracePolygon(points, camera) {
+    context.beginPath();
+    points.forEach((point, index) => {
+      const screen = worldToScreen(point[0], point[1], camera);
+      if (index) context.lineTo(screen.x, screen.y);
+      else context.moveTo(screen.x, screen.y);
+    });
+    context.closePath();
+  }
+
+  function drawNebulae(camera, now) {
+    nebulaClouds.forEach((cloud, index) => {
+      const center = worldToScreen(cloud.x, cloud.y, camera);
+      const pulse = 1 + Math.sin(now * .00011 + cloud.phase) * .09;
+      const driftX = Math.sin(now * .000045 + cloud.phase) * (18 + index % 4 * 5);
+      const driftY = Math.cos(now * .000038 + cloud.phase) * (10 + index % 3 * 4);
+      const radiusX = Math.max(80, cloud.radiusX * camera.zoom * pulse);
+      const radiusY = Math.max(45, cloud.radiusY * camera.zoom * pulse);
+      context.save();
+      context.translate(center.x + driftX, center.y + driftY);
+      context.rotate(cloud.rotation);
+      context.scale(1, radiusY / radiusX);
+      const gradient = context.createRadialGradient(0, 0, 0, 0, 0, radiusX);
+      gradient.addColorStop(0, `${cloud.color}${Math.round(cloud.opacity * 255).toString(16).padStart(2, "0")}`);
+      gradient.addColorStop(.35, `${cloud.color}${Math.round(cloud.opacity * .75 * 255).toString(16).padStart(2, "0")}`);
+      gradient.addColorStop(.72, `${cloud.color}${Math.round(cloud.opacity * .24 * 255).toString(16).padStart(2, "0")}`);
+      gradient.addColorStop(1, `${cloud.color}00`);
+      context.fillStyle = gradient;
+      context.fillRect(-radiusX, -radiusX, radiusX * 2, radiusX * 2);
+      context.restore();
+    });
+  }
+
+  function drawAmbientStars(camera, now) {
+    ambientStars.forEach(star => {
+      const screen = worldToScreen(star.x, star.y, camera);
+      if (screen.x < -4 || screen.y < -4 || screen.x > width + 4 || screen.y > height + 4) return;
+      const twinkle = .35 + (Math.sin(now * .001 + star.phase) + 1) * .22;
+      context.globalAlpha = twinkle;
+      context.fillStyle = "#d9ead5";
+      context.beginPath();
+      context.arc(screen.x, screen.y, star.radius, 0, Math.PI * 2);
+      context.fill();
+    });
+    context.globalAlpha = 1;
+  }
+
+  function drawSectors(camera, ratio) {
+    const lineAlpha = 1 - canvasSmoothstep(2.4, 5.5, ratio);
+    geography.sectors.forEach(sector => {
+      const related = hoveredTarget?.sectorId === sector.id || (hoveredTarget?.kind === "sector" && hoveredTarget.id === sector.id);
+      if (!related || lineAlpha <= .01) return;
+      tracePolygon(sector.boundary, camera);
+      context.fillStyle = `rgba(79,214,122,${.018 * lineAlpha})`;
+      context.fill();
+      context.save();
+      context.setLineDash([4, 7]);
+      context.lineWidth = .7;
+      context.strokeStyle = `rgba(79,214,122,${.32 * lineAlpha})`;
+      context.stroke();
+      context.restore();
+      const vertices = sector.boundary.map(point => worldToScreen(point[0], point[1], camera));
+      context.beginPath();
+      vertices.forEach((vertex, index) => {
+        const previous = vertices[(index + vertices.length - 1) % vertices.length];
+        const next = vertices[(index + 1) % vertices.length];
+        [previous, next].forEach(neighbor => {
+          const distance = Math.hypot(neighbor.x - vertex.x, neighbor.y - vertex.y);
+          if (distance < 1) return;
+          context.moveTo(vertex.x, vertex.y);
+          context.lineTo(vertex.x + (neighbor.x - vertex.x) * Math.min(15 / distance, .3), vertex.y + (neighbor.y - vertex.y) * Math.min(15 / distance, .3));
+        });
+      });
+      context.lineWidth = 1.2;
+      context.strokeStyle = `rgba(79,214,122,${.75 * lineAlpha})`;
+      context.stroke();
+    });
+  }
+
+  function visibleRouteIds() {
+    const chosen = new Set();
+    geography.systems.forEach(system => {
+      geography.routes.filter(route => route.sourceSystemId === system.id || route.targetSystemId === system.id)
+        .sort((a, b) => a.baseTransitHours - b.baseTransitHours)
+        .slice(0, 2)
+        .forEach(route => chosen.add(route.id));
+    });
+    return chosen;
+  }
+
+  const routeIds = visibleRouteIds();
+
+  function drawRoutes(camera, ratio) {
+    const alpha = canvasSmoothstep(1.25, 2.1, ratio) * (1 - canvasSmoothstep(9, 16, ratio));
+    const activeSystemId = hoveredTarget?.systemId || (hoveredTarget?.kind === "system" ? hoveredTarget.id : null);
+    if (alpha <= .01 || !activeSystemId) return;
+    context.lineWidth = .8;
+    context.strokeStyle = `rgba(79,214,122,${.23 * alpha})`;
+    geography.routes.forEach(route => {
+      if (!routeIds.has(route.id) || (route.sourceSystemId !== activeSystemId && route.targetSystemId !== activeSystemId)) return;
+      const source = systemsById.get(route.sourceSystemId);
+      const target = systemsById.get(route.targetSystemId);
+      const start = worldToScreen(source.x, source.y, camera);
+      const end = worldToScreen(target.x, target.y, camera);
+      context.beginPath();
+      context.moveTo(start.x, start.y);
+      context.lineTo(end.x, end.y);
+      context.stroke();
+    });
+  }
+
+  function bodyPosition(system, body) {
+    let centerX = system.x;
+    let centerY = system.y;
+    let radius = 10 + body.orbitIndex * 8;
+    if (body.parentBodyId) {
+      const parent = (bodiesBySystem.get(system.id) || []).find(item => item.id === body.parentBodyId);
+      if (parent) {
+        const parentPosition = bodyPosition(system, parent);
+        centerX = parentPosition.x;
+        centerY = parentPosition.y;
+        radius = 4 + body.orbitIndex * 2.2;
+      }
+    }
+    const angle = body.orbitAngle * Math.PI / 180;
+    return {
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius * .46,
+      centerX,
+      centerY,
+      orbitX: radius,
+      orbitY: radius * .46
+    };
+  }
+
+  function planetColor(kind) {
+    return ({
+      dead_world: "#899087", agri_world: "#7fb65a", hive_world: "#bd8540", war_world: "#bd4d3f",
+      shrine_world: "#d6bb73", forge_world: "#d56b2a", feral_world: "#4f91bd", mining_world: "#9d7954",
+      frontier_world: "#4ca9a0", pleasure_world: "#bd6f9d", penal_world: "#7761a3", fortress_world: "#718ead",
+      moon: "#a7aaa3", asteroid_belt: "#8d7d68", orbital_station: "#92b0a0", space_hulk: "#817568",
+      special: "#9a75cb", watch_station: "#cfae68", watch_fortress: "#cfae68", void_dock: "#8fae9a"
+    })[kind] || "#758078";
+  }
+
+  function stellarClass(star) {
+    const classes = ["B-type blue-white", "A-type white", "G-type yellow-white", "K-type orange", "M-type red"];
+    return classes[hashStr(star?.id || "star") % classes.length];
+  }
+
+  function drawPlanetBody(body, bodyScreen, radius, ratio, hovered) {
+    const seed = hashStr(body.id);
+    const base = planetColor(body.kind);
+    if (body.kind === "asteroid_belt") {
+      context.fillStyle = base;
+      for (let rock = 0; rock < 14; rock++) {
+        const angle = (seed + rock * 137.5) * Math.PI / 180;
+        const distance = radius * (.35 + (rock % 5) * .22);
+        context.beginPath();
+        context.arc(bodyScreen.x + Math.cos(angle) * distance, bodyScreen.y + Math.sin(angle) * distance * .45, Math.max(.7, radius * (.06 + rock % 3 * .025)), 0, Math.PI * 2);
+        context.fill();
+      }
+      return;
+    }
+    if (body.kind === "orbital_station" || body.kind === "space_hulk") {
+      context.save();
+      context.translate(bodyScreen.x, bodyScreen.y);
+      context.rotate((seed % 360) * Math.PI / 180);
+      context.fillStyle = base;
+      context.strokeStyle = hovered ? "#4fd67a" : "rgba(210,225,204,.48)";
+      context.lineWidth = hovered ? 1.5 : .8;
+      context.beginPath();
+      const vertices = body.kind === "space_hulk" ? 9 : 6;
+      for (let vertex = 0; vertex < vertices; vertex++) {
+        const angle = vertex / vertices * Math.PI * 2;
+        const jag = body.kind === "space_hulk" ? .58 + ((seed >> (vertex % 8)) & 3) * .18 : (vertex % 2 ? .55 : 1);
+        const x = Math.cos(angle) * radius * jag;
+        const y = Math.sin(angle) * radius * jag;
+        if (vertex) context.lineTo(x, y); else context.moveTo(x, y);
+      }
+      context.closePath();
+      context.fill();
+      context.stroke();
+      if (body.kind === "orbital_station") {
+        context.beginPath(); context.moveTo(-radius * 1.3, 0); context.lineTo(radius * 1.3, 0); context.stroke();
+      }
+      context.restore();
+      return;
+    }
+    if (seed % 5 === 0 || body.kind === "mining_world") {
+      context.save();
+      context.translate(bodyScreen.x, bodyScreen.y);
+      context.rotate(((seed % 38) - 19) * Math.PI / 180);
+      context.strokeStyle = hovered ? "rgba(79,214,122,.9)" : "rgba(175,192,154,.42)";
+      context.lineWidth = Math.max(.8, radius * .13);
+      context.beginPath();
+      context.ellipse(0, 0, radius * 1.75, radius * .42, 0, 0, Math.PI * 2);
+      context.stroke();
+      context.restore();
+    }
+    const gradient = context.createRadialGradient(
+      bodyScreen.x - radius * .35, bodyScreen.y - radius * .35, radius * .08,
+      bodyScreen.x, bodyScreen.y, radius * 1.1
+    );
+    gradient.addColorStop(0, "rgba(244,245,218,.88)");
+    gradient.addColorStop(.18, base);
+    gradient.addColorStop(1, "#111811");
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.arc(bodyScreen.x, bodyScreen.y, radius, 0, Math.PI * 2);
+    context.fill();
+
+    context.save();
+    context.beginPath();
+    context.arc(bodyScreen.x, bodyScreen.y, radius * .94, 0, Math.PI * 2);
+    context.clip();
+    const detailMode = seed % 4;
+    if (detailMode === 0) {
+      context.strokeStyle = "rgba(10,18,12,.5)";
+      context.lineWidth = Math.max(.6, radius * .12);
+      for (let band = -2; band <= 2; band++) {
+        context.beginPath();
+        context.ellipse(bodyScreen.x, bodyScreen.y + band * radius * .3, radius * 1.1, radius * .12, 0, 0, Math.PI);
+        context.stroke();
+      }
+    } else if (detailMode === 1) {
+      for (let crater = 0; crater < 6; crater++) {
+        const angle = (seed + crater * 83) * Math.PI / 180;
+        const distance = radius * (.18 + (crater % 3) * .19);
+        context.fillStyle = "rgba(5,9,6,.42)";
+        context.beginPath();
+        context.arc(bodyScreen.x + Math.cos(angle) * distance, bodyScreen.y + Math.sin(angle) * distance, Math.max(.7, radius * (.08 + (crater % 2) * .04)), 0, Math.PI * 2);
+        context.fill();
+      }
+    } else if (detailMode === 2) {
+      context.fillStyle = "rgba(115,160,82,.45)";
+      for (let mass = 0; mass < 4; mass++) {
+        const angle = (seed * .7 + mass * 101) * Math.PI / 180;
+        context.beginPath();
+        context.ellipse(bodyScreen.x + Math.cos(angle) * radius * .34, bodyScreen.y + Math.sin(angle) * radius * .26, radius * .25, radius * .14, angle, 0, Math.PI * 2);
+        context.fill();
+      }
+    } else {
+      context.strokeStyle = "rgba(203,227,198,.28)";
+      context.lineWidth = .6;
+      [-.45, 0, .45].forEach(offset => {
+        context.beginPath();
+        context.ellipse(bodyScreen.x, bodyScreen.y, radius * (1 - Math.abs(offset) * .4), radius, 0, 0, Math.PI * 2);
+        context.stroke();
+      });
+    }
+    context.restore();
+
+    context.strokeStyle = hovered ? "#4fd67a" : "rgba(242,237,224,.42)";
+    context.lineWidth = hovered ? 1.6 : .7;
+    context.beginPath();
+    context.arc(bodyScreen.x, bodyScreen.y, radius, 0, Math.PI * 2);
+    context.stroke();
+    if (hovered) {
+      context.strokeStyle = "rgba(79,214,122,.48)";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.arc(bodyScreen.x, bodyScreen.y, radius + 5 + Math.sin(performance.now() * .004) * 1.5, 0, Math.PI * 2);
+      context.stroke();
+    }
+  }
+
+  function drawSystems(camera, ratio, now) {
+    const systemAlpha = .18 + canvasSmoothstep(1.05, 2.2, ratio) * .82;
+    const labelAlpha = canvasSmoothstep(1.55, 2.65, ratio) * (1 - canvasSmoothstep(12, 20, ratio));
+    const bodyAlpha = canvasSmoothstep(2.5, 5.5, ratio);
+    const labelBoxes = [];
+    const systems = [...geography.systems].sort((a, b) => {
+      const priority = system => system.tags.includes("fortress") || system.tags.includes("watch_station") ? 0
+        : system.tags.includes("multi_body_system") ? 1 : 2;
+      return priority(a) - priority(b) || a.name.localeCompare(b.name);
+    });
+    systems.forEach((system, systemIndex) => {
+      const center = worldToScreen(system.x, system.y, camera);
+      if (center.x < -100 || center.y < -100 || center.x > width + 100 || center.y > height + 100) return;
+      const bodies = bodiesBySystem.get(system.id) || [];
+      const star = bodies.find(body => body.kind === "star");
+      const starSeed = hashStr(star?.id || system.id);
+      const starPulse = 1 + Math.sin(now * .0012 + systemIndex) * (.1 + starSeed % 8 / 80);
+      const systemHovered = hoveredTarget?.kind === "system" && hoveredTarget.id === system.id;
+      context.globalAlpha = systemAlpha;
+      const glow = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, 10 * starPulse);
+      const starColors = ["rgba(172,205,255,.96)", "rgba(235,242,255,.98)", "rgba(255,249,214,.98)", "rgba(255,210,151,.96)", "rgba(255,151,120,.94)"];
+      glow.addColorStop(0, starColors[starSeed % starColors.length]);
+      glow.addColorStop(.2, systemHovered ? "rgba(79,214,122,.9)" : starColors[starSeed % starColors.length].replace(/\.9[468]\)/, ".55)"));
+      glow.addColorStop(1, "rgba(79,214,122,0)");
+      context.fillStyle = glow;
+      context.beginPath();
+      context.arc(center.x, center.y, 10 * starPulse, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = ["#acd0ff", "#f4f7ff", "#fff5c7", "#ffd097", "#ff9778"][starSeed % 5];
+      context.beginPath();
+      context.arc(center.x, center.y, canvasClamp(1.6 + ratio * .18 + starSeed % 4 * .3, 1.8, 6.5), 0, Math.PI * 2);
+      context.fill();
+      if (systemHovered) {
+        context.strokeStyle = "rgba(79,214,122,.88)";
+        context.lineWidth = 1.2;
+        context.beginPath();
+        context.arc(center.x, center.y, 10 + Math.sin(now * .004) * 2, 0, Math.PI * 2);
+        context.stroke();
+      }
+
+      if (bodyAlpha > .01) {
+        context.globalAlpha = bodyAlpha;
+        bodies.filter(body => body.kind !== "star").forEach(body => {
+          const position = bodyPosition(system, body);
+          const bodyScreen = worldToScreen(position.x, position.y, camera);
+          const orbitCenter = worldToScreen(position.centerX, position.centerY, camera);
+          const revealOrbits = hoveredTarget?.systemId === system.id || (hoveredTarget?.kind === "system" && hoveredTarget.id === system.id);
+          if (revealOrbits) {
+            context.strokeStyle = "rgba(79,214,122,.42)";
+            context.lineWidth = .7;
+            context.beginPath();
+            context.ellipse(orbitCenter.x, orbitCenter.y, position.orbitX * camera.zoom, position.orbitY * camera.zoom, 0, 0, Math.PI * 2);
+            context.stroke();
+          }
+          const radius = canvasClamp(body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12);
+          const bodyHovered = hoveredTarget?.kind === "body" && hoveredTarget.id === body.id;
+          drawPlanetBody(body, bodyScreen, radius, ratio, bodyHovered);
+          if (ratio > 6.5) {
+            context.font = "9px 'Share Tech Mono', monospace";
+            context.textAlign = "center";
+            context.fillStyle = "rgba(79,214,122,.88)";
+            context.fillText(body.name, bodyScreen.x, bodyScreen.y + radius + 11);
+          }
+        });
+      }
+
+      if (labelAlpha > .02) {
+        context.globalAlpha = labelAlpha;
+        context.font = `${canvasClamp(10 + ratio * .3, 10, 14)}px 'Share Tech Mono', monospace`;
+        context.textAlign = "center";
+        const textWidth = context.measureText(system.name).width;
+        const labelBox = { left: center.x - textWidth / 2 - 4, right: center.x + textWidth / 2 + 4, top: center.y + 7, bottom: center.y + 24 };
+        const overlaps = labelBoxes.some(box => labelBox.left < box.right && labelBox.right > box.left && labelBox.top < box.bottom && labelBox.bottom > box.top);
+        if (overlaps) {
+          context.globalAlpha = 1;
+          return;
+        }
+        labelBoxes.push(labelBox);
+        context.lineWidth = 3;
+        context.strokeStyle = "rgba(2,5,3,.9)";
+        context.strokeText(system.name, center.x, center.y + 17);
+        context.fillStyle = "rgba(79,214,122,.86)";
+        context.fillText(system.name, center.x, center.y + 17);
+      }
+      context.globalAlpha = 1;
+    });
+  }
+
+  function drawDirectiveMarkers(camera, ratio, now) {
+    const overview = ratio < 4.5;
+    const markers = overview ? systemMarkers.values() : directiveMarkers;
+    for (const marker of markers) {
+      const system = systemsById.get(overview ? marker.systemId : marker.body.systemId);
+      const position = overview ? system : bodyPosition(system, marker.body);
+      const screen = worldToScreen(position.x, position.y, camera);
+      if (screen.x < -30 || screen.y < -30 || screen.x > width + 30 || screen.y > height + 30) continue;
+      const top = marker.directives.length ? sortDirectives(marker.directives)[0] : null;
+      const status = top && REACH_STATUS[top.status];
+      const brothers = deployedBrotherIds(marker.directives).size;
+      const radius = overview ? 8 : canvasClamp(marker.body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12) + 5;
+      if (marker.theatre) {
+        context.save();
+        context.setLineDash([2, 3]);
+        context.strokeStyle = "rgba(207,174,104,.7)";
+        context.lineWidth = 1;
+        context.beginPath();
+        context.arc(screen.x, screen.y, radius + 4, 0, Math.PI * 2);
+        context.stroke();
+        context.restore();
+      }
+      if (status) {
+        context.save();
+        if (top.status === "unassigned") context.setLineDash([2, 2]);
+        context.strokeStyle = status.color;
+        context.globalAlpha = status.active ? .9 : .55;
+        context.lineWidth = 1.3;
+        context.beginPath();
+        context.arc(screen.x, screen.y, radius + (marker.theatre ? 7 : 3), 0, Math.PI * 2);
+        context.stroke();
+        if (top.status === "deployed" || top.status === "recruiting") {
+          context.globalAlpha = .25 + (Math.sin(now * .004) + 1) * .16;
+          context.beginPath();
+          context.arc(screen.x, screen.y, radius + 7, 0, Math.PI * 2);
+          context.stroke();
+        }
+        context.restore();
+      }
+      if (brothers) {
+        const label = `\u2694${brothers}`;
+        context.font = "9px 'Share Tech Mono', monospace";
+        const badgeWidth = context.measureText(label).width + 8;
+        const badgeX = screen.x + radius + 4;
+        const badgeY = screen.y - radius - 13;
+        context.fillStyle = "#140d06";
+        context.strokeStyle = "#cfae68";
+        context.lineWidth = .8;
+        context.fillRect(badgeX, badgeY, badgeWidth, 13);
+        context.strokeRect(badgeX, badgeY, badgeWidth, 13);
+        context.fillStyle = "#cfae68";
+        context.textAlign = "left";
+        context.fillText(label, badgeX + 4, badgeY + 10);
+      }
+    }
+  }
+
+  function drawHoverLeader(camera, now) {
+    if (!hoveredTarget || !tooltip || tooltip.hidden || !Number.isFinite(hoveredTarget.worldX)) return;
+    const start = worldToScreen(hoveredTarget.worldX, hoveredTarget.worldY, camera);
+    const end = { x: tooltip.offsetLeft, y: tooltip.offsetTop + tooltip.offsetHeight / 2 };
+    const bend = { x: start.x + (end.x - start.x) * .58, y: start.y };
+    const points = [start, bend, { x: bend.x, y: end.y }, end];
+    const lengths = points.slice(1).map((point, index) => Math.hypot(point.x - points[index].x, point.y - points[index].y));
+    const total = lengths.reduce((sum, length) => sum + length, 0);
+    let remaining = total * canvasSmoothstep(0, 1, canvasClamp((now - hoveredTarget.startedAt) / 650, 0, 1));
+    context.strokeStyle = "rgba(79,214,122,.9)";
+    context.lineWidth = 1.1;
+    context.beginPath();
+    context.moveTo(start.x, start.y);
+    for (let index = 0; index < lengths.length && remaining > 0; index++) {
+      const from = points[index];
+      const to = points[index + 1];
+      if (remaining >= lengths[index]) {
+        context.lineTo(to.x, to.y);
+        remaining -= lengths[index];
+      } else {
+        const portion = remaining / lengths[index];
+        context.lineTo(from.x + (to.x - from.x) * portion, from.y + (to.y - from.y) * portion);
+        remaining = 0;
+      }
+    }
+    context.stroke();
+    context.fillStyle = "#4fd67a";
+    context.beginPath();
+    context.arc(start.x, start.y, 2.5 + Math.sin(now * .005) * .7, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  function updateStatus(ratio) {
+    const heading = document.querySelector(".reach-map-level strong");
+    const status = document.getElementById("reach-canvas-status");
+    if (!heading || !status) return;
+    if (ratio < 1.7) {
+      heading.textContent = "Jericho Reach";
+      status.textContent = "Strategic sector projection";
+    } else if (ratio < 5) {
+      heading.textContent = "Stellar cartography";
+      status.textContent = "Systems and warp routes resolving";
+    } else {
+      const focused = state.selectedSystem && systemsById.get(state.selectedSystem);
+      heading.textContent = focused ? `${focused.name} system` : "Local system detail";
+      status.textContent = "Orbital bodies and theatres resolving";
+    }
+  }
+
+  function drawFrame(timestamp) {
+    if (!canvas.isConnected) return;
+    resizeCanvas();
+    const camera = state.reachCanvasCamera;
+    camera.zoom += (camera.targetZoom - camera.zoom) * .16;
+    if (zoomAnchor) {
+      camera.x = zoomAnchor.worldX - (zoomAnchor.screenX - width / 2) / camera.zoom;
+      camera.y = zoomAnchor.worldY - (zoomAnchor.screenY - height / 2) / camera.zoom;
+      if (Math.abs(camera.zoom - camera.targetZoom) < .0001) zoomAnchor = null;
+    } else {
+      camera.x += (camera.targetX - camera.x) * .16;
+      camera.y += (camera.targetY - camera.y) * .16;
+    }
+    context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
+    context.fillStyle = "#020403";
+    context.fillRect(0, 0, width, height);
+    const ratio = camera.zoom / camera.baseZoom;
+    if (hoveredTarget?.kind === "sector" && (ratio >= 2.4 || camera.targetZoom / camera.baseZoom >= 2.4)) {
+      hoveredTarget = null;
+      canvas.style.cursor = "grab";
+      window.clearTimeout(tooltipResolveTimer);
+      if (tooltip) {
+        tooltip.classList.remove("pending", "loading");
+        tooltip.dataset.targetKey = "";
+        tooltip.hidden = true;
+      }
+    }
+    canvas.dataset.cameraX = String(camera.x);
+    canvas.dataset.cameraY = String(camera.y);
+    canvas.dataset.cameraZoom = String(camera.zoom);
+    canvas.dataset.zoomRatio = String(ratio);
+    drawNebulae(camera, timestamp);
+    drawAmbientStars(camera, timestamp);
+    drawSectors(camera, ratio);
+    drawRoutes(camera, ratio);
+    drawSystems(camera, ratio, timestamp);
+    drawDirectiveMarkers(camera, ratio, timestamp);
+    drawHoverLeader(camera, timestamp);
+    updateStatus(ratio);
+    animationFrame = requestAnimationFrame(drawFrame);
+  }
+
+  function localPoint(event) {
+    const rectangle = canvas.getBoundingClientRect();
+    return { x: event.clientX - rectangle.left, y: event.clientY - rectangle.top };
+  }
+
+  function updateCanvasHover(event) {
+    const point = localPoint(event);
+    const camera = state.reachCanvasCamera;
+    const ratio = camera.zoom / camera.baseZoom;
+    let target = null;
+    if (ratio > 2.5) {
+      geography.systems.forEach(system => (bodiesBySystem.get(system.id) || [])
+        .filter(body => body.kind !== "star")
+        .forEach(body => {
+          const position = bodyPosition(system, body);
+          const screen = worldToScreen(position.x, position.y);
+          const distance = Math.hypot(screen.x - point.x, screen.y - point.y);
+          const radius = canvasClamp(body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12);
+          if (distance <= radius + 7 && (!target || distance < target.distance)) {
+            target = {
+              kind: "body", id: body.id, systemId: system.id, sectorId: system.sectorId,
+              name: body.name,
+              meta: `${titleCase(body.kind)} · ${system.name} · Orbit ${body.orbitIndex}${body.parentBodyId ? " · Satellite" : ""} · ${titleCase(body.source)}${body.battleEligible ? " · Battle eligible" : ""}`,
+              worldX: position.x, worldY: position.y, distance
+            };
+          }
+        }));
+    }
+    if (!target) {
+      geography.systems.forEach(system => {
+        const screen = worldToScreen(system.x, system.y);
+        const distance = Math.hypot(screen.x - point.x, screen.y - point.y);
+        if (distance <= 14 && (!target || distance < target.distance)) {
+          const bodies = (bodiesBySystem.get(system.id) || []).filter(body => body.kind !== "star").length;
+          const star = (bodiesBySystem.get(system.id) || []).find(body => body.kind === "star");
+          const routes = geography.routes.filter(route => route.sourceSystemId === system.id || route.targetSystemId === system.id).length;
+          target = {
+            kind: "system", id: system.id, systemId: system.id, sectorId: system.sectorId,
+            name: system.name, meta: `${stellarClass(star)} · ${bodies} bodies · ${routes} warp routes · ${titleCase(system.source)}`,
+            worldX: system.x, worldY: system.y, distance
+          };
+        }
+      });
+    }
+    if (!target && ratio < 2.4 && camera.targetZoom / camera.baseZoom < 2.4) {
+      const world = screenToWorld(point.x, point.y);
+      const sector = geographySectorAt(world);
+      if (sector) {
+        const systems = geography.systems.filter(system => system.sectorId === sector.id).length;
+        target = {
+          kind: "sector", id: sector.id, sectorId: sector.id, name: sector.name,
+          meta: `${systems} charted systems`, worldX: sector.label[0], worldY: sector.label[1], distance: 0
+        };
+      }
+    }
+    const sameTarget = target && hoveredTarget && target.kind === hoveredTarget.kind && target.id === hoveredTarget.id;
+    if (sameTarget) target = hoveredTarget;
+    else if (target) target = { ...target, startedAt: performance.now() };
+    hoveredTarget = target;
+    canvas.style.cursor = target ? "pointer" : "grab";
+    if (!tooltip) return;
+    if (!target || viewport.classList.contains("dragging")) {
+      window.clearTimeout(tooltipResolveTimer);
+      tooltip.classList.remove("pending", "loading");
+      tooltip.dataset.targetKey = "";
+      tooltip.hidden = true;
+      return;
+    }
+    tooltip.hidden = false;
+    if (!sameTarget) {
+      window.clearTimeout(tooltipResolveTimer);
+      const targetKey = `${target.kind}:${target.id}`;
+      tooltip.dataset.targetKey = targetKey;
+      tooltip.classList.add("pending", "loading");
+      tooltip.innerHTML = `<strong>LOADING TARGET DATA</strong>ASTROGRAPHIC LOCK IN PROGRESS`;
+      tooltipResolveTimer = window.setTimeout(() => {
+        if (tooltip.dataset.targetKey !== targetKey || !hoveredTarget || viewport.classList.contains("dragging")) return;
+        tooltip.classList.remove("pending");
+        tooltipResolveTimer = window.setTimeout(() => {
+          if (tooltip.dataset.targetKey !== targetKey || !hoveredTarget || viewport.classList.contains("dragging")) return;
+          tooltip.classList.remove("loading");
+          tooltip.innerHTML = `<strong>${escapeHtml(target.name)}</strong>${escapeHtml(target.meta)}`;
+        }, 650);
+      }, 650);
+    }
+  }
+
+  canvas.addEventListener("wheel", event => {
+    event.preventDefault();
+    const camera = state.reachCanvasCamera;
+    const point = localPoint(event);
+    const world = screenToWorld(point.x, point.y, {
+      ...camera, x: camera.targetX, y: camera.targetY, zoom: camera.targetZoom
+    });
+    const factor = Math.exp(-event.deltaY * (event.deltaMode === 1 ? .045 : .0014));
+    const nextZoom = canvasClamp(camera.targetZoom * factor, camera.baseZoom, camera.baseZoom * 120);
+    camera.targetX = world.x - (point.x - width / 2) / nextZoom;
+    camera.targetY = world.y - (point.y - height / 2) / nextZoom;
+    camera.targetZoom = nextZoom;
+    zoomAnchor = { worldX: world.x, worldY: world.y, screenX: point.x, screenY: point.y };
+  }, { passive: false });
+
+  canvas.addEventListener("pointerdown", event => {
+    if (event.button !== 0) return;
+    pointerId = event.pointerId;
+    zoomAnchor = null;
+    previousPointer = { x: event.clientX, y: event.clientY };
+    dragDistance = 0;
+    canvas.setPointerCapture(pointerId);
+    viewport.classList.add("dragging");
+    if (tooltip) tooltip.hidden = true;
+  });
+
+  canvas.addEventListener("pointermove", event => {
+    if (event.pointerId !== pointerId || !previousPointer) {
+      updateCanvasHover(event);
+      return;
+    }
+    const dx = event.clientX - previousPointer.x;
+    const dy = event.clientY - previousPointer.y;
+    previousPointer = { x: event.clientX, y: event.clientY };
+    dragDistance += Math.abs(dx) + Math.abs(dy);
+    const camera = state.reachCanvasCamera;
+    camera.x -= dx / camera.zoom;
+    camera.y -= dy / camera.zoom;
+    camera.targetX = camera.x;
+    camera.targetY = camera.y;
+  });
+
+  function finishPointer(event) {
+    if (event.pointerId !== pointerId) return;
+    const clickPoint = localPoint(event);
+    pointerId = null;
+    previousPointer = null;
+    viewport.classList.remove("dragging");
+    if (dragDistance > 7) return;
+    const camera = state.reachCanvasCamera;
+    const ratio = camera.zoom / camera.baseZoom;
+    const world = screenToWorld(clickPoint.x, clickPoint.y);
+    if (ratio > 4.5) {
+      let nearestBody = null;
+      geography.systems.forEach(system => (bodiesBySystem.get(system.id) || []).filter(body => body.kind !== "star").forEach(body => {
+        const position = bodyPosition(system, body);
+        const screen = worldToScreen(position.x, position.y);
+        const distance = Math.hypot(screen.x - clickPoint.x, screen.y - clickPoint.y);
+        if (!nearestBody || distance < nearestBody.distance) nearestBody = { body, distance };
+      }));
+      if (nearestBody && nearestBody.distance < 18) {
+        openGeographySystem(nearestBody.body.systemId);
+        return;
+      }
+    }
+    const nearestSystem = geography.systems.reduce((nearest, system) => {
+      const distance = Math.hypot(system.x - world.x, system.y - world.y) * camera.zoom;
+      return !nearest || distance < nearest.distance ? { system, distance } : nearest;
+    }, null);
+    if (nearestSystem && nearestSystem.distance < 22) {
+      zoomAnchor = null;
+      state.selectedSystem = nearestSystem.system.id;
+      camera.targetX = nearestSystem.system.x;
+      camera.targetY = nearestSystem.system.y;
+      camera.targetZoom = Math.max(camera.targetZoom, camera.baseZoom * 6.5);
+      return;
+    }
+    const sector = geographySectorAt(world);
+    if (sector && ratio < 3) {
+      zoomAnchor = null;
+      camera.targetX = sector.label[0];
+      camera.targetY = sector.label[1];
+      camera.targetZoom = Math.max(camera.targetZoom, camera.baseZoom * 2.5);
+    }
+  }
+
+  canvas.addEventListener("pointerup", finishPointer);
+  canvas.addEventListener("pointercancel", finishPointer);
+  canvas.addEventListener("pointerleave", () => {
+    if (pointerId !== null) return;
+    hoveredTarget = null;
+    canvas.style.cursor = "grab";
+    window.clearTimeout(tooltipResolveTimer);
+    if (tooltip) {
+      tooltip.classList.remove("pending", "loading");
+      tooltip.dataset.targetKey = "";
+      tooltip.hidden = true;
+    }
+  });
+
+  viewport.querySelector(".reach-controls").addEventListener("click", event => {
+    const button = event.target.closest("[data-reach-zoom]");
+    if (!button) return;
+    const camera = state.reachCanvasCamera;
+    if (button.dataset.reachZoom === "reset") {
+      zoomAnchor = null;
+      state.selectedSystem = null;
+      camera.targetX = bounds.x + bounds.w / 2;
+      camera.targetY = bounds.y + bounds.h / 2;
+      camera.targetZoom = camera.baseZoom;
+    } else {
+      zoomAnchor = null;
+      const factor = button.dataset.reachZoom === "in" ? 1.65 : 1 / 1.65;
+      camera.targetZoom = canvasClamp(camera.targetZoom * factor, camera.baseZoom, camera.baseZoom * 120);
+    }
+  });
+
+  resizeCanvas();
+  cancelAnimationFrame(animationFrame);
+  animationFrame = requestAnimationFrame(drawFrame);
+}
+
+function mobileGeographyHtml() {
+  if (!state.geography) return "";
+  const bodyCounts = new Map();
+  state.geography.bodies.forEach(body => {
+    if (body.kind === "star") return;
+    bodyCounts.set(body.systemId, (bodyCounts.get(body.systemId) || 0) + 1);
+  });
+  return `<section class="reach-mobile-nav" aria-label="Jericho Reach sector navigator">
+    <div class="tier-label">Sector Navigator</div>
+    ${state.geography.sectors.map(sector => {
+      const systems = state.geography.systems.filter(system => system.sectorId === sector.id)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return `<details class="reach-mobile-sector">
+        <summary><span>${escapeHtml(sector.name)}</span><small>${systems.length} systems</small></summary>
+        <div class="reach-mobile-systems">${systems.map(system => `
+          <button class="reach-mobile-system" type="button" data-mobile-system="${escapeHtml(system.id)}">
+            <span>${escapeHtml(system.name)}</span><small>${bodyCounts.get(system.id) || 0} bodies</small>
+          </button>`).join("")}</div>
+      </details>`;
+    }).join("")}
+  </section>`;
+}
+
 function renderReach() {
   const app = document.getElementById("app");
-  if (state.reachStatus !== "live" || !state.reach) {
-    const failed = state.reachStatus === "error";
+  const geographyLive = state.geographyStatus === "live" && state.geography;
+  const reachLive = state.reachStatus === "live" && state.reach;
+  if (!geographyLive && !reachLive) {
+    const failed = state.reachStatus === "error" && state.geographyStatus === "error";
     const message = failed
       ? "&gt; Cogitator link severed<br>The Reach chart could not be retrieved from the Strategium."
       : "&gt; Awaiting astropathic relay<br>No star chart has been received from the Servitor yet.";
@@ -3739,13 +4997,20 @@ function renderReach() {
     ])}`;
     return;
   }
-  const reach = state.reach;
-  state.reachBase = reachBounds(reach.nodes);
+  const reach = state.reach || { nodes: [], edges: [], directives: [], rep: 0 };
+  if (!geographyLive) state.reachBase = reachBounds(reach.nodes);
   const directives = visibleReachDirectives();
   const active = activeReachDirectives();
   const contested = new Set(active.map(d => d.node)).size;
   const rep = Number(reach.rep) || 0;
   const { statuses, company } = state.reachFilters;
+  const selectedSector = state.geography && state.geography.sectors.find(sector => sector.id === state.selectedSector);
+  const selectedSystem = state.geography && state.geography.systems.find(system => system.id === state.selectedSystem);
+  const mapHeading = state.reachMapLevel === "system" ? selectedSystem?.name || "System"
+    : state.reachMapLevel === "sector" ? selectedSector?.name || "Sector" : "Jericho Reach";
+  const mapSubheading = state.reachMapLevel === "system" ? "Planetary-system tactical view"
+    : state.reachMapLevel === "sector" ? "System-level tactical chart" : "Sector-level command chart";
+  const parentLabel = state.reachMapLevel === "system" ? `Return to ${selectedSector?.name || "sector"}` : "Return to Reach sectors";
 
   const chips = REACH_FILTER_CHIPS.map(chip => {
     const pressed = chip.statuses.every(s => statuses.has(s));
@@ -3786,7 +5051,8 @@ function renderReach() {
       <select class="reach-select" data-reach-company aria-label="Filter by company">${companyOptions}</select>
     </div>
     <div class="reach-viewport" id="reach-viewport">
-      ${reachSvg(reach, directives)}
+      ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Continuous galactic map of the Jericho Reach"></canvas>` : reachSvg(reach, directives)}
+      ${geographyLive ? `<div class="reach-map-level"><strong>Jericho Reach</strong>Continuous stellar cartography</div><div id="reach-canvas-status" class="reach-canvas-status">Strategic sector projection</div><div id="reach-canvas-tooltip" class="reach-canvas-tooltip" hidden></div>` : ""}
       <div class="reach-controls">
         <button class="icon-btn" type="button" data-reach-zoom="in" aria-label="Zoom in">+</button>
         <button class="icon-btn" type="button" data-reach-zoom="out" aria-label="Zoom out">&minus;</button>
@@ -3797,9 +5063,11 @@ function renderReach() {
         <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:var(--gold);border-style:dashed"></span>Active theatre</div>
         <div class="reach-legend-item"><span style="color:var(--gold)">&#9876;</span>Brothers deployed</div>
       </div>
-      <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))} &middot; ` : ""}drag to pan &middot; click then scroll to zoom</div>
+      <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))} &middot; ` : ""}drag to pan &middot; wheel to zoom &middot; select to focus</div>
       <div class="reach-tooltip" id="reach-tooltip" hidden></div>
     </div>
+    ${geographyLive ? `<details class="reach-desktop-index"><summary>Sector navigator</summary>${mobileGeographyHtml()}</details>` : ""}
+    ${geographyLive ? mobileGeographyHtml() : ""}
     <div class="tier-label" style="margin-top:26px">Active Deployments (${deployments.length})</div>
     <table class="roster-table reach-table">
       <thead><tr><th>Directive</th><th>World</th><th>Status</th><th>Assigned</th><th>Brothers</th><th>Deadline</th></tr></thead>
@@ -3898,8 +5166,86 @@ function hideReachTooltip() {
   if (tip) tip.hidden = true;
 }
 
+function reachMapPoint(clientX, clientY) {
+  const svg = document.getElementById("reach-svg");
+  if (!svg || !state.reachView) return null;
+  const rect = svg.getBoundingClientRect();
+  const view = state.reachView;
+  const height = view.w * rect.height / rect.width;
+  return {
+    x: view.cx - view.w / 2 + ((clientX - rect.left) / rect.width) * view.w,
+    y: view.cy - height / 2 + ((clientY - rect.top) / rect.height) * height
+  };
+}
+
+function geographyPointInPolygon(point, polygon) {
+  let inside = false;
+  let previous = polygon[polygon.length - 1];
+  polygon.forEach(current => {
+    const crosses = (current[1] > point.y) !== (previous[1] > point.y);
+    if (crosses) {
+      const boundaryX = (previous[0] - current[0]) * (point.y - current[1]) / (previous[1] - current[1]) + current[0];
+      if (point.x < boundaryX) inside = !inside;
+    }
+    previous = current;
+  });
+  return inside;
+}
+
+function geographySectorAt(point) {
+  return point && state.geography.sectors.find(sector => geographyPointInPolygon(point, sector.boundary));
+}
+
+function nearestGeographySystem(point, sectorId) {
+  const systems = geographySectorDisplaySystems(sectorId);
+  if (!systems.length) return null;
+  return systems.reduce((nearest, system) => {
+    const distance = Math.hypot(system.x - point.x, system.y - point.y);
+    return !nearest || distance < nearest.distance ? { system, distance } : nearest;
+  }, null).system;
+}
+
+function showReachLevel() {
+  state.reachMapLevel = "reach";
+  state.selectedSector = null;
+  state.selectedSystem = null;
+  state.reachView = null;
+  state.reachSemanticZoomAt = performance.now();
+  renderReach();
+}
+
+function showSectorLevel(sectorId) {
+  if (!state.geography.sectors.some(sector => sector.id === sectorId)) return;
+  state.reachMapLevel = "sector";
+  state.selectedSector = sectorId;
+  state.selectedSystem = null;
+  state.reachView = null;
+  state.reachSemanticZoomAt = performance.now();
+  renderReach();
+}
+
+function showSystemLevel(systemId) {
+  const system = state.geography.systems.find(item => item.id === systemId);
+  if (!system) return;
+  state.reachMapLevel = "system";
+  state.selectedSector = system.sectorId;
+  state.selectedSystem = system.id;
+  state.reachView = null;
+  state.reachSemanticZoomAt = performance.now();
+  renderReach();
+}
+
+function showParentReachLevel() {
+  if (state.reachMapLevel === "system") showSectorLevel(state.selectedSector);
+  else showReachLevel();
+}
+
 function setupReachViewport() {
   const vp = document.getElementById("reach-viewport");
+  if (document.getElementById("reach-canvas")) {
+    setupGeographyCanvas();
+    return;
+  }
   const svg = document.getElementById("reach-svg");
   if (!vp || !svg) return;
   applyReachView();
@@ -3908,6 +5254,8 @@ function setupReachViewport() {
   const pointers = new Map();
   let moved = 0;
   let engaged = false;
+  let semanticWheelDelta = 0;
+  let semanticWheelAt = 0;
 
   vp.addEventListener("pointerdown", e => {
     engaged = true;
@@ -3961,7 +5309,34 @@ function setupReachViewport() {
 
   vp.addEventListener("pointerleave", () => { if (!pointers.size) engaged = false; });
   vp.addEventListener("wheel", e => {
-    // Leave page scrolling alone until the chart is engaged; trackpad pinch arrives with ctrlKey.
+    if (state.geographyStatus === "live" && state.geography) {
+      e.preventDefault();
+      const now = performance.now();
+      if (now - state.reachSemanticZoomAt < 750) {
+        semanticWheelDelta = 0;
+        return;
+      }
+      if (now - semanticWheelAt > 900 || Math.sign(semanticWheelDelta) !== Math.sign(e.deltaY)) semanticWheelDelta = 0;
+      semanticWheelAt = now;
+      semanticWheelDelta += e.deltaY * (e.deltaMode === 1 ? 14 : 1);
+      if (Math.abs(semanticWheelDelta) < 260) return;
+      const inward = semanticWheelDelta < 0;
+      semanticWheelDelta = 0;
+      const point = reachMapPoint(e.clientX, e.clientY);
+      if (inward && state.reachMapLevel === "reach") {
+        const sector = geographySectorAt(point);
+        if (sector) showSectorLevel(sector.id);
+      } else if (inward && state.reachMapLevel === "sector") {
+        const system = nearestGeographySystem(point, state.selectedSector);
+        if (system) showSystemLevel(system.id);
+      } else if (!inward && state.reachMapLevel !== "reach") {
+        showParentReachLevel();
+      } else if (state.reachMapLevel === "system") {
+        zoomReachAt(Math.exp(e.deltaY * .0015), e.clientX, e.clientY);
+      }
+      return;
+    }
+    // Leave page scrolling alone until the legacy chart is engaged; trackpad pinch arrives with ctrlKey.
     if (!engaged && !e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
     zoomReachAt(Math.exp(e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015)), e.clientX, e.clientY);
@@ -4254,6 +5629,35 @@ function wireEvents() {
       toggleReachFilter(filterBtn.dataset.reachFilter);
       return;
     }
+    const mobileSystem = e.target.closest("[data-mobile-system]");
+    if (mobileSystem) {
+      openGeographySystem(mobileSystem.dataset.mobileSystem);
+      return;
+    }
+    const levelBtn = e.target.closest("[data-reach-level]");
+    if (levelBtn) {
+      showParentReachLevel();
+      return;
+    }
+    const sectorEl = e.target.closest("[data-sector]");
+    if (sectorEl) {
+      showSectorLevel(sectorEl.dataset.sector);
+      return;
+    }
+    const systemEl = e.target.closest("[data-system]");
+    if (systemEl) {
+      if (state.reachMapLevel === "reach") {
+        const system = state.geography && state.geography.systems.find(item => item.id === systemEl.dataset.system);
+        if (system) showSectorLevel(system.sectorId);
+      } else showSystemLevel(systemEl.dataset.system);
+      return;
+    }
+    const bodyEl = e.target.closest("[data-body]");
+    if (bodyEl) {
+      const body = state.geography && state.geography.bodies.find(item => item.id === bodyEl.dataset.body);
+      if (body) openGeographySystem(body.systemId);
+      return;
+    }
     const planetEl = e.target.closest("[data-planet]");
     if (planetEl) {
       if (state.reachSuppressClick) return;
@@ -4302,6 +5706,11 @@ function wireEvents() {
     if (atlasRegion && (e.key === "Enter" || e.key === " ")) {
       e.preventDefault();
       openAtlasLocation(atlasRegion.dataset.atlasLocation, atlasRegion);
+      return;
+    }
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches(".reach-sector, .reach-system, .reach-body")) {
+      e.preventDefault();
+      e.target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       return;
     }
     if (e.key === "Escape") {
@@ -4455,6 +5864,7 @@ async function init() {
   await loadSavedSettings();
   await Promise.all([
     loadData(),
+    loadSiteConfig(),
     state.page === "reach" ? loadReach() : null,
     state.page === "blood" ? loadChapterLore() : null
   ]);

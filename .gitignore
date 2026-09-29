@@ -27,6 +27,7 @@ coverage/
 !.env.example
 __pycache__
 data/*
+!data/reach_geography.json
 # Python/test/runtime artifacts
 .pytest_cache/
 .ruff_cache/
