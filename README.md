@@ -27,11 +27,21 @@ The live app loads roster data from its same-origin `/api/roster` endpoint. The 
 
 ## Record of Blood
 
-Visit `/record-of-blood` for the fortress wall, using `assets/record of blood wall.png` as its backdrop. It shows one pauldron for each Chapter represented by the live ranked roster, excluding Black Shield and unrecorded origins. Use the arrows to browse eight Chapters at a time (four on narrow screens). Hover or focus a pauldron for its Chapter's member names; select it to open the full roster and member dossiers. Without a live roster, the room shows a relay/empty state rather than sample Chapters.
+The interface is framed as an Ordo Xenos analyst's Cogitator for investigating activity in the Jericho Reach. The main channels are **Personnel Docket**, **Sector Operations**, and **Chapter Origins**; the shared Return control restores the previous view and focus where possible.
+
+The root route opens with a skippable, session-scoped Cogitator startup and simulated Inquisitorial credential check, then reveals the interactive Watch Fortress Jericho atlas. Its SVG region paths follow the source map and its legend: specialist and company locations open their existing dossiers, while flight, communications, and defense locations open Sector Operations. On narrow screens the atlas preserves readable detail through horizontal panning. The production atlas image is served from the fixed `/assets/watch-fortress-jericho-map.png` route; `assets/jericho map with legend.png` remains a development reference.
+
+Formation chart tiles and dossiers use the supplied specialist insignia in place of generic cadre dots: `Armory.png`, `Apothecarion.png`, `Librarians.png`, `Reclusiam.png`, `Recon.png` for the Black Vault, and `Watch_Blades.png` for the Hall of Blades. Existing company sigils remain unchanged. The server serves the six formation files through `/assets/formation-symbols/<formation-key>.png`.
+
+Company, formation, and Kill Team views display `RENOWN: <tier>` as the rank, with numeric REP and completed directives as separate values. Kill Team views also display the tier unlocks defined by the bot: Unproven/Initiated have no unlocks; Vigilant unlocks Cloaks; Sworn adds Iron Halos; Hallowed adds crested helms (except Victrix Guard); Eternal unlocks a feature in Jericho lore. The publisher only defines unlock descriptions for Kill Teams, so company and formation views do not invent unlocks. Formation honours use the existing challenge-ribbon display; when there are no awarded ribbons, no honours panel is rendered. Marine dossiers place recorded award ribbons between the marine's identity and service studs, aligned without a separator. The Personnel Docket's only blinking cursor sits at the end of its terminal footer.
+
+Visit `/record-of-blood` for the Chapter-origin index. It shows one pauldron for each home Chapter represented by brothers currently serving at Watch Fortress Jericho, excluding Black Shield and unrecorded origins. Use the arrows to browse twelve Chapters per page at any viewport size. Each compact Chapter record expands on hover or keyboard focus to show up to five longest-serving members, including rank, name, and service years; select one to open its Chapter lore and complete roster in a compact dossier. Lore is read from the bot's `reference/chapters.json` when the repositories are side by side; set `STRATEGIUM_CHAPTERS_REFERENCE_PATH` when they are stored elsewhere. Without a live roster, the archive shows a relay/empty state rather than sample Chapters. A subtle blinking cursor and scanline treatment carry the Cogitator display language across the Strategium.
 
 Pauldrons without supplied artwork are intentionally unmarked. The supplied PNGs are served in place from `assets/Painted Pauldrons/Completed/`; the Chapter-to-filename list is `PAULDRON_ART` in `jericho-strategium.html`. To add another, place a transparent PNG in that folder and add its Chapter name to the list (or an explicit filename override when spelling differs, as with Celestial Lions). The server serves only simple PNG basenames from this folder; it does not expose the PSD template or other files.
 
-Optional ambience uses `assets/ambience/fortress-ambience.mp3`. The play control stays disabled until this file is present; playback never starts automatically, and stops when the visitor leaves the room or hides the tab. Use an original or licensed loop you have permission to distribute. Both asset folders are included when `assets/` is copied during deployment.
+Optional ambience uses `assets/ambience/fortress-ambience.mp3`. No recording is currently included, so the play control identifies the missing file and stays disabled until it is supplied. Playback never starts automatically, and stops when the visitor leaves the archive or hides the tab. Use an original or licensed loop you have permission to distribute. Both asset folders are included when `assets/` is copied during deployment.
+
+The shared header uses the Jericho Deathwatch emblem at `assets/jericho symbol.png`, served at the fixed `/assets/jericho-symbol.png` route. The startup terminal uses `assets/Inquisitorial_Rosette.png`, served at the fixed `/assets/inquisitorial-rosette.png` route. The Fortress org chart keeps its existing layout and connector network; the Librarius and Reclusiam command routes branch orthogonally from the Watch Master's node.
 
 The endpoint should return JSON in this shape:
 
@@ -66,13 +76,13 @@ Important notes:
 - `serverJoinedAt` is an optional ISO timestamp from Discord. The UI derives completed years of service from it.
 - `serverDays` is an optional direct alternative to `serverJoinedAt` when the bot already calculates Discord tenure.
 - `aarCount` is an optional number of recorded after-action reports.
-- A Marine earns one service stud for every complete pair of thresholds: `400 AAR points` **and** `4 complete weeks`. Completed studs are calculated as `min(floor(aarPoints / 400), floor(serverWeeks / 4))`, capped at 16.
-- Each completed service stud represents 25 Long Vigil years. Long Vigil service is therefore `serviceStuds * 25`, capped at 400 years.
+- A Marine earns one service stud for every complete pair of thresholds: `400 AAR points` **and** `4 complete weeks`. Completed studs are calculated as `min(floor(aarPoints / 400), floor(serverDays / 28))`, capped at 16.
+- Long Vigil years use continuous progress through those same paired thresholds: `min(aarPoints / 400, serverDays / 28) * 25`, capped at 400 years and displayed to one decimal place. Service studs remain discrete milestone badges, so partial progress changes years without awarding a stud.
 - The dossier uses a configurable late-M42 anchor (`CURRENT_IMPERIAL_YEAR = 41999`) and estimates Watch entry as the anchor year minus completed Long Vigil years. The setting is configurable because 40k does not provide one universally fixed current calendar date.
 - Examples:
-  - `400 AAR points + 4 weeks` earns `1 service stud` and `25 Long Vigil years`.
-  - `5000 AAR points + 4 weeks` still earns only `1 service stud` because time is the limiting factor.
-  - `5000 AAR points + 64 weeks` earns `12 service studs` and `300 Long Vigil years`.
+  - `200 AAR points + 4 weeks` earns `0 service studs` and `12.5 Long Vigil years` because AAR progress is limiting.
+  - `400 AAR points + 2 weeks` earns `0 service studs` and `12.5 Long Vigil years` because tenure is limiting.
+  - `5000 AAR points + 4 weeks` earns `1 service stud` and `25 Long Vigil years`; additional AAR cannot outrun tenure.
 - Do not call a Discord bot token or other secret directly from the browser. The bot publishes signed snapshots to `/internal/roster/snapshot`; this backend stores the snapshot and serves `/api/roster`.
 - `backstory` is the only user-editable field. Discord roles and bot-managed data remain authoritative for all other fields.
 - For production, put the backend behind HTTPS, set `STRATEGIUM_ALLOWED_ORIGIN` to the exact site origin, set `STRATEGIUM_SECURE_COOKIES=1`, and keep all secrets in the host secret manager.

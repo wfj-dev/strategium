@@ -22,6 +22,12 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
+CHAPTERS_REFERENCE_PATH = Path(
+    os.getenv(
+        "STRATEGIUM_CHAPTERS_REFERENCE_PATH",
+        str(ROOT.parent / "discord-bots" / "op-scribe-servitor" / "reference" / "chapters.json"),
+    )
+)
 
 
 def _load_dotenv(path: Path) -> None:
@@ -58,6 +64,22 @@ AMBIENCE_PATH = ROOT / "assets" / "ambience" / "fortress-ambience.mp3"
 AMBIENCE_URL = "/assets/ambience/fortress-ambience.mp3"
 RECORD_WALL_PATH = ROOT / "assets" / "record of blood wall.png"
 RECORD_WALL_URL = "/assets/record-of-blood-wall.png"
+JERICHO_SYMBOL_PATH = ROOT / "assets" / "jericho symbol.png"
+JERICHO_SYMBOL_URL = "/assets/jericho-symbol.png"
+INQUISITORIAL_ROSETTE_PATH = ROOT / "assets" / "Inquisitorial_Rosette.png"
+INQUISITORIAL_ROSETTE_URL = "/assets/inquisitorial-rosette.png"
+FORTRESS_MAP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.png"
+FORTRESS_MAP_URL = "/assets/watch-fortress-jericho-map.png"
+FORMATION_SYMBOLS = {
+    "armory": "Armory.png",
+    "apothecarion": "Apothecarion.png",
+    "librarius": "Librarians.png",
+    "reclusiam": "Reclusiam.png",
+    "black_vault": "Recon.png",
+    "hall_of_blades": "Watch_Blades.png",
+}
+FORMATION_SYMBOLS_DIR = ROOT / "assets"
+FORMATION_SYMBOL_URL_PREFIX = "/assets/formation-symbols/"
 MAX_AWARDS_PER_MEMBER = 40
 HOST = os.getenv("STRATEGIUM_HOST", "127.0.0.1")
 PORT = int(os.getenv("STRATEGIUM_PORT", "8787"))
@@ -432,10 +454,30 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send_media(_pauldron_path(urllib.parse.unquote(path[len(PAULDRON_URL_PREFIX):])), head=True)
             return
         if path == AMBIENCE_URL:
-            self._send_media(AMBIENCE_PATH if AMBIENCE_PATH.is_file() else None, head=True)
+            if AMBIENCE_PATH.is_file():
+                self._send_media(AMBIENCE_PATH, head=True)
+            else:
+                self.send_response(HTTPStatus.NO_CONTENT)
+                self.send_header("X-Asset-Available", "false")
+                self.end_headers()
             return
         if path == RECORD_WALL_URL:
             self._send_media(RECORD_WALL_PATH if RECORD_WALL_PATH.is_file() else None, head=True)
+            return
+        if path == JERICHO_SYMBOL_URL:
+            self._send_media(JERICHO_SYMBOL_PATH if JERICHO_SYMBOL_PATH.is_file() else None, head=True)
+            return
+        if path == INQUISITORIAL_ROSETTE_URL:
+            self._send_media(INQUISITORIAL_ROSETTE_PATH if INQUISITORIAL_ROSETTE_PATH.is_file() else None, head=True)
+            return
+        if path == FORTRESS_MAP_URL:
+            self._send_media(FORTRESS_MAP_PATH if FORTRESS_MAP_PATH.is_file() else None, head=True)
+            return
+        if path.startswith(FORMATION_SYMBOL_URL_PREFIX):
+            key = path[len(FORMATION_SYMBOL_URL_PREFIX):].removesuffix(".png")
+            filename = FORMATION_SYMBOLS.get(key)
+            symbol = FORMATION_SYMBOLS_DIR / filename if filename else None
+            self._send_media(symbol if symbol and symbol.is_file() else None, head=True)
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -447,6 +489,17 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.OK, {"ok": True})
         elif parsed.path == "/api/roster":
             self._send(HTTPStatus.OK, self._merged_roster())
+        elif parsed.path == "/api/chapter-lore":
+            reference = _load_json(CHAPTERS_REFERENCE_PATH, {})
+            chapters = reference.get("chapters", []) if isinstance(reference, dict) else []
+            lore = {
+                chapter["name"]: chapter["lore_summary"]
+                for chapter in chapters
+                if isinstance(chapter, dict)
+                and isinstance(chapter.get("name"), str)
+                and isinstance(chapter.get("lore_summary"), str)
+            } if isinstance(chapters, list) else {}
+            self._send(HTTPStatus.OK, lore, {"Cache-Control": "no-cache"})
         elif parsed.path == "/api/reach":
             with _LOCK:
                 reach = _load_json(REACH_PATH, {})
@@ -459,6 +512,17 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send_media(AMBIENCE_PATH if AMBIENCE_PATH.is_file() else None)
         elif parsed.path == RECORD_WALL_URL:
             self._send_media(RECORD_WALL_PATH if RECORD_WALL_PATH.is_file() else None)
+        elif parsed.path == JERICHO_SYMBOL_URL:
+            self._send_media(JERICHO_SYMBOL_PATH if JERICHO_SYMBOL_PATH.is_file() else None)
+        elif parsed.path == INQUISITORIAL_ROSETTE_URL:
+            self._send_media(INQUISITORIAL_ROSETTE_PATH if INQUISITORIAL_ROSETTE_PATH.is_file() else None)
+        elif parsed.path == FORTRESS_MAP_URL:
+            self._send_media(FORTRESS_MAP_PATH if FORTRESS_MAP_PATH.is_file() else None)
+        elif parsed.path.startswith(FORMATION_SYMBOL_URL_PREFIX):
+            key = parsed.path[len(FORMATION_SYMBOL_URL_PREFIX):].removesuffix(".png")
+            filename = FORMATION_SYMBOLS.get(key)
+            symbol = FORMATION_SYMBOLS_DIR / filename if filename else None
+            self._send_media(symbol if symbol and symbol.is_file() else None)
         elif parsed.path == "/api/auth/discord/start":
             self._discord_start()
         elif parsed.path == "/api/auth/logout":
