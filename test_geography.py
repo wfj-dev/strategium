@@ -1,3 +1,5 @@
+import math
+
 import pytest
 from pathlib import Path
 
@@ -129,8 +131,8 @@ def test_generated_geography_preserves_legacy_anchors_and_separates_fortresses()
     geography = load_geography(GEOGRAPHY_PATH)
 
     assert len(geography["sectors"]) == 7
-    assert len(geography["systems"]) == 90
-    assert 360 <= len(geography["bodies"]) <= 540
+    assert len(geography["systems"]) == 360
+    assert len(geography["bodies"]) == 1786
     assert {system["name"] for system in geography["systems"]} >= {
         "Recidious",
         "Erioch",
@@ -176,6 +178,52 @@ def _point_in_polygon(point: tuple[float, float], polygon: list[list[float]]) ->
                 inside = not inside
         previous_x, previous_y = current_x, current_y
     return inside
+
+
+def test_generated_periphery_doubles_systems_and_bodies_within_sectors() -> None:
+    geography = load_geography(GEOGRAPHY_PATH)
+    systems = {system["id"]: system for system in geography["systems"]}
+    sectors = {sector["id"]: sector for sector in geography["sectors"]}
+    body_counts = {system_id: 0 for system_id in systems}
+    for body in geography["bodies"]:
+        body_counts[body["systemId"]] += 1
+
+    companions = [system for system in systems.values() if "periphery" in system["tags"]]
+    assert len(companions) == 90
+    for companion in companions:
+        parent_id = companion["id"].removesuffix("_periphery")
+        parent = systems[parent_id]
+        assert companion["source"] == "homebrew"
+        assert companion["sectorId"] == parent["sectorId"]
+        assert _point_in_polygon((companion["x"], companion["y"]), sectors[companion["sectorId"]]["boundary"])
+        assert body_counts[companion["id"]] == body_counts[parent_id]
+        assert any(
+            {route["sourceSystemId"], route["targetSystemId"]} == {parent_id, companion["id"]}
+            and route["status"] == "open"
+            for route in geography["routes"]
+        )
+
+
+def test_survey_systems_fill_sectors_without_overlapping_or_isolating_systems() -> None:
+    geography = load_geography(GEOGRAPHY_PATH)
+    sectors = {sector["id"]: sector for sector in geography["sectors"]}
+    surveys = [system for system in geography["systems"] if "survey" in system["tags"]]
+    assert len(surveys) == 180
+    assert all(sum(system["sectorId"] == sector_id for system in surveys) >= 10 for sector_id in sectors)
+
+    for survey in surveys:
+        point = (survey["x"], survey["y"])
+        assert survey["source"] == "homebrew"
+        assert _point_in_polygon(point, sectors[survey["sectorId"]]["boundary"])
+        assert all(
+            math.dist(point, (other["x"], other["y"])) >= 28
+            for other in geography["systems"] if other["id"] != survey["id"]
+        )
+        assert any(
+            survey["id"] in (route["sourceSystemId"], route["targetSystemId"])
+            and route["status"] == "open"
+            for route in geography["routes"]
+        )
 
 
 def test_generated_sector_boundaries_form_one_non_overlapping_partition() -> None:
