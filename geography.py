@@ -159,6 +159,16 @@ def validate_geography(payload: Any) -> dict[str, Any]:
             if body_system[parent_id] != body["systemId"]:
                 raise ValueError(f"body {body['id']} parent belongs to another system")
 
+    parents = {body["id"]: body["parentBodyId"] for body in bodies}
+    for body in bodies:
+        ancestor = body["id"]
+        visited = set()
+        while ancestor is not None:
+            if ancestor in visited:
+                raise ValueError(f"body {body['id']} has a parent cycle")
+            visited.add(ancestor)
+            ancestor = parents[ancestor]
+
     for system in systems:
         primary_id = system["primaryBodyId"]
         if primary_id not in body_ids:

@@ -108,6 +108,20 @@ def test_validate_geography_rejects_orphan_body() -> None:
         validate_geography(payload)
 
 
+@pytest.mark.parametrize("cycle", ["self", "pair"])
+def test_validate_geography_rejects_parent_cycles(cycle: str) -> None:
+    payload = _sample_geography()
+    parent = payload["bodies"][0]
+    if cycle == "pair":
+        payload["bodies"].append({**parent, "id": "jericho_anchorage", "parentBodyId": parent["id"]})
+        parent["parentBodyId"] = "jericho_anchorage"
+    else:
+        parent["parentBodyId"] = parent["id"]
+
+    with pytest.raises(ValueError, match="parent cycle"):
+        validate_geography(payload)
+
+
 def test_shortest_route_uses_authored_transit_hours() -> None:
     geography = validate_geography(_sample_geography())
 
