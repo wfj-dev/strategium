@@ -141,6 +141,18 @@ def _sector_partitions() -> dict[str, list[list[float]]]:
     return partitions
 
 
+def _point_in_polygon(x: float, y: float, polygon: list[list[float]]) -> bool:
+    inside = False
+    previous_x, previous_y = polygon[-1]
+    for current_x, current_y in polygon:
+        if (current_y > y) != (previous_y > y):
+            boundary_x = (previous_x - current_x) * (y - current_y) / (previous_y - current_y) + current_x
+            if x < boundary_x:
+                inside = not inside
+        previous_x, previous_y = current_x, current_y
+    return inside
+
+
 def _normalized_sector(node: dict[str, Any], centroids: dict[str, tuple[float, float]]) -> str:
     region = str(node.get("region") or "")
     if region != "contested":
@@ -448,6 +460,158 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
             "status": "open",
         })
 
+    original_systems = tuple(systems)
+    occupied = [(system["x"], system["y"]) for system in original_systems]
+    periphery_kinds = ("frontier_world", "mining_world", "dead_world", "orbital_station", "asteroid_belt")
+    for system in original_systems:
+        companion_id = f"{system['id']}_periphery"
+        companion_name = f"{system['name']} Periphery"
+        position = None
+        for radius in (42, 56, 72, 90, 115, 145, *range(175, 901, 30)):
+            for step in range(24):
+                angle = (sum(ord(character) for character in system["id"]) + step * 137.508) * math.pi / 180
+                x = round(system["x"] + radius * math.cos(angle), 2)
+                y = round(system["y"] + radius * math.sin(angle), 2)
+                if _point_in_polygon(x, y, partitions[system["sectorId"]]) and all(
+                    math.dist((x, y), other) >= 28 for other in occupied
+                ):
+                    position = (x, y)
+                    break
+            if position:
+                break
+        if position is None:
+            raise ValueError(f"no free position in sector for {companion_id}")
+        occupied.append(position)
+        systems.append({
+            "id": companion_id,
+            "name": companion_name,
+            "sectorId": system["sectorId"],
+            "x": position[0],
+            "y": position[1],
+            "classification": "charted_system",
+            "primaryBodyId": f"{companion_id}_star",
+            "source": "homebrew",
+            "tags": ["periphery"],
+        })
+        bodies.append({
+            "id": f"{companion_id}_star",
+            "systemId": companion_id,
+            "parentBodyId": None,
+            "name": f"{companion_name} Primary",
+            "kind": "star",
+            "orbitIndex": 0,
+            "orbitAngle": 0,
+            "displayRadius": 6,
+            "battleEligible": False,
+            "source": "homebrew",
+        })
+        body_count = sum(body["systemId"] == system["id"] for body in bodies) - 1
+        for orbit_index in range(1, body_count + 1):
+            kind = periphery_kinds[orbit_index - 1]
+            bodies.append({
+                "id": f"{companion_id}_body_{orbit_index}",
+                "systemId": companion_id,
+                "parentBodyId": None,
+                "name": f"{companion_name} {orbit_index}",
+                "kind": kind,
+                "orbitIndex": orbit_index,
+                "orbitAngle": (orbit_index * 137.508) % 360,
+                "displayRadius": 4 + orbit_index % 3,
+                "battleEligible": kind not in {"asteroid_belt"},
+                "source": "homebrew",
+            })
+        distance = math.dist(position, (system["x"], system["y"]))
+        proximity = "far" if distance > 240 else "medium" if distance > 150 else "close"
+        routes.append({
+            "id": f"{system['id']}__{companion_id}",
+            "sourceSystemId": system["id"],
+            "targetSystemId": companion_id,
+            "routeType": "charted_warp",
+            "baseTransitHours": _route_hours(distance, proximity == "close", proximity),
+            "risk": _route_risk(proximity, proximity == "close"),
+            "status": "open",
+        })
+
+    chart_x = [point[0] for point in CHART_BOUNDARY]
+    chart_y = [point[1] for point in CHART_BOUNDARY]
+    candidates = []
+    for row, y in enumerate(range(int(min(chart_y)) + 18, int(max(chart_y)), 36)):
+        for x in range(int(min(chart_x)) + 18 + row % 2 * 18, int(max(chart_x)), 36):
+            sector_id = next(
+                (sector_id for sector_id, polygon in partitions.items() if _point_in_polygon(x, y, polygon)),
+                None,
+            )
+            if sector_id is not None:
+                nearest = min(math.dist((x, y), other) for other in occupied)
+                candidates.append((x, y, sector_id, nearest))
+
+    survey_counts: dict[str, int] = defaultdict(int)
+    for _ in range(180):
+        x, y, sector_id, clearance = max(candidates, key=lambda candidate: candidate[3])
+        if clearance < 28:
+            raise ValueError("no room for additional charted systems")
+        survey_counts[sector_id] += 1
+        survey_id = f"{sector_id}_survey_{survey_counts[sector_id]:02d}"
+        survey_name = f"{SECTOR_NAMES[sector_id]} Survey {survey_counts[sector_id]:02d}"
+        parent = min(
+            (system for system in systems if system["sectorId"] == sector_id),
+            key=lambda system: math.dist((x, y), (system["x"], system["y"])),
+        )
+        systems.append({
+            "id": survey_id,
+            "name": survey_name,
+            "sectorId": sector_id,
+            "x": x,
+            "y": y,
+            "classification": "charted_system",
+            "primaryBodyId": f"{survey_id}_star",
+            "source": "homebrew",
+            "tags": ["survey"],
+        })
+        bodies.append({
+            "id": f"{survey_id}_star",
+            "systemId": survey_id,
+            "parentBodyId": None,
+            "name": f"{survey_name} Primary",
+            "kind": "star",
+            "orbitIndex": 0,
+            "orbitAngle": 0,
+            "displayRadius": 6,
+            "battleEligible": False,
+            "source": "homebrew",
+        })
+        for orbit_index in range(1, 4 + survey_counts[sector_id] % 3):
+            kind = periphery_kinds[(orbit_index + survey_counts[sector_id]) % len(periphery_kinds)]
+            bodies.append({
+                "id": f"{survey_id}_body_{orbit_index}",
+                "systemId": survey_id,
+                "parentBodyId": None,
+                "name": f"{survey_name} {orbit_index}",
+                "kind": kind,
+                "orbitIndex": orbit_index,
+                "orbitAngle": (orbit_index * 137.508) % 360,
+                "displayRadius": 4 + orbit_index % 3,
+                "battleEligible": kind != "asteroid_belt",
+                "source": "homebrew",
+            })
+        distance = math.dist((x, y), (parent["x"], parent["y"]))
+        proximity = "far" if distance > 240 else "medium" if distance > 150 else "close"
+        routes.append({
+            "id": f"{parent['id']}__{survey_id}",
+            "sourceSystemId": parent["id"],
+            "targetSystemId": survey_id,
+            "routeType": "charted_warp",
+            "baseTransitHours": _route_hours(distance, proximity == "close", proximity),
+            "risk": _route_risk(proximity, proximity == "close"),
+            "status": "open",
+        })
+        occupied.append((x, y))
+        candidates = [
+            (other_x, other_y, other_sector, min(nearest, math.dist((x, y), (other_x, other_y))))
+            for other_x, other_y, other_sector, nearest in candidates
+            if (other_x, other_y) != (x, y)
+        ]
+
     return validate_geography({
         "schemaVersion": 1,
         "chartBoundary": [[x, y] for x, y in CHART_BOUNDARY],
@@ -473,7 +637,7 @@ def main() -> None:
     graph = json.loads(args.source.read_text(encoding="utf-8"))
     geography = build_geography(graph)
     legacy_names = {str(node["id"]) for node in graph.get("nodes", [])}
-    migrated_names = {system["name"] for system in geography["systems"] if system["id"] != FORTRESS_SYSTEM_ID}
+    migrated_names = {system["name"] for system in geography["systems"] if system["source"] != "homebrew"}
     expected_system_names = (legacy_names - set(RECIDIOUS_PLANETS)) | {"Recidious"}
     if expected_system_names != migrated_names:
         raise ValueError("migration did not preserve every legacy system anchor")
