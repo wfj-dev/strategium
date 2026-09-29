@@ -953,6 +953,13 @@
   .canvas-callout-data { display: block; opacity: 0; animation: canvas-callout-show .01s .65s steps(1,end) forwards; }
   @keyframes canvas-callout-hide { to { visibility: hidden; height: 0; overflow: hidden; } }
   @keyframes canvas-callout-show { to { opacity: 1; } }
+  .reach-desktop-index { margin-top: 8px; border-top: 1px solid var(--border-dim); }
+  .reach-desktop-index > summary {
+    width: fit-content; padding: 10px 4px; color: var(--green); cursor: pointer;
+    text-transform: uppercase; font-size: 11px;
+  }
+  .reach-desktop-index > summary:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
+  .reach-desktop-index .reach-mobile-nav { display: block; max-height: 320px; overflow-y: auto; }
   .reach-mobile-nav { display: none; }
   .reach-mobile-sector { border-top: 1px solid var(--border-dim); }
   .reach-mobile-sector:last-child { border-bottom: 1px solid var(--border-dim); }
@@ -1181,6 +1188,7 @@
     .slate-corner.tr { top: 25px; left: 18px; right: auto; }
     .reach-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .reach-viewport { display: none; }
+    .reach-desktop-index { display: none; }
     .reach-mobile-nav { display: block; margin-top: 8px; }
     .reach-legend, .reach-hint { display: none; }
     .reach-select { margin-left: 0; }
@@ -4141,6 +4149,26 @@ function setupGeographyCanvas() {
     bodiesBySystem.get(body.systemId).push(body);
   });
   bodiesBySystem.forEach(bodies => bodies.sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name)));
+  const reachNodesByName = new Map((state.reach?.nodes || []).map(node => [node.id, node]));
+  const directivesByWorld = new Map();
+  visibleReachDirectives().forEach(directive => {
+    if (!directivesByWorld.has(directive.node)) directivesByWorld.set(directive.node, []);
+    directivesByWorld.get(directive.node).push(directive);
+  });
+  const directiveMarkers = geography.bodies.map(body => ({
+    body,
+    directives: directivesByWorld.get(body.name) || [],
+    theatre: Boolean(reachNodesByName.get(body.name)?.gamePlanet)
+  })).filter(marker => marker.directives.length || marker.theatre);
+  const systemMarkers = new Map();
+  directiveMarkers.forEach(marker => {
+    if (!systemMarkers.has(marker.body.systemId)) {
+      systemMarkers.set(marker.body.systemId, { systemId: marker.body.systemId, directives: [], theatre: false });
+    }
+    const systemMarker = systemMarkers.get(marker.body.systemId);
+    systemMarker.directives.push(...marker.directives);
+    systemMarker.theatre ||= marker.theatre;
+  });
   const starRand = mulberry32(44041);
   const ambientStars = Array.from({ length: 620 }, () => ({
     x: bounds.x - 100 + starRand() * (bounds.w + 200),
@@ -4572,6 +4600,63 @@ function setupGeographyCanvas() {
     });
   }
 
+  function drawDirectiveMarkers(camera, ratio, now) {
+    const overview = ratio < 4.5;
+    const markers = overview ? systemMarkers.values() : directiveMarkers;
+    for (const marker of markers) {
+      const system = systemsById.get(overview ? marker.systemId : marker.body.systemId);
+      const position = overview ? system : bodyPosition(system, marker.body);
+      const screen = worldToScreen(position.x, position.y, camera);
+      if (screen.x < -30 || screen.y < -30 || screen.x > width + 30 || screen.y > height + 30) continue;
+      const top = marker.directives.length ? sortDirectives(marker.directives)[0] : null;
+      const status = top && REACH_STATUS[top.status];
+      const brothers = deployedBrotherIds(marker.directives).size;
+      const radius = overview ? 8 : canvasClamp(marker.body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12) + 5;
+      if (marker.theatre) {
+        context.save();
+        context.setLineDash([2, 3]);
+        context.strokeStyle = "rgba(207,174,104,.7)";
+        context.lineWidth = 1;
+        context.beginPath();
+        context.arc(screen.x, screen.y, radius + 4, 0, Math.PI * 2);
+        context.stroke();
+        context.restore();
+      }
+      if (status) {
+        context.save();
+        if (top.status === "unassigned") context.setLineDash([2, 2]);
+        context.strokeStyle = status.color;
+        context.globalAlpha = status.active ? .9 : .55;
+        context.lineWidth = 1.3;
+        context.beginPath();
+        context.arc(screen.x, screen.y, radius + (marker.theatre ? 7 : 3), 0, Math.PI * 2);
+        context.stroke();
+        if (top.status === "deployed" || top.status === "recruiting") {
+          context.globalAlpha = .25 + (Math.sin(now * .004) + 1) * .16;
+          context.beginPath();
+          context.arc(screen.x, screen.y, radius + 7, 0, Math.PI * 2);
+          context.stroke();
+        }
+        context.restore();
+      }
+      if (brothers) {
+        const label = `\u2694${brothers}`;
+        context.font = "9px 'Share Tech Mono', monospace";
+        const badgeWidth = context.measureText(label).width + 8;
+        const badgeX = screen.x + radius + 4;
+        const badgeY = screen.y - radius - 13;
+        context.fillStyle = "#140d06";
+        context.strokeStyle = "#cfae68";
+        context.lineWidth = .8;
+        context.fillRect(badgeX, badgeY, badgeWidth, 13);
+        context.strokeRect(badgeX, badgeY, badgeWidth, 13);
+        context.fillStyle = "#cfae68";
+        context.textAlign = "left";
+        context.fillText(label, badgeX + 4, badgeY + 10);
+      }
+    }
+  }
+
   function drawHoverLeader(camera, now) {
     if (!hoveredTarget || !tooltip || tooltip.hidden || !Number.isFinite(hoveredTarget.worldX)) return;
     const start = worldToScreen(hoveredTarget.worldX, hoveredTarget.worldY, camera);
@@ -4657,6 +4742,7 @@ function setupGeographyCanvas() {
     drawSectors(camera, ratio);
     drawRoutes(camera, ratio);
     drawSystems(camera, ratio, timestamp);
+    drawDirectiveMarkers(camera, ratio, timestamp);
     drawHoverLeader(camera, timestamp);
     updateStatus(ratio);
     animationFrame = requestAnimationFrame(drawFrame);
@@ -4980,6 +5066,7 @@ function renderReach() {
       <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))} &middot; ` : ""}drag to pan &middot; wheel to zoom &middot; select to focus</div>
       <div class="reach-tooltip" id="reach-tooltip" hidden></div>
     </div>
+    ${geographyLive ? `<details class="reach-desktop-index"><summary>Sector navigator</summary>${mobileGeographyHtml()}</details>` : ""}
     ${geographyLive ? mobileGeographyHtml() : ""}
     <div class="tier-label" style="margin-top:26px">Active Deployments (${deployments.length})</div>
     <table class="roster-table reach-table">
