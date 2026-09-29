@@ -48,7 +48,10 @@ def test_request_is_secure_uses_forwarded_proto() -> None:
     [
         ("https://discord.gg/example", "https://discord.gg/example"),
         ("https://discord.com/invite/example", "https://discord.com/invite/example"),
+        ("https://discord.gg/B5pkZhcHzK", "https://discord.gg/B5pkZhcHzK"),
         ("http://discord.gg/example", ""),
+        ("https://discord.gg:bad/example", ""),
+        ("https://discord.gg:99999/example", ""),
         ("https://evil.example/invite/example", ""),
         ("javascript:alert(1)", ""),
         ("", ""),

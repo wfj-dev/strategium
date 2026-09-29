@@ -168,11 +168,12 @@ def _discord_invite_url(value: str) -> str:
         return ""
     try:
         parsed = urllib.parse.urlsplit(value.strip())
+        port = parsed.port
     except ValueError:
         return ""
     if parsed.scheme != "https" or parsed.username or parsed.password or parsed.query or parsed.fragment:
         return ""
-    if parsed.port not in (None, 443):
+    if port not in (None, 443):
         return ""
     host = (parsed.hostname or "").lower()
     if host == "discord.gg":
