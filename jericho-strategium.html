@@ -144,12 +144,30 @@
   .atlas-frame::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(79,214,122,.018) 0 1px, transparent 1px 4px), linear-gradient(180deg, rgba(1,3,2,.2), transparent 18%, transparent 82%, rgba(1,3,2,.62)); box-shadow: inset 0 0 80px rgba(0,0,0,.58); }
   .atlas-image-wrap { position: relative; width: min(100vw, calc(177.68vh - 199px)); width: min(100vw, calc(177.68svh - 199px)); aspect-ratio: 1672 / 941; }
   .atlas-image { display: block; width: 100%; height: auto; }
-  .atlas-regions { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-  .atlas-region { cursor: pointer; outline: none; pointer-events: all; }
-  .atlas-region-shape { fill: rgba(207,174,104,0); stroke: rgba(207,174,104,0); stroke-width: 2; vector-effect: non-scaling-stroke; transition: fill .16s, stroke .16s, filter .16s; }
+  .atlas-highlight-layer { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: 0; pointer-events: none; transition: opacity .12s ease; }
+  .atlas-highlight-layer.visible { opacity: 1; }
+  .atlas-regions { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .atlas-region { cursor: pointer; outline: none; pointer-events: none; }
+  .atlas-region-hit { fill: none; stroke: transparent; stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
+  .atlas-region-shape { fill: rgba(207,174,104,0); stroke: rgba(207,174,104,0); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; transition: fill .16s, stroke .16s, filter .16s; }
   .atlas-region:hover .atlas-region-shape, .atlas-region:focus-visible .atlas-region-shape { fill: rgba(207,174,104,.28); stroke: #e2c77f; filter: drop-shadow(0 0 7px rgba(207,174,104,.85)); }
-  .atlas-region-label { fill: var(--gold); paint-order: stroke; stroke: rgba(3,7,5,.94); stroke-width: 5px; stroke-linejoin: round; font: 700 14px 'Share Tech Mono', monospace; text-anchor: middle; opacity: 0; pointer-events: none; transition: opacity .12s; }
-  .atlas-region:hover .atlas-region-label, .atlas-region:focus-visible .atlas-region-label { opacity: 1; }
+  .atlas-region[data-atlas-layer]:hover .atlas-region-shape, .atlas-region[data-atlas-layer]:focus-visible .atlas-region-shape { fill: transparent; stroke: transparent; filter: none; }
+  .atlas-region-label { display: none; }
+  .atlas-leaders { position: fixed; z-index: 6; inset: 0; width: 100vw; height: 100vh; overflow: visible; pointer-events: none; }
+  .atlas-leader-line { fill: none; stroke: #59d77b; stroke-width: 1.5; stroke-dasharray: 1; stroke-dashoffset: 0; opacity: 0; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px rgba(79,214,122,.75)); }
+  .atlas-leader-line.drawing { opacity: 1; stroke-dashoffset: 1; animation: atlas-line-draw 1s linear forwards; }
+  @keyframes atlas-line-draw { to { stroke-dashoffset: 0; } }
+  .atlas-callout.pending { opacity: 0; visibility: hidden; }
+  .atlas-callout.loading { animation: atlas-callout-load 160ms steps(1,end) infinite; }
+  @keyframes atlas-callout-load { 0%, 100% { opacity: 1; } 50% { opacity: .78; } }
+  .atlas-leader-point { fill: #a9ef83; filter: drop-shadow(0 0 5px rgba(79,214,122,.9)); }
+  .atlas-callout { position: fixed; z-index: 7; right: 16px; bottom: 46px; width: min(280px, calc(100vw - 32px)); min-height: 88px; padding: 9px 11px; border: 1px solid rgba(79,214,122,.65); border-left: 3px solid var(--green); background: rgba(2,9,5,.96); box-shadow: inset 0 0 20px rgba(79,214,122,.05), 0 8px 28px rgba(0,0,0,.72); color: var(--green); pointer-events: none; }
+  .atlas-callout[hidden] { display: none; }
+  .atlas-callout-kicker { color: var(--green-faint); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
+  .atlas-callout h2 { margin: 3px 0 4px; color: var(--green); font: 700 13px 'Share Tech Mono', monospace; letter-spacing: .06em; text-transform: uppercase; text-shadow: 0 0 8px rgba(79,214,122,.25); }
+  .atlas-callout p { margin: 0; color: #8bb88b; font-size: 9px; line-height: 1.4; }
+  body::after { content: ""; position: fixed; z-index: 4; inset: 0; pointer-events: none; opacity: .018; background: repeating-linear-gradient(0deg, rgba(105,202,104,.16) 0 1px, transparent 1px 4px); animation: terminal-signal-flicker 18s steps(1,end) infinite; }
+  @keyframes terminal-signal-flicker { 0%, 94%, 95%, 100% { opacity: .018; } 94.2%, 94.4% { opacity: .045; } 95.2% { opacity: .014; } }
   .atlas-status { position: fixed; z-index: 12; left: 16px; bottom: 14px; display: flex; gap: 8px; align-items: center; padding: 5px 8px; border: 1px solid rgba(79,214,122,.25); background: rgba(3,7,5,.86); color: var(--green-dim); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
   .atlas-status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 7px var(--green); }
 
@@ -1228,26 +1246,97 @@ const FORMATIONS = {
 };
 
 const ATLAS_LOCATIONS = [
-  { id: "01", name: "Strategium", path: "M 681 105 L 708 70 L 767 43 L 826 42 L 873 71 L 910 119 L 902 177 L 866 222 L 817 252 L 768 244 L 717 215 L 680 169 Z", labelX: 797, labelY: 151, view: "strategium" },
-  { id: "02", name: "Reclusiam", path: "M 931 93 L 958 63 L 1001 57 L 1040 73 L 1073 106 L 1080 159 L 1054 203 L 1005 223 L 963 204 L 936 169 Z", labelX: 1007, labelY: 143, view: "formation", formationId: "reclusiam" },
-  { id: "03", name: "Watch Armory", path: "M 1077 220 L 1108 194 L 1154 184 L 1201 201 L 1241 238 L 1251 284 L 1226 326 L 1178 346 L 1127 331 L 1090 297 Z", labelX: 1166, labelY: 275, view: "formation", formationId: "armory" },
-  { id: "04", name: "Stasis Cells", path: "M 132 571 L 157 528 L 206 485 L 264 465 L 329 470 L 384 491 L 430 531 L 452 585 L 443 631 L 409 665 L 356 681 L 295 668 L 235 644 L 180 615 Z", labelX: 286, labelY: 578, view: "formation", formationId: "apothecarion" },
-  { id: "05", name: "Librarius", path: "M 1354 100 L 1380 78 L 1421 75 L 1459 94 L 1484 126 L 1485 171 L 1460 205 L 1418 221 L 1381 203 L 1356 169 Z", labelX: 1421, labelY: 148, view: "formation", formationId: "librarius" },
-  { id: "06", name: "Vehicle Bays", path: "M 928 659 L 980 627 L 1043 620 L 1108 632 L 1175 649 L 1230 677 L 1266 715 L 1251 745 L 1200 759 L 1132 751 L 1064 773 L 1000 789 L 947 771 L 929 732 Z", labelX: 1093, labelY: 706, view: "formation", formationId: "armory" },
-  { id: "07", name: "Flight Deck", path: "M 1350 423 L 1392 395 L 1451 383 L 1515 390 L 1575 411 L 1629 450 L 1653 501 L 1650 565 L 1621 617 L 1577 653 L 1514 680 L 1450 665 L 1401 630 L 1360 581 L 1339 525 Z", labelX: 1499, labelY: 524, page: "reach" },
-  { id: "08", name: "Dueling Grounds", path: "M 254 342 L 281 326 L 321 335 L 362 339 L 405 348 L 444 366 L 483 390 L 476 413 L 436 421 L 389 411 L 341 421 L 299 412 L 267 390 L 257 365 Z", labelX: 369, labelY: 379, view: "formation", formationId: "hall_of_blades" },
-  { id: "09", name: "Apothecarion", path: "M 464 374 L 491 346 L 535 337 L 577 355 L 603 392 L 600 435 L 571 468 L 528 478 L 487 457 L 465 421 Z", labelX: 535, labelY: 410, view: "formation", formationId: "apothecarion" },
-  { id: "10a", name: "Orbital Defense Batteries", path: "M 47 245 L 72 228 L 102 231 L 123 253 L 128 282 L 110 306 L 78 310 L 53 292 Z", labelX: 87, labelY: 272, page: "reach" },
-  { id: "10b", name: "Orbital Defense Batteries", path: "M 24 534 L 49 514 L 79 516 L 100 539 L 102 572 L 83 595 L 52 596 L 28 575 Z", labelX: 63, labelY: 557, page: "reach" },
-  { id: "10c", name: "Orbital Defense Batteries", path: "M 1510 230 L 1535 212 L 1567 216 L 1588 239 L 1591 270 L 1571 293 L 1540 293 L 1517 273 Z", labelX: 1550, labelY: 255, page: "reach" },
-  { id: "11", name: "Communications Arrays", path: "M 205 154 L 230 132 L 263 131 L 289 153 L 295 185 L 276 211 L 244 214 L 218 194 Z", labelX: 252, labelY: 173, page: "reach" },
-  { id: "12", name: "Astropathic Choir", path: "M 405 119 L 429 96 L 461 96 L 485 119 L 489 150 L 470 174 L 439 176 L 415 157 Z", labelX: 449, labelY: 139, view: "formation", formationId: "librarius" },
-  { id: "13", name: "Primus Company Hall", path: "M 671 430 L 694 406 L 729 401 L 756 422 L 775 461 L 771 510 L 748 553 L 716 570 L 684 550 L 669 502 Z", labelX: 723, labelY: 481, view: "company", companyId: 1 },
-  { id: "14", name: "Secundus Company Hall", path: "M 805 452 L 829 430 L 865 429 L 891 451 L 910 488 L 908 536 L 885 576 L 851 591 L 820 572 L 804 526 Z", labelX: 856, labelY: 501, view: "company", companyId: 2 },
-  { id: "15", name: "Tertius Company Hall", path: "M 940 452 L 965 430 L 1001 430 L 1027 454 L 1045 492 L 1043 540 L 1019 580 L 985 595 L 954 575 L 939 527 Z", labelX: 991, labelY: 503, view: "company", companyId: 3 },
-  { id: "16", name: "Quartus Company Hall", path: "M 1075 432 L 1100 408 L 1137 406 L 1165 430 L 1183 469 L 1180 517 L 1157 558 L 1122 575 L 1090 555 L 1074 508 Z", labelX: 1127, labelY: 486, view: "company", companyId: 4 },
-  { id: "17", name: "Quintus Company Hall", path: "M 1210 411 L 1235 387 L 1271 386 L 1299 410 L 1316 449 L 1313 498 L 1290 538 L 1255 555 L 1223 535 L 1209 488 Z", labelX: 1261, labelY: 466, view: "company", companyId: 5 }
+  { id: "01", name: "Strategium", layer: "strategium", path: "M 690 0 L 900 0 L 900 180 L 690 180 Z", labelX: 795, labelY: 150, view: "strategium" },
+  { id: "02", name: "Watch Armory", layer: "armory", path: "M 955 82 L 1021 82 L 1100 82 L 1228 176 L 1260 218 L 1260 318 L 1145 318 L 1085 307 L 1021 272 L 968 253 Z", labelX: 1106, labelY: 190, view: "formation", formationId: "armory" },
+  { id: "03", name: "Apothecarion", layer: "apothecarion", path: "M 500 325 L 675 325 L 675 462 L 500 462 Z", labelX: 587, labelY: 402, view: "formation", formationId: "apothecarion" },
+  { id: "04", name: "Reclusiam", layer: "reclusiam", path: "M 910 15 L 1040 15 L 1040 232 L 910 232 Z", labelX: 975, labelY: 125, view: "formation", formationId: "reclusiam" },
+  { id: "05", name: "Black Vault", layer: "black-vault", path: "M 195 400 L 570 400 L 570 725 L 195 725 Z", labelX: 382, labelY: 560, view: "formation", formationId: "black_vault" },
+  { id: "06", name: "Librarius", layer: "librarius", path: "M 1240 48 L 1430 48 L 1430 252 L 1240 252 Z", labelX: 1335, labelY: 146, view: "formation", formationId: "librarius" },
+  { id: "07", name: "Dueling Grounds", layer: "dueling-grounds", path: "M 185 245 L 390 245 L 390 400 L 185 400 Z", labelX: 287, labelY: 325, view: "formation", formationId: "hall_of_blades" },
+  { id: "08", name: "Primus Company Hall", layer: "company-primus", path: "M 645 392 L 830 392 L 830 520 L 645 520 Z", labelX: 737, labelY: 456, view: "company", companyId: 1 },
+  { id: "09", name: "Secundus Company Hall", layer: "company-secundus", path: "M 790 360 L 950 360 L 950 550 L 790 550 Z", labelX: 870, labelY: 455, view: "company", companyId: 2 },
+  { id: "10", name: "Tertius Company Hall", layer: "company-tertius", path: "M 905 350 L 1100 350 L 1100 560 L 905 560 Z", labelX: 1002, labelY: 455, view: "company", companyId: 3 },
+  { id: "11", name: "Quartus Company Hall", layer: "company-quartus", path: "M 1035 315 L 1200 315 L 1200 535 L 1035 535 Z", labelX: 1117, labelY: 425, view: "company", companyId: 4 },
+  { id: "12", name: "Quintus Company Hall", layer: "company-quintus", path: "M 1160 360 L 1360 360 L 1360 525 L 1160 525 Z", labelX: 1260, labelY: 442, view: "company", companyId: 5 },
+  { id: "13", name: "Flight Deck", layer: "flight-deck", path: "M 1315 430 L 1670 430 L 1670 785 L 1315 785 Z", labelX: 1492, labelY: 605, page: "reach" },
+  { id: "14", name: "Vehicle Bays", layer: "vehicle-bays", path: "M 790 565 L 1320 565 L 1320 795 L 790 795 Z", labelX: 1055, labelY: 670, view: "formation", formationId: "armory" },
+  { id: "15", name: "Astropathic Choir", layer: "astropathic-choir", path: "M 430 82 L 600 82 L 600 285 L 430 285 Z", labelX: 515, labelY: 180, view: "formation", formationId: "librarius" }
 ];
+
+const ATLAS_LORE = {
+  "01": "Command, intelligence collation, and strategic deployment authority for Watch Fortress Jericho.",
+  "02": "The Armory maintains the weapons, wargear, and technical resources required by the fortress.",
+  "03": "The Apothecarion safeguards the wounded, the gene-seed, and the lives entrusted to the Watch.",
+  "04": "The Reclusiam preserves the Watch's oaths and sustains the spiritual discipline of the Long Vigil.",
+  "05": "The Black Vault holds dangerous assets and intelligence released only when the threat warrants the risk.",
+  "06": "The Librarius studies forbidden knowledge and interprets threats before they become campaigns.",
+  "07": "The Hall of Blades prepares close-combat specialists for boarding actions and confined engagements.",
+  "08": "Company Primus muster and command station.",
+  "09": "Company Secundus muster and command station.",
+  "10": "Company Tertius muster and command station.",
+  "11": "Company Quartus muster and command station.",
+  "12": "Company Quintus muster and command station.",
+  "13": "The flight deck launches and receives craft carrying Watch personnel and materiel across the sector.",
+  "14": "Vehicle bays maintain the ground transports and armour committed to operations across the Reach.",
+  "15": "The Astropathic Choir receives and relays sanctioned communications across the Jericho Reach."
+};
+
+let atlasHitMask = null;
+let atlasHitMaskPromise = null;
+let activeAtlasLocationId = null;
+let atlasHighlightSequence = 0;
+
+function loadAtlasHitMask() {
+  if (atlasHitMaskPromise) return atlasHitMaskPromise;
+  atlasHitMaskPromise = new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const counts = new Uint32Array(16);
+      const sumX = new Float64Array(16);
+      const sumY = new Float64Array(16);
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const id = pixels[(y * canvas.width + x) * 4];
+          if (!id || id > 15) continue;
+          counts[id] += 1;
+          sumX[id] += x;
+          sumY[id] += y;
+        }
+      }
+      const anchors = {};
+      const nearest = new Float64Array(16).fill(Infinity);
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const id = pixels[(y * canvas.width + x) * 4];
+          if (!id || !counts[id]) continue;
+          const dx = x - sumX[id] / counts[id];
+          const dy = y - sumY[id] / counts[id];
+          const distance = dx * dx + dy * dy;
+          if (distance < nearest[id]) {
+            nearest[id] = distance;
+            anchors[id] = { x: x + .5, y: y + .5 };
+          }
+        }
+      }
+      atlasHitMask = {
+        width: canvas.width,
+        height: canvas.height,
+        pixels,
+        anchors
+      };
+      resolve(atlasHitMask);
+    };
+    image.onerror = reject;
+    image.src = "/assets/atlas-hover-mask.png?v=3";
+  });
+  return atlasHitMaskPromise;
+}
 
 const FORMATION_SYMBOLS = {
   armory: "armory",
@@ -2087,52 +2176,72 @@ function plateHtml({ id, member, name, rankLabel, sub, accent, vacant, size }) {
 
 function renderBreadcrumb() {
   const el = document.getElementById("breadcrumb");
+  const separator = `<span class="crumb-sep" aria-hidden="true">&rsaquo;</span>`;
+  const current = label => `<span class="crumb crumb-current" aria-current="page">${escapeHtml(label)}</span>`;
   if (state.page === "blood") {
-    el.innerHTML = `<button class="crumb" data-page="reach">Jericho Reach</button><span class="crumb-sep">&rsaquo;</span><span class="crumb crumb-current">Chapter Origins // Record of Blood</span>`;
+    el.innerHTML = `<button class="crumb" data-page="blood">Chapter Origins</button>${separator}${current("Record of Blood")}`;
     return;
   }
   if (state.page === "reach") {
-    el.innerHTML = `<span class="crumb crumb-current">Jericho Reach // Sector Operations</span><span class="crumb-sep">&rsaquo;</span><span class="crumb">Ordo Xenos Directives</span>`;
+    el.innerHTML = `<button class="crumb" data-page="reach">Sector Operations</button>${separator}${current("Jericho Reach")}`;
     return;
   }
   if (state.view === "landing") {
-    el.innerHTML = `<span class="crumb crumb-current">Fortress Atlas // Command Nexus</span>`;
+    el.innerHTML = `<button class="crumb" data-atlas-home>Fortress Atlas</button>${separator}${current("Command Nexus")}`;
     return;
   }
   const parts = [`<button class="crumb" data-nav="strategium">Personnel Docket</button>`];
-  if (state.view === "company" || state.view === "killteam") {
-    parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
+  if (state.view === "strategium") {
+    parts.push(separator, current("Watch Fortress Jericho"));
+    el.innerHTML = parts.join("");
+    return;
+  }
+  if (state.view === "company") {
+    parts.push(separator, current(`Company ${COMPANY_NAMES[state.companyId]}`));
+    el.innerHTML = parts.join("");
+    return;
+  }
+  if (state.view === "killteam") {
+    parts.push(separator);
     parts.push(`<button class="crumb" data-nav="company" data-company="${state.companyId}">Company ${COMPANY_NAMES[state.companyId]}</button>`);
   }
   if (state.view === "killteam") {
     const teams = killTeamsForCompany(state.companyId);
     const t = teams.find(t => t.killTeam === state.killTeamId || t.name === state.killTeamId);
     const label = t ? t.name : "Kill-team";
-    parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
-    parts.push(`<span class="crumb crumb-current">${escapeHtml(label)}</span>`);
+    parts.push(separator, current(label));
   }
   if (state.view === "formation") {
     const f = FORMATIONS[state.formationId];
-    parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
-    parts.push(`<span class="crumb crumb-current">${escapeHtml(f ? f.name : "Formation")}</span>`);
+    parts.push(separator, current(f ? f.name : "Formation"));
   }
   el.innerHTML = parts.join("");
 }
 
 function renderLanding() {
+  activeAtlasLocationId = null;
+  atlasHighlightSequence += 1;
   const hotspots = ATLAS_LOCATIONS.map(location => `
     <g class="atlas-region" role="button" tabindex="0" data-atlas-location="${escapeHtml(location.id)}"
+      ${location.layer ? `data-atlas-layer="${escapeHtml(location.layer)}"` : ""}
       aria-label="Open ${escapeHtml(location.name)}">
+      <path class="atlas-region-hit" d="${location.path}"></path>
       <path class="atlas-region-shape" d="${location.path}"></path>
-      <text class="atlas-region-label" x="${location.labelX}" y="${location.labelY}">${escapeHtml(location.name)}</text>
     </g>`).join("");
   document.getElementById("app").innerHTML = `
     <section class="atlas-frame" aria-label="Interactive Watch Fortress Jericho atlas">
       <div class="atlas-image-wrap">
         <img class="atlas-image" src="/assets/watch-fortress-jericho-map.png" alt="Isometric strategic atlas of Watch Fortress Jericho">
+        <img id="atlas-highlight-layer" class="atlas-highlight-layer" alt="" aria-hidden="true">
+        <svg id="atlas-leaders" class="atlas-leaders" aria-hidden="true"><path id="atlas-leader-line" class="atlas-leader-line" pathLength="1"></path><circle id="atlas-leader-point" class="atlas-leader-point" r="3"></circle></svg>
         <svg class="atlas-regions" viewBox="0 0 1672 941" preserveAspectRatio="none" aria-label="Fortress locations">${hotspots}</svg>
       </div>
       <div class="atlas-status">Fortress datalink stable // ${state.dataStatus === "live" ? "roster verified" : "archive relay"}</div>
+      <aside id="atlas-callout" class="atlas-callout" hidden aria-live="polite">
+        <div id="atlas-callout-kicker" class="atlas-callout-kicker"></div>
+        <h2 id="atlas-callout-title"></h2>
+        <p id="atlas-callout-lore"></p>
+      </aside>
     </section>`;
   requestAnimationFrame(() => {
     const frame = document.querySelector(".atlas-frame");
@@ -2140,6 +2249,103 @@ function renderLanding() {
       frame.scrollLeft = (frame.scrollWidth - frame.clientWidth) / 2;
     }
   });
+  const imageWrap = document.querySelector(".atlas-image-wrap");
+  loadAtlasHitMask().catch(error => console.error("Atlas hit mask failed to load", error));
+  imageWrap.addEventListener("pointermove", async event => {
+    const region = await atlasRegionAtPoint(event.clientX, event.clientY);
+    setAtlasHighlight(region, { x: event.clientX, y: event.clientY });
+  });
+  imageWrap.addEventListener("pointerleave", () => setAtlasHighlight(null));
+  imageWrap.addEventListener("click", async event => {
+    const region = await atlasRegionAtPoint(event.clientX, event.clientY);
+    if (!region) return;
+    openAtlasLocation(region.dataset.atlasLocation, region);
+  });
+}
+
+async function atlasRegionAtPoint(clientX, clientY) {
+  const imageWrap = document.querySelector(".atlas-image-wrap");
+  if (!imageWrap) return null;
+  try {
+    const mask = atlasHitMask || await loadAtlasHitMask();
+    const rect = imageWrap.getBoundingClientRect();
+    const x = Math.floor((clientX - rect.left) / rect.width * mask.width);
+    const y = Math.floor((clientY - rect.top) / rect.height * mask.height);
+    if (x < 0 || y < 0 || x >= mask.width || y >= mask.height) return null;
+    const id = mask.pixels[(y * mask.width + x) * 4];
+    if (!id) return null;
+    const locationId = String(id).padStart(2, "0");
+    return document.querySelector(`[data-atlas-location="${locationId}"]`);
+  } catch {
+    return null;
+  }
+}
+
+function setAtlasHighlight(region, pointerAnchor = null) {
+  const locationId = region?.dataset.atlasLocation || null;
+  if (locationId === activeAtlasLocationId) return;
+  activeAtlasLocationId = locationId;
+  const sequence = ++atlasHighlightSequence;
+  const image = document.getElementById("atlas-highlight-layer");
+  const callout = document.getElementById("atlas-callout");
+  const leaders = document.getElementById("atlas-leaders");
+  const leaderLine = document.getElementById("atlas-leader-line");
+  const leaderPoint = document.getElementById("atlas-leader-point");
+  if (!image || !callout || !leaders || !leaderLine || !leaderPoint) return;
+  const layer = region?.dataset.atlasLayer;
+  if (!locationId || !layer) {
+    image.classList.remove("visible");
+    callout.classList.remove("pending", "loading");
+    callout.hidden = true;
+    leaderLine.classList.remove("drawing");
+    leaderLine.setAttribute("d", "");
+    return;
+  }
+  const source = `/assets/fortress-layers/${encodeURIComponent(layer)}.png`;
+  if (image.getAttribute("src") !== source) image.src = source;
+  image.classList.add("visible");
+
+  const location = ATLAS_LOCATIONS.find(item => item.id === region.dataset.atlasLocation);
+  if (!location) return;
+  document.getElementById("atlas-callout-kicker").textContent = `FORTRESS SECTION // ${location.id}`;
+  document.getElementById("atlas-callout-title").textContent = "LOADING";
+  document.getElementById("atlas-callout-lore").textContent = "ESTABLISHING NOOSPHERIC LINK...";
+  callout.hidden = false;
+  callout.classList.add("pending", "loading");
+
+  const mask = atlasHitMask;
+  const anchor = mask?.anchors[Number(location.id)];
+  const imageWrap = document.querySelector(".atlas-image-wrap");
+  const imageBounds = imageWrap?.getBoundingClientRect();
+  const regionBounds = region.getBoundingClientRect();
+  const centerX = anchor && imageBounds
+    ? imageBounds.left + (anchor.x / mask.width) * imageBounds.width
+    : pointerAnchor?.x ?? (regionBounds.left + regionBounds.width / 2);
+  const centerY = anchor && imageBounds
+    ? imageBounds.top + (anchor.y / mask.height) * imageBounds.height
+    : pointerAnchor?.y ?? (regionBounds.top + regionBounds.height / 2);
+  const calloutBounds = callout.getBoundingClientRect();
+  const endX = calloutBounds.left;
+  const endY = calloutBounds.top + calloutBounds.height / 2;
+  const bendX = centerX + (endX - centerX) * .56;
+  leaders.setAttribute("viewBox", `0 0 ${window.innerWidth} ${window.innerHeight}`);
+  leaderLine.classList.remove("drawing");
+  leaderLine.setAttribute("d", `M ${centerX} ${centerY} L ${bendX} ${centerY} L ${bendX} ${endY} L ${endX} ${endY}`);
+  leaderPoint.setAttribute("cx", centerX);
+  leaderPoint.setAttribute("cy", centerY);
+  void leaderLine.getBoundingClientRect();
+  leaderLine.classList.add("drawing");
+  setTimeout(() => {
+    if (sequence === atlasHighlightSequence && activeAtlasLocationId === locationId) {
+      callout.classList.remove("pending");
+      setTimeout(() => {
+        if (sequence !== atlasHighlightSequence || activeAtlasLocationId !== locationId) return;
+        document.getElementById("atlas-callout-title").textContent = location.name;
+        document.getElementById("atlas-callout-lore").textContent = ATLAS_LORE[location.id] || "Authorized facility within Watch Fortress Jericho.";
+        callout.classList.remove("loading");
+      }, 1000);
+    }
+  }, 1000);
 }
 
 function terminalTransmissionHtml(query, accessing, fields) {
@@ -2650,7 +2856,7 @@ function updateStatusBadge() {
       return;
     }
     if (state.view === "landing") {
-      slateCount.textContent = "FORTRESS ATLAS NODES: 17";
+      slateCount.textContent = `FORTRESS ATLAS SECTIONS: ${ATLAS_LOCATIONS.length}`;
       slateCount.style.display = "";
       return;
     }
@@ -3950,6 +4156,14 @@ function wireEvents() {
   document.getElementById("member-modal-return").addEventListener("click", goBack);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) pauseBloodAudio();
+  });
+  document.addEventListener("focusin", (event) => {
+    const region = event.target.closest?.("[data-atlas-location]");
+    if (region) setAtlasHighlight(region);
+  });
+  document.addEventListener("focusout", (event) => {
+    const region = event.target.closest?.("[data-atlas-location]");
+    if (region && !region.contains(event.relatedTarget) && !region.matches(":hover")) setAtlasHighlight(null);
   });
   const clampRibbonTip = (e) => {
     const ribbon = e.target.closest && e.target.closest(".ribbon");
