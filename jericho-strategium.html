@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Watch Fortress Jericho — Strategium</title>
+<title>Ordo Xenos — Jericho Sector Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -49,7 +49,7 @@
     border: 1px solid var(--gold-dim); background: #0a0a09;
     display: flex; align-items: center; justify-content: center; color: var(--gold);
   }
-  .header-icon svg { width: 23px; height: 23px; }
+  .header-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
   .header-title {
     font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px;
     letter-spacing: 0.04em; text-transform: uppercase; color: var(--gold);
@@ -86,11 +86,15 @@
     transition: color 0.15s, border-color 0.15s;
   }
   .icon-btn:hover { color: var(--green); border-color: var(--green); }
+  .back-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 28px; padding: 4px 9px; border-color: var(--green-dim); color: var(--green); background: rgba(79,214,122,.06); }
+  .back-btn[hidden] { display: none; }
+  .back-btn-arrow { font-size: 16px; line-height: 1; }
+  .back-btn:hover { border-color: var(--green); color: var(--white); background: rgba(79,214,122,.12); }
 
   .slate {
     position: relative;
     border: 1px solid var(--border);
-    background: rgba(79,214,122,0.015);
+    background: repeating-linear-gradient(0deg, rgba(79,214,122,0.012) 0 1px, transparent 1px 4px), rgba(79,214,122,0.015);
     box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 0 30px rgba(79,214,122,0.04);
     padding: 40px 30px 46px;
   }
@@ -106,9 +110,11 @@
 
   #breadcrumb {
     display: flex; align-items: center; gap: 6px; font-size: 12px;
-    text-transform: uppercase; letter-spacing: 0.06em; margin: 18px 0 30px; flex-wrap: wrap;
+    text-transform: uppercase; letter-spacing: 0.06em; margin: 0; flex-wrap: wrap;
     color: var(--green-dim);
   }
+  .slate-navigation { display: flex; align-items: center; gap: 14px; min-height: 28px; margin: 18px 0 30px; }
+  .slate-navigation #breadcrumb { flex: 1; min-width: 0; }
   #breadcrumb::before { content: ">"; color: var(--green); margin-right: 2px; }
   .crumb { background: none; border: none; color: var(--green-dim); cursor: pointer; padding: 2px 0; font-family: inherit; font-size: inherit; letter-spacing: inherit; }
   .crumb:hover { color: var(--green); }
@@ -128,6 +134,77 @@
     100% { transform: scale(1); opacity: 1; }
   }
 
+  body.atlas-page { overflow-x: hidden; }
+  body.atlas-page .page { max-width: none; min-height: 100vh; padding: 0; }
+  body.atlas-page .header { position: absolute; z-index: 20; top: 22px; left: 50%; width: min(1180px, 100%); transform: translateX(-50%); margin: 0; padding: 0 24px 16px; border-bottom: 1px solid var(--border-dim); background: linear-gradient(180deg, rgba(2,5,4,.92), rgba(2,5,4,.58)); }
+  body.atlas-page .slate { min-height: 100vh; padding: 0; border: 0; background: #010302; box-shadow: none; }
+  body.atlas-page .slate > .hud-bracket, body.atlas-page .slate > .slate-corner, body.atlas-page .slate-navigation { display: none; }
+  body.atlas-page #app { min-height: 100vh; }
+  .atlas-frame { position: relative; display: grid; place-items: center; width: 100vw; height: 100vh; height: 100svh; min-height: 100vh; padding-top: 112px; overflow: hidden; background-color: #030605; background-image: linear-gradient(rgba(79,214,122,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(79,214,122,.035) 1px, transparent 1px), repeating-linear-gradient(0deg, rgba(79,214,122,.012) 0 1px, transparent 1px 4px); background-size: 48px 48px, 48px 48px, auto; }
+  .atlas-frame::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(79,214,122,.018) 0 1px, transparent 1px 4px), linear-gradient(180deg, rgba(1,3,2,.2), transparent 18%, transparent 82%, rgba(1,3,2,.62)); box-shadow: inset 0 0 80px rgba(0,0,0,.58); }
+  .atlas-image-wrap { position: relative; width: min(100vw, calc(177.68vh - 199px)); width: min(100vw, calc(177.68svh - 199px)); aspect-ratio: 1672 / 941; }
+  .atlas-image { display: block; width: 100%; height: auto; }
+  .atlas-regions { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .atlas-region { cursor: pointer; outline: none; pointer-events: all; }
+  .atlas-region-shape { fill: rgba(207,174,104,0); stroke: rgba(207,174,104,0); stroke-width: 2; vector-effect: non-scaling-stroke; transition: fill .16s, stroke .16s, filter .16s; }
+  .atlas-region:hover .atlas-region-shape, .atlas-region:focus-visible .atlas-region-shape { fill: rgba(207,174,104,.28); stroke: #e2c77f; filter: drop-shadow(0 0 7px rgba(207,174,104,.85)); }
+  .atlas-region-label { fill: var(--gold); paint-order: stroke; stroke: rgba(3,7,5,.94); stroke-width: 5px; stroke-linejoin: round; font: 700 14px 'Share Tech Mono', monospace; text-anchor: middle; opacity: 0; pointer-events: none; transition: opacity .12s; }
+  .atlas-region:hover .atlas-region-label, .atlas-region:focus-visible .atlas-region-label { opacity: 1; }
+  .atlas-status { position: fixed; z-index: 12; left: 16px; bottom: 14px; display: flex; gap: 8px; align-items: center; padding: 5px 8px; border: 1px solid rgba(79,214,122,.25); background: rgba(3,7,5,.86); color: var(--green-dim); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+  .atlas-status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 7px var(--green); }
+
+  .cogitator-boot[hidden] { display: none; }
+  .cogitator-boot { position: fixed; z-index: 120; inset: 0; display: grid; place-items: center; padding: 22px; overflow: hidden; background: #010201; color: var(--green); }
+  .cogitator-boot::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(79,214,122,.045) 0 1px, transparent 1px 4px), radial-gradient(circle at 50% 46%, rgba(79,214,122,.1), transparent 46%), linear-gradient(90deg, transparent 49.8%, rgba(79,214,122,.06) 50%, transparent 50.2%); animation: boot-flicker 130ms steps(2,end) infinite; }
+  .boot-initializing, .boot-access { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; transition: opacity .3s, visibility .3s; }
+  .boot-initializing { color: var(--green); font-size: 13px; letter-spacing: .18em; text-transform: uppercase; }
+  .boot-initializing::after { content: "_"; color: var(--gold); animation: termBlink 1s steps(1) infinite; }
+  .boot-initializing span { color: var(--green-faint); font-size: 9px; letter-spacing: .12em; }
+  .boot-access { opacity: 0; visibility: hidden; }
+  .boot-access strong { color: var(--green); font: 700 19px 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: .12em; text-shadow: 0 0 12px rgba(79,214,122,.55); }
+  .boot-access strong.typing::after { content: "█"; margin-left: 5px; color: var(--green); animation: boot-cursor .45s steps(1,end) infinite; }
+  .boot-access span { color: var(--green-dim); font-size: 9px; text-transform: uppercase; letter-spacing: .13em; }
+  .cogitator-console { position: relative; width: min(780px, 100%); padding: 0; border: 0; background: none; box-shadow: none; opacity: 0; visibility: hidden; transform: scale(.97, .88); clip-path: inset(8% 6%); transition: opacity .35s, transform .42s cubic-bezier(.2,.8,.2,1), clip-path .42s, visibility .35s; }
+  .cogitator-boot.console-open .cogitator-console { opacity: 1; visibility: visible; transform: scale(1); clip-path: inset(0); }
+  .cogitator-boot.console-closing .cogitator-console { opacity: 0; visibility: hidden; transform: scale(.97, .88); clip-path: inset(8% 6%); }
+  .cogitator-boot.console-open .boot-initializing, .cogitator-boot.authorized .boot-initializing { opacity: 0; visibility: hidden; }
+  .cogitator-boot.authorized .boot-access { opacity: 1; visibility: visible; }
+  .cogitator-boot.access-closing .boot-access { opacity: 0; visibility: hidden; transform: scale(1.04); }
+  body.atlas-page.atlas-booting .atlas-frame { opacity: 0; }
+  body.atlas-page.atlas-reveal .atlas-frame { animation: atlas-reveal .85s ease-out both; }
+  @keyframes atlas-reveal { from { opacity: 0; filter: brightness(2.2); } to { opacity: 1; filter: brightness(1); } }
+  .boot-screen { position: relative; padding: 18px 20px; overflow: hidden; border: 1px solid #39472c; background: repeating-linear-gradient(0deg, rgba(110,176,59,.035) 0 1px, transparent 1px 4px), radial-gradient(ellipse at 50% 42%, rgba(43,93,31,.25), transparent 68%), #050a05; box-shadow: inset 0 0 32px rgba(0,0,0,.95), 0 0 18px rgba(79,214,122,.1); }
+  .boot-screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(128,196,78,.035), transparent 24%, transparent 78%, rgba(128,196,78,.025)); }
+  .cogitator-mark { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(105,153,69,.32); }
+  .cogitator-mark img { width: 42px; height: 42px; object-fit: contain; filter: sepia(.35); }
+  .cogitator-mark strong { display: block; color: var(--gold); font-family: 'Cinzel', serif; font-size: 14px; text-transform: uppercase; letter-spacing: .08em; }
+  .cogitator-mark span { display: block; margin-top: 3px; color: var(--green-dim); font-size: 9px; text-transform: uppercase; letter-spacing: .12em; }
+  .boot-phase { margin: 14px 0 0; color: #91805b; font-size: 9px; text-transform: uppercase; letter-spacing: .12em; }
+  .boot-objective { display: grid; justify-items: center; gap: 5px; margin: 14px auto 2px; max-width: 560px; padding: 8px 12px; border: 1px solid #6c8a3d; background: linear-gradient(180deg, rgba(126,181,66,.9), rgba(65,106,34,.92)); color: #10190c; box-shadow: 0 0 18px rgba(107,167,55,.22), inset 0 1px rgba(230,255,179,.34); text-align: center; }
+  .boot-objective-label { font-size: 8px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+  .boot-objective-value { font-family: 'Share Tech Mono', monospace; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .boot-grid { display: block; }
+  .boot-log { min-height: 154px; margin: 12px 0; padding: 10px 12px; border: 1px solid rgba(105,153,69,.2); background: rgba(1,4,2,.75); color: #62834d; font-size: 10px; line-height: 1.8; }
+  .boot-line { opacity: 0; transform: translateY(3px); }
+  .boot-line.visible { opacity: 1; transform: none; color: var(--green-dim); }
+  .boot-line.visible::after { content: " [PASS]"; color: var(--green); }
+  .credential-block { display: grid; grid-template-columns: 140px 1fr; gap: 1px; border: 1px solid var(--border-dim); background: var(--border-dim); }
+  .credential-block span { padding: 8px 10px; background: #050a06; font-size: 10px; }
+  .credential-label { color: var(--green-dim); text-transform: uppercase; }
+  .credential-value { min-width: 0; min-height: 29px; color: var(--white); overflow: hidden; white-space: nowrap; }
+  .credential-value.typing::after { content: "█"; margin-left: 2px; color: var(--green); animation: boot-cursor .45s steps(1,end) infinite; }
+  .boot-progress { height: 2px; margin-top: 17px; background: var(--border-dim); overflow: hidden; }
+  .boot-progress span { display: block; width: 0; height: 100%; background: var(--green); box-shadow: 0 0 8px var(--green); transition: width 2.2s steps(18,end); }
+  .cogitator-boot.running .boot-progress span { width: 100%; }
+  .boot-skip { position: absolute; top: 14px; right: 14px; border: 0; background: none; color: var(--green-dim); font-size: 9px; text-transform: uppercase; cursor: pointer; }
+  .boot-skip:hover { color: var(--green); }
+  .boot-verdict { min-height: 18px; margin-top: 12px; color: var(--green-dim); font-size: 10px; text-align: center; text-transform: uppercase; letter-spacing: .13em; }
+  .cogitator-boot.authorized .boot-verdict { color: var(--gold); }
+  .cogitator-boot.complete { animation: boot-release .68s steps(5,end) forwards; }
+  @keyframes boot-flicker { 50% { opacity: .82; } }
+  @keyframes boot-cursor { 50% { opacity: 0; } }
+  @keyframes boot-release { 55% { filter: brightness(2.4) contrast(1.5); } 100% { opacity: 0; filter: brightness(.2); } }
+
   .tier-label {
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
     color: var(--gold-dim); margin: 6px 0 16px; display: flex; align-items: center; gap: 10px;
@@ -146,6 +223,16 @@
   @media (max-width: 640px) {
     .tree-row::before, .tree-row > *::before { display: none; }
     .tree-row { padding-top: 0; }
+  }
+
+  @media (max-width: 760px) {
+    body.atlas-page .header { top: 12px; width: 100%; padding: 0 24px 12px; }
+    body.atlas-page .site-nav { order: 2; width: 100%; }
+    .atlas-frame { display: grid; place-items: center; height: 100vh; height: 100svh; min-height: 100vh; padding-top: 112px; overflow: auto hidden; overscroll-behavior: contain; }
+    .atlas-image-wrap { position: relative; width: min(1180px, calc(177.68vh - 199px)); width: min(1180px, calc(177.68svh - 199px)); max-width: none; aspect-ratio: 1672 / 941; }
+    .atlas-region-label { font-size: 10px; }
+    .boot-screen { padding: 16px 12px; }
+    .credential-block { grid-template-columns: 105px minmax(0, 1fr); }
   }
 
   .branch-row {
@@ -419,10 +506,9 @@
     border-bottom: 1px solid var(--border-dim); padding-bottom: 6px; margin-bottom: 2px;
     display: flex; align-items: center; gap: 8px;
   }
-  .formation-plate-label::before {
-    content: ""; width: 9px; height: 9px; border-radius: 50%;
-    background: var(--formation-accent, var(--green-dim)); border: 1px solid rgba(255,255,255,0.25); flex-shrink: 0;
-  }
+  .formation-plate-label::before { content: none; }
+  .formation-symbol { display: block; width: 22px; height: 22px; flex: 0 0 22px; object-fit: contain; border-radius: 50%; }
+  .formation-tier-label .formation-symbol { order: 0; }
   .formation-plate-lead { font-size: 12px; color: var(--green); }
   .formation-plate-count { font-size: 10.5px; color: var(--green-faint); }
   .formation-plate-blurb {
@@ -434,10 +520,7 @@
   }
 
   .formation-tier-label { display: flex; align-items: center; gap: 10px; }
-  .formation-tier-label::before {
-    content: ""; order: -1; width: 11px; height: 11px; border-radius: 50%;
-    background: var(--formation-accent, var(--green-dim)); border: 1px solid rgba(255,255,255,0.25); flex-shrink: 0;
-  }
+  .formation-tier-label::before { content: none; }
 
   .tier-formation-lead { margin-bottom: 30px; justify-content: flex-start; }
 
@@ -479,10 +562,39 @@
   .formation-directive-stat {
     display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
     background: rgba(207,174,104,0.05); border: 1px solid var(--gold-dim);
-    padding: 8px 16px; margin: 0 auto 24px; font-size: 11.5px;
+    padding: 8px 16px; margin: 0 0 22px; font-size: 11.5px;
     letter-spacing: 0.05em; color: var(--gold); text-transform: uppercase;
-    max-width: 680px; box-shadow: inset 0 0 15px rgba(207,174,104,0.05);
+    width: 100%; box-shadow: inset 0 0 15px rgba(207,174,104,0.05);
   }
+  .renown-rank { display: inline-block; padding: 2px 7px; border: 1px solid var(--gold); border-radius: 2px; background: #141b14; color: var(--gold); font-weight: 700; line-height: 1.35; }
+  .renown-unlocks { flex-basis: 100%; color: var(--green-dim); font-size: 10px; text-align: center; text-transform: none; }
+  .renown-info { position: relative; display: inline-block; outline: none; }
+  .renown-info:hover > .renown-rank, .renown-info:focus > .renown-rank { color: var(--gold); background: rgba(207,174,104,.12); box-shadow: 0 0 8px rgba(207,174,104,.18); }
+  .renown-popover { position: absolute; z-index: 70; left: 50%; bottom: calc(100% + 8px); width: min(320px, calc(100vw - 32px)); padding: 9px 11px; border: 1px solid var(--gold-dim); background: rgba(5,10,7,.98); box-shadow: 0 8px 20px #030503; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, 4px); transition: opacity .12s, transform .12s, visibility .12s; text-align: left; text-transform: none; letter-spacing: 0; }
+  .renown-info:hover .renown-popover, .renown-info:focus .renown-popover, .renown-info:focus-within .renown-popover { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+  .killteam-plate:focus .renown-popover { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+  .renown-popover-title { display: block; margin: 0 0 5px; color: var(--gold); font: 700 9px 'Cinzel', serif; text-transform: uppercase; letter-spacing: .08em; }
+  .renown-ladder { display: block; }
+  .renown-tier { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-top: 1px solid rgba(79,214,122,.12); color: var(--green-faint); font-size: 9px; line-height: 1.35; }
+  .renown-tier:first-child { border-top: 0; }
+  .renown-tier-name { color: var(--gold-dim); font-weight: 700; }
+  .renown-tier.current .renown-tier-name { color: var(--gold); }
+  .renown-tier.current .renown-tier-name::before { content: "› "; }
+  .renown-tier.future { opacity: .48; }
+  .renown-tier-unlock { color: var(--green-dim); }
+  .renown-scope-note { display: block; margin: 8px 0 0; padding-top: 7px; border-top: 1px solid var(--border-dim); color: var(--green-faint); font-size: 9px; line-height: 1.45; }
+  .chapter-record-overlay { z-index: 64; align-items: center; padding: 20px; }
+  #member-modal { z-index: 66; }
+  .chapter-record-overlay .overlay-panel { max-width: 760px; }
+  .chapter-lore { margin: 0 0 16px; padding: 12px 14px; border-left: 2px solid var(--gold-dim); color: var(--green-dim); font-size: 12px; line-height: 1.65; }
+  .chapter-record-roster { max-height: 48vh; overflow: auto; }
+  .chapter-record-roster .blood-roster-list { max-height: none; }
+  .chapter-preview-more { color: var(--gold); font-size: 10px; }
+  .formation-record-grid { display: grid; grid-template-columns: minmax(210px, .8fr) minmax(0, 2fr); gap: 24px; align-items: stretch; margin: 0 0 26px; }
+  .formation-record-grid .tier-label { margin-top: 0; }
+  .formation-leadership { min-width: 0; }
+  .formation-leadership .tier-formation-lead { margin: 0; justify-content: flex-start; }
+  @media (max-width: 760px) { .formation-record-grid { grid-template-columns: 1fr; gap: 18px; } }
   .directive-tier-tag {
     background: #141b14; border: 1px solid var(--gold); color: var(--gold);
     font-weight: 700; font-size: 10px; padding: 2px 7px; border-radius: 2px;
@@ -492,11 +604,8 @@
     font-size: 9.5px; color: var(--gold-dim); margin-top: 2px;
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
-  .directive-tier-badge {
-    color: var(--gold); font-weight: 700; font-size: 9px;
-    border: 1px solid rgba(207,174,104,0.4); padding: 1px 4px; border-radius: 2px;
-    text-transform: uppercase;
-  }
+  .killteam-plate-renown-label { color: var(--gold); font-weight: 700; text-transform: uppercase; }
+  .killteam-plate-unlocks { color: var(--green-dim); font-size: 9px; line-height: 1.35; }
   .killteam-header { margin-bottom: 24px; text-align: center; }
   .killteam-header-title {
     font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px; letter-spacing: 0.03em;
@@ -529,6 +638,7 @@
   .term-line { display: flex; flex-wrap: wrap; gap: 10px 14px; }
   .term-gap { height: 6px; }
   .term-prompt { color: var(--green); }
+  .term-cursor { display: inline-block; animation: termBlink 1.1s steps(1) infinite; color: var(--green); }
   .term-label {
     color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.05em;
     min-width: 140px; flex-shrink: 0;
@@ -536,7 +646,6 @@
   .term-value { color: var(--green-dim); flex: 1 1 300px; }
   .term-active { color: var(--gold); }
   .term-alert { color: var(--red); text-shadow: 0 0 5px rgba(224,92,79,0.25); }
-  .term-cursor { display: inline-block; animation: termBlink 1.1s steps(1) infinite; color: var(--green); }
   @keyframes termBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
   .overlay {
@@ -556,6 +665,9 @@
     transform-origin: top center;
   }
   .overlay-panel.panel-wide { max-width: 580px; }
+  .member-modal-panel { padding-top: 52px; }
+  .member-modal-return { position: absolute; top: 12px; left: 16px; display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid var(--green-dim); background: rgba(79,214,122,.05); color: var(--green); font: inherit; font-size: 10px; text-transform: uppercase; cursor: pointer; }
+  .member-modal-return:hover { border-color: var(--green); color: var(--white); background: rgba(79,214,122,.1); }
 
   .overlay-panel.fade-in { animation: fadeScale 200ms ease-out; }
   @keyframes fadeScale { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
@@ -633,11 +745,18 @@
   .search-result-meta { font-size: 11px; color: var(--green-dim); }
 
   .modal-rank { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold); margin-bottom: 6px; }
-  .modal-heading { position: relative; padding-top: 20px; min-height: 78px; }
-  .modal-studs { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; }
-  .modal-studs-label { color: var(--gold); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 2px; }
-  .modal-studs .stud-display { justify-content: center; }
-  .modal-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 23px; color: var(--white); margin-bottom: 14px; }
+  .modal-heading { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(0, 1.35fr) minmax(84px, auto); gap: 14px; align-items: start; padding: 8px 0 14px; min-height: 98px; }
+  .modal-identity { min-width: 0; }
+  .modal-award-center { min-width: 0; display: flex; flex-direction: column; align-items: stretch; text-align: center; }
+  .modal-award-label { color: var(--gold); font-size: 10px; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 6px; }
+  .modal-award-rack { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; min-height: 38px; align-content: flex-start; }
+  .modal-award { display: block; padding: 0; border: 1px solid var(--border-dim); background: #050705; line-height: 0; cursor: help; }
+  .modal-award img { display: block; width: 68px; height: 24px; object-fit: contain; }
+  .modal-no-awards { display: flex; min-height: 38px; align-items: center; justify-content: center; border: 1px dashed var(--border-dim); color: var(--green-faint); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+  .modal-studs { min-width: 84px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .modal-studs-label { color: var(--gold); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+  .modal-studs .stud-display { justify-content: center; min-height: 38px; align-items: center; }
+  .modal-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 23px; color: var(--white); margin: 0 0 14px; overflow-wrap: anywhere; }
   .modal-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); color: var(--green-dim); }
   .modal-row span:last-child { color: var(--white); }
   .modal-link {
@@ -711,6 +830,17 @@
     .roster-chapter { display: none; }
     .roster-table th:nth-child(3) { display: none; }
     .modal-name { font-size: 19px; }
+    .renown-popover { position: fixed; left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 70vh; overflow: auto; transform: translateY(5px); }
+    .renown-info:hover .renown-popover, .renown-info:focus .renown-popover, .renown-info:focus-within .renown-popover { transform: translateY(0); }
+    .chapter-record-overlay { padding: 12px; }
+    .chapter-record-roster { max-height: 52vh; }
+    .modal-heading { grid-template-columns: minmax(0, 1fr) minmax(74px, auto); gap: 8px; padding-top: 12px; min-height: 0; }
+    .modal-identity { grid-column: 1 / -1; }
+    .modal-name { margin-bottom: 4px; }
+    .modal-award-center { grid-column: 1; grid-row: 2; text-align: left; }
+    .modal-award-rack { justify-content: flex-start; }
+    .modal-award img { width: 54px; height: 22px; }
+    .modal-studs { grid-column: 2; grid-row: 2; justify-self: end; align-self: center; }
     .dropcap { font-size: 32px; }
   }
 
@@ -835,47 +965,41 @@
   .strat-pos { color: var(--green); }
   .strat-neg { color: var(--red); }
 
-  .blood-page .page { max-width: 1520px; }
-  .blood-page .header { max-width: 1180px; margin-left: auto; margin-right: auto; }
-  .blood-page .slate { padding: 0; border: 0; background: none; box-shadow: none; }
-  .blood-page .hud-bracket, .blood-page .slate-corner { display: none; }
-  .blood-page #breadcrumb { max-width: 1180px; margin: 12px auto 18px; }
+  .blood-page .page { max-width: 1180px; }
   .blood-room { color: #c9c0aa; }
   .blood-heading { max-width: 1180px; margin: 0 auto; padding: 12px 0 24px; }
-  .blood-overline { color: var(--gold-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; }
-  .blood-heading h2 { font-family: 'Cinzel', serif; text-transform: uppercase; color: var(--white); font-size: clamp(28px, 4vw, 48px); margin: 4px 0 14px; font-weight: 600; }
+  .blood-overline { color: var(--green-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; }
+  .blood-heading h2 { font-family: 'Share Tech Mono', monospace; text-transform: uppercase; color: var(--gold); font-size: 24px; margin: 5px 0 8px; font-weight: 700; }
+  .blood-description { max-width: 72ch; margin: 0; color: var(--green-dim); font-size: 12px; line-height: 1.65; }
   .blood-heading-foot { display: flex; gap: 12px; align-items: center; justify-content: space-between; color: #aaa48e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
   #blood-audio { background: #171c19; border: 1px solid #645c46; color: var(--gold); cursor: pointer; padding: 8px 12px; font-size: 11px; text-transform: uppercase; white-space: nowrap; }
   #blood-audio:hover, #blood-audio[aria-pressed="true"] { background: #292b23; border-color: var(--gold); }
   #blood-audio:disabled { opacity: 0.6; cursor: not-allowed; }
+  #blood-audio.audio-unavailable { color: var(--green-faint); border-color: var(--border-dim); cursor: help; }
 
-  .blood-wall {
-    position: relative; isolation: isolate; overflow: hidden; min-height: 610px;
-    background: #3b3328 url('/assets/record-of-blood-wall.png') center center / cover no-repeat;
-    box-shadow: inset 0 0 65px 12px rgba(11,9,7,.55), 0 18px 40px #000;
-  }
-  .blood-wall::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; background: linear-gradient(90deg, rgba(17,13,9,.18), transparent 25% 75%, rgba(17,13,9,.28)); }
-  .blood-light { position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 24% 25%, rgba(255,196,110,.16), transparent 65%); animation: bloodGlow 8s ease-in-out infinite alternate; }
-  @keyframes bloodGlow { from { opacity: .5; } to { opacity: 1; } }
-  .blood-mounts { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 4px 12px; width: min(76%, 950px); height: 445px; margin: 0 auto; padding: 28px 0 12px; }
-  .blood-mount { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 4px; border: 0; color: #f1e5c8; background: none; cursor: pointer; text-align: center; }
-  .blood-mount::before { content: ""; position: absolute; top: 15%; width: min(90%, 190px); aspect-ratio: 1; border-radius: 48%; pointer-events: none; background: radial-gradient(ellipse at 55% 59%, rgba(13,10,8,.86) 15%, rgba(29,20,13,.62) 47%, rgba(50,35,20,.14) 71%, transparent 78%); filter: blur(6px); }
-  .blood-pauldron { position: relative; display: block; width: min(100%, 140px); aspect-ratio: 1; filter: drop-shadow(5px 10px 5px rgba(0,0,0,.85)); transition: filter .25s, transform .25s; }
+  .blood-console { position: relative; border: 1px solid var(--border); background: rgba(3,8,5,.9); box-shadow: inset 0 0 45px rgba(0,0,0,.65); padding: 12px; }
+  .blood-console-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 0 4px 10px; border-bottom: 1px solid var(--border-dim); color: var(--green-dim); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+  .blood-console-bar strong { color: var(--gold-dim); font-weight: 400; }
+  .blood-mounts { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 12px 0; }
+  .blood-mount { position: relative; display: grid; grid-template-columns: minmax(56px, 76px) minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: start; gap: 8px 10px; min-width: 0; min-height: 96px; padding: 9px; border: 1px solid var(--border-dim); color: var(--green); background: rgba(79,214,122,.018); cursor: pointer; text-align: left; transition: border-color .16s, background .16s; }
+  .blood-mount:hover, .blood-mount:focus-visible, .blood-mount.selected { border-color: var(--green-dim); background: rgba(79,214,122,.06); }
+  .blood-pauldron { position: relative; display: block; grid-column: 1; grid-row: 1; width: 100%; aspect-ratio: 1; }
   .blood-pauldron svg { width: 100%; height: 100%; fill: #9c916f; stroke: #c0b291; stroke-width: 2; }
   .blood-plate { fill: #343a36; stroke: #b5a484; stroke-width: 7; }
   .blood-trim { fill: #252b28; stroke: #55594d; stroke-width: 3; }
   .blood-grain { fill: none; stroke: #868373; stroke-width: 2; opacity: .55; }
-  .blood-pauldron img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 2px #000); }
+  .blood-pauldron img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
   .blood-pauldron img[hidden] { display: none; }
-  .blood-mount:hover .blood-pauldron, .blood-mount:focus-visible .blood-pauldron, .blood-mount.selected .blood-pauldron { filter: drop-shadow(0 0 10px rgba(246,196,110,.4)) drop-shadow(5px 10px 5px #000); transform: translateY(-2px); }
-  .blood-mount:hover, .blood-mount:focus { z-index: 4; }
-  .blood-preview { position: absolute; z-index: 5; top: 0; left: 100%; width: 260px; max-width: calc(100vw - 32px); max-height: 240px; padding: 12px; overflow-y: auto; text-align: left; background: rgba(8,14,10,.98); border: 1px solid var(--gold-dim); border-left: 3px solid var(--gold); box-shadow: 0 12px 30px #050605, inset 0 0 24px rgba(79,214,122,.04); opacity: 0; visibility: hidden; pointer-events: none; }
-  .blood-mount:nth-child(4n + 3) .blood-preview, .blood-mount:nth-child(4n) .blood-preview { left: auto; right: 100%; }
-  .blood-mount:hover .blood-preview, .blood-mount:focus .blood-preview { opacity: 1; visibility: visible; pointer-events: auto; }
-  .blood-mounts:focus-within .blood-mount:hover:not(:focus) .blood-preview { opacity: 0; visibility: hidden; pointer-events: none; }
-  .blood-preview-title { display: block; margin-bottom: 7px; padding-bottom: 7px; border-bottom: 1px solid var(--border-dim); color: var(--gold); font-family: 'Cinzel', serif; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
-  .blood-preview-member { display: block; padding: 4px 0; color: var(--green); font-size: 12px; overflow-wrap: anywhere; }
-  .blood-empty { position: relative; z-index: 2; text-align: center; padding: 130px 24px; color: #281f15; }
+  .blood-entry-copy { display: flex; grid-column: 2; grid-row: 1; flex-direction: column; gap: 5px; min-width: 0; padding-top: 4px; }
+  .blood-entry-name { color: var(--white); font-family: 'Share Tech Mono', monospace; font-size: 12px; line-height: 1.3; overflow-wrap: anywhere; }
+  .blood-entry-count { color: var(--green-dim); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+  .blood-preview { display: flex; grid-column: 1 / -1; flex-direction: column; gap: 2px; min-width: 0; max-height: 0; padding-top: 0; overflow: hidden; border-top: 1px solid transparent; text-align: left; opacity: 0; pointer-events: none; transition: max-height .2s ease, opacity .16s ease, padding-top .2s ease, border-color .2s ease; }
+  .blood-mount:hover .blood-preview, .blood-mount:focus-visible .blood-preview { max-height: 128px; padding-top: 7px; border-top-color: var(--border-dim); opacity: 1; }
+  .blood-preview-title { display: block; margin-bottom: 2px; color: var(--gold-dim); font-size: 8px; line-height: 1.3; text-transform: uppercase; letter-spacing: .08em; }
+  .blood-preview-member { display: flex; justify-content: space-between; gap: 8px; min-width: 0; padding: 2px 0; color: var(--green); font-size: 9px; line-height: 1.3; }
+  .blood-preview-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .blood-preview-years { flex: 0 0 auto; color: var(--gold-dim); white-space: nowrap; }
+  .blood-empty { text-align: center; padding: 42px 24px; color: var(--green-dim); font-size: 12px; }
   .blood-controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 16px auto; color: var(--gold); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
   .blood-controls button { width: 42px; height: 42px; background: #191d18; border: 1px solid var(--gold-dim); color: var(--gold); cursor: pointer; font-size: 20px; }
   .blood-controls button:hover:not(:disabled) { border-color: var(--gold); background: #313329; }
@@ -891,18 +1015,23 @@
   @media (max-width: 600px) {
     .blood-page .page { padding: 14px 10px 32px; }
     .blood-heading { padding: 10px 5px 20px; }
-    .blood-wall { min-height: 540px; background-position: center; }
-    .blood-mounts { width: min(92%, 360px); height: 395px; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 16px 0 8px; }
-    .blood-pauldron { width: min(100%, 120px); }
-    .blood-preview, .blood-mount:nth-child(4n + 3) .blood-preview { left: 0; right: auto; width: min(270px, calc(100vw - 44px)); max-height: 180px; }
-    .blood-mount:nth-child(2n) .blood-preview { left: auto; right: 0; }
+    .blood-console { padding: 8px; }
+    .blood-mounts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .blood-mount { min-height: 94px; padding: 7px; gap: 7px; grid-template-columns: minmax(48px, 64px) minmax(0, 1fr); }
+    .blood-preview-member { font-size: 8.5px; }
     .blood-roster { padding: 16px 12px; }
   }
 
   @media (max-width: 600px) {
     .header { flex-wrap: wrap; }
+    .header-right { width: auto; flex-wrap: nowrap; gap: 7px; }
+    .slate-navigation { align-items: flex-start; flex-direction: column; gap: 8px; margin: 24px 0 22px; }
+    .slate-navigation .back-btn { align-self: flex-start; }
+    #search-btn { margin-left: auto; }
     .site-nav { order: 3; width: 100%; }
     .site-nav a { flex: 1; text-align: center; }
+    .slate-corner.tl { top: 9px; left: 18px; right: 18px; overflow: hidden; text-overflow: ellipsis; }
+    .slate-corner.tr { top: 25px; left: 18px; right: auto; }
     .reach-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .reach-legend, .reach-hint { display: none; }
     .reach-select { margin-left: 0; }
@@ -914,7 +1043,6 @@
     * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     .reach-pulse { animation: none; opacity: 0.5; }
     .blood-mount { opacity: 1; }
-    .blood-light { animation: none; }
   }
 
   :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
@@ -922,24 +1050,60 @@
 </head>
 <body>
 
+  <div id="cogitator-boot" class="cogitator-boot" hidden aria-live="polite" aria-label="Inquisitorial command terminal startup">
+    <button id="boot-skip" class="boot-skip" type="button">Bypass startup</button>
+    <div class="boot-initializing">Initializing...<span>Machine spirit // cold start</span></div>
+    <div class="boot-access" aria-live="assertive">
+      <strong id="boot-access-text"></strong>
+      <span>Inquisitorial authentication // accepted</span>
+    </div>
+    <div class="cogitator-console">
+      <div class="boot-screen">
+        <div class="cogitator-mark">
+          <img src="/assets/inquisitorial-rosette.png" alt="" aria-hidden="true">
+          <div><strong>Ordo Xenos Command Terminal</strong><span>Watch Fortress Jericho // Inquisitorial network</span></div>
+        </div>
+        <div class="boot-phase">Cold start // terminal POST 000.001.M42</div>
+        <div class="boot-objective">
+          <span class="boot-objective-label">Authorization objectives</span>
+          <span class="boot-objective-value">Inquisitorial ident and cipher required</span>
+        </div>
+        <div class="boot-grid">
+          <div class="boot-log" aria-hidden="true">
+            <div class="boot-line">MEMORY RELIQUARY...............INTEGRITY</div>
+            <div class="boot-line">NOOSPHERIC TRANSCEIVER.........HANDSHAKE</div>
+            <div class="boot-line">XENOS-THREAT ARCHIVE...........SEALED</div>
+            <div class="boot-line">JERICHO TACTICAL UPLINK.........READY</div>
+            <div class="boot-line">INQUISITORIAL IDENT GATE........CHALLENGE</div>
+          </div>
+        </div>
+        <div class="credential-block">
+          <span class="credential-label">Operator ident</span><span id="boot-ident" class="credential-value"></span>
+          <span class="credential-label">Cipher challenge</span><span id="boot-cipher" class="credential-value"></span>
+          <span class="credential-label">Access tier</span><span id="boot-clearance" class="credential-value"></span>
+        </div>
+        <div class="boot-progress" aria-hidden="true"><span></span></div>
+        <div id="boot-verdict" class="boot-verdict">Awaiting operator authentication</div>
+      </div>
+    </div>
+  </div>
+
   <div class="page">
     <header class="header">
       <div class="header-left">
-        <div class="header-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
-            <path d="M2 12 C6 5, 18 5, 22 12 C18 19, 6 19, 2 12 Z"/>
-            <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
-          </svg>
+        <div class="header-icon">
+          <img src="/assets/jericho-symbol.png" alt="Jericho Deathwatch emblem" width="44" height="44">
         </div>
         <div>
           <h1 class="header-title">Watch Fortress Jericho</h1>
-          <div class="header-sub">Cogitator-Pattern MK.IV &middot; Strategium Access</div>
+          <div class="header-sub">Ordo Xenos &middot; Jericho Sector Intelligence</div>
         </div>
       </div>
-      <nav class="site-nav" aria-label="Strategium sections">
-        <a href="/" data-page="fortress">Fortress</a>
-        <a href="/reach" data-page="reach">Reach Map</a>
-        <a href="/record-of-blood" data-page="blood">Record of Blood</a>
+      <nav class="site-nav" aria-label="Ordo Xenos intelligence channels">
+        <a href="/" data-atlas-home>Fortress Atlas</a>
+        <a href="/" data-page="fortress">Personnel Docket</a>
+        <a href="/reach" data-page="reach">Sector Operations</a>
+        <a href="/record-of-blood" data-page="blood">Chapter Origins</a>
       </nav>
       <div class="header-right">
         <div id="auth-container"></div>
@@ -952,10 +1116,13 @@
       <div class="hud-bracket tr"></div>
       <div class="hud-bracket bl"></div>
       <div class="hud-bracket br"></div>
-      <div class="slate-corner tl">STRATEGIUM-SLATE // JERICHO</div>
-      <div class="slate-corner tr" id="slate-count">ASTARTES ON RECORD: &mdash;</div>
+      <div class="slate-corner tl">ORDO XENOS // JERICHO SECTOR INTELLIGENCE</div>
+      <div class="slate-corner tr" id="slate-count">PERSONNEL DOSSIERS: &mdash;</div>
 
-      <nav id="breadcrumb"></nav>
+      <div class="slate-navigation">
+        <button id="back-btn" class="auth-btn back-btn" type="button" aria-label="Return to previous view" title="Return to previous view" hidden><span class="back-btn-arrow" aria-hidden="true">&larr;</span><span>Return</span></button>
+        <nav id="breadcrumb"></nav>
+      </div>
       <main id="app"></main>
     </div>
   </div>
@@ -963,8 +1130,8 @@
   <div id="search-overlay" class="overlay">
     <div class="overlay-panel">
       <button id="search-close-btn" class="overlay-close" aria-label="Close">✕</button>
-      <h2 class="overlay-title">Search // Roster</h2>
-      <input id="search-input" class="field-input" type="text" placeholder="name, rank, or chapter of origin..." autocomplete="off">
+      <h2 class="overlay-title">Search // Sector Archive</h2>
+      <input id="search-input" class="field-input" type="text" placeholder="name, rank, or home Chapter..." autocomplete="off">
       <div id="search-results" class="search-results"></div>
     </div>
   </div>
@@ -977,9 +1144,17 @@
   </div>
 
   <div id="member-modal" class="overlay">
-    <div class="overlay-panel panel-wide">
+    <div class="overlay-panel panel-wide member-modal-panel">
       <button id="member-modal-close" class="overlay-close" aria-label="Close">✕</button>
+      <button id="member-modal-return" class="member-modal-return" type="button"><span aria-hidden="true">&larr;</span> Return to previous view</button>
       <div id="member-modal-body"></div>
+    </div>
+  </div>
+
+  <div id="chapter-record-overlay" class="overlay chapter-record-overlay" role="dialog" aria-modal="true" aria-labelledby="chapter-record-title">
+    <div class="overlay-panel">
+      <button id="chapter-record-close" class="overlay-close" type="button" aria-label="Close Chapter dossier">&times;</button>
+      <div id="chapter-record-body"></div>
     </div>
   </div>
 
@@ -1051,6 +1226,43 @@ const FORMATIONS = {
   hall_of_blades: { name: "Hall of Blades", lead: "blade_master", ranks: ["first_blade", "blade_guard"] },
   black_vault: { name: "Black Vault", lead: "huntmaster", ranks: ["kill_marine"] }
 };
+
+const ATLAS_LOCATIONS = [
+  { id: "01", name: "Strategium", path: "M 681 105 L 708 70 L 767 43 L 826 42 L 873 71 L 910 119 L 902 177 L 866 222 L 817 252 L 768 244 L 717 215 L 680 169 Z", labelX: 797, labelY: 151, view: "strategium" },
+  { id: "02", name: "Reclusiam", path: "M 931 93 L 958 63 L 1001 57 L 1040 73 L 1073 106 L 1080 159 L 1054 203 L 1005 223 L 963 204 L 936 169 Z", labelX: 1007, labelY: 143, view: "formation", formationId: "reclusiam" },
+  { id: "03", name: "Watch Armory", path: "M 1077 220 L 1108 194 L 1154 184 L 1201 201 L 1241 238 L 1251 284 L 1226 326 L 1178 346 L 1127 331 L 1090 297 Z", labelX: 1166, labelY: 275, view: "formation", formationId: "armory" },
+  { id: "04", name: "Stasis Cells", path: "M 132 571 L 157 528 L 206 485 L 264 465 L 329 470 L 384 491 L 430 531 L 452 585 L 443 631 L 409 665 L 356 681 L 295 668 L 235 644 L 180 615 Z", labelX: 286, labelY: 578, view: "formation", formationId: "apothecarion" },
+  { id: "05", name: "Librarius", path: "M 1354 100 L 1380 78 L 1421 75 L 1459 94 L 1484 126 L 1485 171 L 1460 205 L 1418 221 L 1381 203 L 1356 169 Z", labelX: 1421, labelY: 148, view: "formation", formationId: "librarius" },
+  { id: "06", name: "Vehicle Bays", path: "M 928 659 L 980 627 L 1043 620 L 1108 632 L 1175 649 L 1230 677 L 1266 715 L 1251 745 L 1200 759 L 1132 751 L 1064 773 L 1000 789 L 947 771 L 929 732 Z", labelX: 1093, labelY: 706, view: "formation", formationId: "armory" },
+  { id: "07", name: "Flight Deck", path: "M 1350 423 L 1392 395 L 1451 383 L 1515 390 L 1575 411 L 1629 450 L 1653 501 L 1650 565 L 1621 617 L 1577 653 L 1514 680 L 1450 665 L 1401 630 L 1360 581 L 1339 525 Z", labelX: 1499, labelY: 524, page: "reach" },
+  { id: "08", name: "Dueling Grounds", path: "M 254 342 L 281 326 L 321 335 L 362 339 L 405 348 L 444 366 L 483 390 L 476 413 L 436 421 L 389 411 L 341 421 L 299 412 L 267 390 L 257 365 Z", labelX: 369, labelY: 379, view: "formation", formationId: "hall_of_blades" },
+  { id: "09", name: "Apothecarion", path: "M 464 374 L 491 346 L 535 337 L 577 355 L 603 392 L 600 435 L 571 468 L 528 478 L 487 457 L 465 421 Z", labelX: 535, labelY: 410, view: "formation", formationId: "apothecarion" },
+  { id: "10a", name: "Orbital Defense Batteries", path: "M 47 245 L 72 228 L 102 231 L 123 253 L 128 282 L 110 306 L 78 310 L 53 292 Z", labelX: 87, labelY: 272, page: "reach" },
+  { id: "10b", name: "Orbital Defense Batteries", path: "M 24 534 L 49 514 L 79 516 L 100 539 L 102 572 L 83 595 L 52 596 L 28 575 Z", labelX: 63, labelY: 557, page: "reach" },
+  { id: "10c", name: "Orbital Defense Batteries", path: "M 1510 230 L 1535 212 L 1567 216 L 1588 239 L 1591 270 L 1571 293 L 1540 293 L 1517 273 Z", labelX: 1550, labelY: 255, page: "reach" },
+  { id: "11", name: "Communications Arrays", path: "M 205 154 L 230 132 L 263 131 L 289 153 L 295 185 L 276 211 L 244 214 L 218 194 Z", labelX: 252, labelY: 173, page: "reach" },
+  { id: "12", name: "Astropathic Choir", path: "M 405 119 L 429 96 L 461 96 L 485 119 L 489 150 L 470 174 L 439 176 L 415 157 Z", labelX: 449, labelY: 139, view: "formation", formationId: "librarius" },
+  { id: "13", name: "Primus Company Hall", path: "M 671 430 L 694 406 L 729 401 L 756 422 L 775 461 L 771 510 L 748 553 L 716 570 L 684 550 L 669 502 Z", labelX: 723, labelY: 481, view: "company", companyId: 1 },
+  { id: "14", name: "Secundus Company Hall", path: "M 805 452 L 829 430 L 865 429 L 891 451 L 910 488 L 908 536 L 885 576 L 851 591 L 820 572 L 804 526 Z", labelX: 856, labelY: 501, view: "company", companyId: 2 },
+  { id: "15", name: "Tertius Company Hall", path: "M 940 452 L 965 430 L 1001 430 L 1027 454 L 1045 492 L 1043 540 L 1019 580 L 985 595 L 954 575 L 939 527 Z", labelX: 991, labelY: 503, view: "company", companyId: 3 },
+  { id: "16", name: "Quartus Company Hall", path: "M 1075 432 L 1100 408 L 1137 406 L 1165 430 L 1183 469 L 1180 517 L 1157 558 L 1122 575 L 1090 555 L 1074 508 Z", labelX: 1127, labelY: 486, view: "company", companyId: 4 },
+  { id: "17", name: "Quintus Company Hall", path: "M 1210 411 L 1235 387 L 1271 386 L 1299 410 L 1316 449 L 1313 498 L 1290 538 L 1255 555 L 1223 535 L 1209 488 Z", labelX: 1261, labelY: 466, view: "company", companyId: 5 }
+];
+
+const FORMATION_SYMBOLS = {
+  armory: "armory",
+  apothecarion: "apothecarion",
+  librarius: "librarius",
+  reclusiam: "reclusiam",
+  black_vault: "black_vault",
+  hall_of_blades: "hall_of_blades"
+};
+
+function formationSymbolHtml(key) {
+  const formation = FORMATIONS[key];
+  if (!formation || !FORMATION_SYMBOLS[key]) return "";
+  return `<img class="formation-symbol" src="/assets/formation-symbols/${FORMATION_SYMBOLS[key]}.png" alt="" aria-hidden="true" loading="lazy">`;
+}
 
 const FORMATION_LORE = {
   armory: "The Armory keeps the Fortress armed, repaired, and ready. Its artificers maintain the wargear that lets every other formation answer the next summons.",
@@ -1406,7 +1618,7 @@ function generateSampleRoster() {
 
 const state = {
   page: "fortress",    // 'fortress' | 'reach' | 'blood'
-  view: "strategium",   // 'strategium' | 'company' | 'killteam' | 'formation'
+  view: "landing",   // 'landing' | 'strategium' | 'company' | 'killteam' | 'formation'
   companyId: null,
   killTeamId: null,
   formationId: null,
@@ -1425,7 +1637,11 @@ const state = {
   reachSuppressClick: false,
   selectedPlanet: null,
   selectedChapter: null,
-  bloodPage: 0
+  chapterLore: null,
+  bloodPage: 0,
+  modalMemberId: null,
+  modalReturnTarget: null,
+  navigationHistory: []
 };
 
 const BACKSTORY_MAX_WORDS = 400;
@@ -1645,7 +1861,20 @@ function escapeHtml(str) {
 
 function serviceMetrics(member) {
   if (!member) return { vigilYears: null, studsPips: "—" };
-  const vigilYears = Number.isFinite(Number(member.vigilYears)) ? Number(member.vigilYears) : null;
+  const aarPoints = Number(member.aarPoints ?? member.stats?.aar_points);
+  const joinedAt = member.serverJoinedAt || member.discordJoinedAt || member.joinedAt;
+  const joinedMs = joinedAt ? Date.parse(joinedAt) : NaN;
+  const serverDays = Number.isFinite(Number(member.serverDays))
+    ? Math.max(0, Number(member.serverDays))
+    : Number.isFinite(joinedMs) && joinedMs <= Date.now()
+      ? Math.max(0, (Date.now() - joinedMs) / (24 * 60 * 60 * 1000))
+      : null;
+  const pairedProgress = Number.isFinite(aarPoints) && serverDays !== null
+    ? Math.min(Math.max(0, aarPoints) / 400, serverDays / 28)
+    : null;
+  const calculatedYears = pairedProgress === null ? null : Math.min(pairedProgress * 25, 400);
+  const publishedYears = Number.isFinite(Number(member.vigilYears)) ? Number(member.vigilYears) : null;
+  const vigilYears = calculatedYears === null ? publishedYears : Math.round(calculatedYears * 10) / 10;
   return { vigilYears, studsPips: member.serviceStudPips || "—" };
 }
 
@@ -1665,7 +1894,7 @@ function watchEntryLabel(member) {
 
 function serviceRecord(member) {
   const metrics = serviceMetrics(member);
-  return metrics.vigilYears === null ? "Vigil record pending" : `${metrics.vigilYears} years given to the Long Vigil`;
+  return metrics.vigilYears === null ? "Vigil record pending" : `${metrics.vigilYears.toFixed(1)} years given to the Long Vigil`;
 }
 
 function vigilEntryRecord(member) {
@@ -1677,6 +1906,61 @@ function serviceStudsHtml(member) {
   const pips = String(member.serviceStudPips || "—");
   if (pips === "—") return `<span class="stud-display">—</span>`;
   return `<span class="stud-display">${[...pips].map(pip => `<span class="stud-pip ${pip === "●" ? "auramite" : "plasteel"}" aria-hidden="true">${pip}</span>`).join("")}</span>`;
+}
+
+function memberAwardsHtml(member) {
+  const awards = (Array.isArray(member.awards) ? member.awards : []).filter(award => award && award.ribbon);
+  if (!awards.length) return `<span class="modal-no-awards">No honours recorded</span>`;
+  return `<div class="modal-award-rack">${awards.map(award => `
+    <span class="modal-award" title="${escapeHtml(award.name || "Recorded honour")}" aria-label="${escapeHtml(award.name || "Recorded honour")}">
+      <img src="${apiUrl(`/assets/ribbons/${encodeURIComponent(award.ribbon)}`)}" alt="${escapeHtml(award.name || "Recorded honour")}" loading="lazy">
+    </span>`).join("")}</div>`;
+}
+
+const RENOWN_TIERS = ["Unproven", "Initiated", "Vigilant", "Sworn", "Hallowed", "Eternal"];
+const KILL_TEAM_RENOWN_UNLOCKS = {
+  Unproven: [],
+  Initiated: [],
+  Vigilant: ["Cloaks"],
+  Sworn: ["Cloaks", "Iron Halos"],
+  Hallowed: ["Cloaks", "Iron Halos", "Crested helms (except Victrix Guard)"],
+  Eternal: ["Featured in Jericho lore"]
+};
+const KILL_TEAM_RENOWN_GAINS = {
+  Unproven: [],
+  Initiated: [],
+  Vigilant: ["Cloaks"],
+  Sworn: ["Iron Halos"],
+  Hallowed: ["All crested helms (excluding Victrix Guard)"],
+  Eternal: ["Featured in Jericho lore"]
+};
+
+function renownSummaryHtml(directive, kind = "unit") {
+  const completed = Number(directive.completed ?? directive.completions_28d ?? 0);
+  const rep = Number(directive.rep_earned ?? directive.rep_earned_28d ?? 0);
+  const tier = directive.tier || (kind === "killteam" ? "Unproven" : "Unranked");
+  const unlocks = kind === "killteam"
+    ? KILL_TEAM_RENOWN_UNLOCKS[tier] || []
+    : [];
+  return `<div class="formation-directive-stat" aria-label="${kind === "killteam" ? "Kill Team" : "Unit"} Renown">
+    <span>RENOWN: ${renownInfoHtml(kind, tier)}</span>
+    <span>REP: <strong>${Number.isFinite(rep) ? rep.toFixed(1) : "0.0"}</strong></span>
+    <span>STRIKE DIRECTIVES: <strong>${Number.isFinite(completed) ? completed : 0} COMPLETED</strong></span>
+    <span class="renown-unlocks">CURRENTLY UNLOCKED: ${kind === "killteam" && unlocks.length ? escapeHtml(unlocks.join(", ")) : kind === "killteam" ? "No unlocks at this rank" : "No published unlock schedule for this unit type"}</span>
+  </div>`;
+}
+
+function renownInfoHtml(kind, tier, focusable = true) {
+  const currentIndex = RENOWN_TIERS.indexOf(tier);
+  const rows = RENOWN_TIERS.map((rank, index) => {
+    const unlocked = index <= currentIndex;
+    const current = rank === tier;
+    const unlocks = KILL_TEAM_RENOWN_GAINS[rank] || [];
+    const unlockText = unlocks.length ? unlocks.join(", ") : "No new unlock";
+    return `<span class="renown-tier${unlocked ? " earned" : " future"}${current ? " current" : ""}"><span class="renown-tier-name">${escapeHtml(rank)}</span><span class="renown-tier-unlock">${escapeHtml(unlockText)}</span></span>`;
+  }).join("");
+  const scopeNote = kind === "killteam" ? "" : `<span class="renown-scope-note">Published Kill Team reference. Company and formation unlock schedules are not present in the roster source.</span>`;
+  return `<span class="renown-info"${focusable ? ` tabindex="0"` : ""} aria-label="${escapeHtml(tier)} Renown; hover or focus for unlock tiers"><strong class="renown-rank">${escapeHtml(tier)}</strong><span class="renown-popover" role="tooltip"><span class="renown-popover-title">Renown unlock tiers</span><span class="renown-ladder">${rows}</span>${scopeNote}</span></span>`;
 }
 
 function unitLink(label, attrs) {
@@ -1804,14 +2088,18 @@ function plateHtml({ id, member, name, rankLabel, sub, accent, vacant, size }) {
 function renderBreadcrumb() {
   const el = document.getElementById("breadcrumb");
   if (state.page === "blood") {
-    el.innerHTML = `<span class="crumb crumb-current">Record of Blood</span>`;
+    el.innerHTML = `<button class="crumb" data-page="reach">Jericho Reach</button><span class="crumb-sep">&rsaquo;</span><span class="crumb crumb-current">Chapter Origins // Record of Blood</span>`;
     return;
   }
   if (state.page === "reach") {
-    el.innerHTML = `<span class="crumb crumb-current">Jericho Reach</span><span class="crumb-sep">&rsaquo;</span><span class="crumb">Ordo Xenos Strike Directives</span>`;
+    el.innerHTML = `<span class="crumb crumb-current">Jericho Reach // Sector Operations</span><span class="crumb-sep">&rsaquo;</span><span class="crumb">Ordo Xenos Directives</span>`;
     return;
   }
-  const parts = [`<button class="crumb" data-nav="strategium">Strategium</button>`];
+  if (state.view === "landing") {
+    el.innerHTML = `<span class="crumb crumb-current">Fortress Atlas // Command Nexus</span>`;
+    return;
+  }
+  const parts = [`<button class="crumb" data-nav="strategium">Personnel Docket</button>`];
   if (state.view === "company" || state.view === "killteam") {
     parts.push(`<span class="crumb-sep">&rsaquo;</span>`);
     parts.push(`<button class="crumb" data-nav="company" data-company="${state.companyId}">Company ${COMPANY_NAMES[state.companyId]}</button>`);
@@ -1829,6 +2117,44 @@ function renderBreadcrumb() {
     parts.push(`<span class="crumb crumb-current">${escapeHtml(f ? f.name : "Formation")}</span>`);
   }
   el.innerHTML = parts.join("");
+}
+
+function renderLanding() {
+  const hotspots = ATLAS_LOCATIONS.map(location => `
+    <g class="atlas-region" role="button" tabindex="0" data-atlas-location="${escapeHtml(location.id)}"
+      aria-label="Open ${escapeHtml(location.name)}">
+      <path class="atlas-region-shape" d="${location.path}"></path>
+      <text class="atlas-region-label" x="${location.labelX}" y="${location.labelY}">${escapeHtml(location.name)}</text>
+    </g>`).join("");
+  document.getElementById("app").innerHTML = `
+    <section class="atlas-frame" aria-label="Interactive Watch Fortress Jericho atlas">
+      <div class="atlas-image-wrap">
+        <img class="atlas-image" src="/assets/watch-fortress-jericho-map.png" alt="Isometric strategic atlas of Watch Fortress Jericho">
+        <svg class="atlas-regions" viewBox="0 0 1672 941" preserveAspectRatio="none" aria-label="Fortress locations">${hotspots}</svg>
+      </div>
+      <div class="atlas-status">Fortress datalink stable // ${state.dataStatus === "live" ? "roster verified" : "archive relay"}</div>
+    </section>`;
+  requestAnimationFrame(() => {
+    const frame = document.querySelector(".atlas-frame");
+    if (frame && frame.scrollWidth > frame.clientWidth) {
+      frame.scrollLeft = (frame.scrollWidth - frame.clientWidth) / 2;
+    }
+  });
+}
+
+function terminalTransmissionHtml(query, accessing, fields) {
+  const rows = fields.map(field => {
+    const tone = field.tone === "alert" ? " term-alert" : field.tone === "active" ? " term-active" : "";
+    return `<div class="term-line"><span class="term-label">${escapeHtml(field.label)}</span><span class="term-value${tone}">${escapeHtml(field.value)}</span></div>`;
+  }).join("");
+  return `<div class="terminal-output">
+    <div class="term-line term-prompt">&gt; QUERY: ${escapeHtml(query)}</div>
+    <div class="term-line term-prompt">&gt; ${escapeHtml(accessing)}</div>
+    <div class="term-line term-gap"></div>
+    ${rows}
+    <div class="term-line term-gap"></div>
+    <div class="term-line term-prompt">&gt; END TRANSMISSION<span class="term-cursor">_</span></div>
+  </div>`;
 }
 
 function renderStrategium() {
@@ -1862,7 +2188,7 @@ function renderStrategium() {
     return `
       <div class="map-node formation-slot formation-slot-${key}">
       <button class="formation-plate ${isUnformed ? 'unit-unformed' : ''}" data-nav="formation" data-formation="${key}" type="button" style="--formation-accent:${FORMATION_COLORS[key]}">
-        <span class="formation-plate-label">${escapeHtml(f.name)}</span>
+        <span class="formation-plate-label">${formationSymbolHtml(key)}${escapeHtml(f.name)}</span>
         ${lead ? `<span class="formation-plate-lead">${RANK_LABELS[lead.rank]} ${escapeHtml(displayName(lead.name))}</span>` : ""}
         ${equerries.map(e => `<span class="formation-plate-lead">${escapeHtml(equerryTitle(e))} ${escapeHtml(displayName(e.name))}</span>`).join("")}
         ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Cadre Dormant &mdash;</span>` : `<span class="formation-plate-count">${count} sworn</span>`}
@@ -1947,12 +2273,13 @@ function drawMapConnectors() {
   const commandBounds = bounds(command);
   const railY = companies[0].top - 24;
   const middleRect = rectFor(".map-middle");
+  const branchY = commandBounds.bottom + (bounds(".map-middle").top - commandBounds.bottom) / 2;
   const companyRail = `<line x1="${companies[0].centerX}" y1="${railY}" x2="${companies[4].centerX}" y2="${railY}"></line>`;
   const lines = [
     horizontal(command, formation("armory")),
     horizontal(command, formation("apothecarion")),
-    vertical(command, formation("librarius")),
-    vertical(command, formation("reclusiam")),
+    orthogonal(command, formation("librarius"), branchY),
+    orthogonal(command, formation("reclusiam"), branchY),
     vertical(formation("armory"), formation("black_vault")),
     vertical(formation("apothecarion"), formation("hall_of_blades")),
     `<line x1="${commandBounds.centerX}" y1="${commandBounds.bottom}" x2="${commandBounds.centerX}" y2="${railY}"></line>`,
@@ -1981,17 +2308,19 @@ function renderCompany(companyId) {
   const teams = teamList.map(t => {
     const leadName = t.lead ? t.lead.name : "Unassigned";
     const directive = (state.directiveStats && state.directiveStats.killTeams && state.directiveStats.killTeams[t.name]) || {};
+    const renownRep = Number(directive.rep_earned ?? directive.rep_earned_28d ?? 0);
+    const renownCompleted = Number(directive.completed ?? directive.completions_28d ?? 0);
     return `
       <button class="killteam-plate" data-nav="killteam" data-company="${companyId}" data-killteam="${t.killTeam}" type="button">
         <span class="killteam-numeral" aria-hidden="true">${t.slot}</span>
         <span class="killteam-plate-label">${escapeHtml(t.name)}</span>
         <span class="killteam-plate-lead">${t.lead ? RANK_LABELS[t.lead.rank] + " " + escapeHtml(displayName(leadName)) : "No active Watch Sergeant"}</span>
         <span class="killteam-plate-count">${t.count} in team</span>
-        ${directive.tier || directive.completed ? `
-          <div class="killteam-plate-renown">
-            <span class="directive-tier-badge">${escapeHtml(directive.tier || 'Unproven')}</span>
-            <span>${directive.completed || directive.completions_28d || 0} completed &middot; ${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)} rep</span>
-          </div>` : ""}
+        <div class="killteam-plate-renown">
+          <span class="killteam-plate-renown-label">RENOWN: ${renownInfoHtml("killteam", directive.tier || "Unproven", false)}</span>
+          <span>${Number.isFinite(renownCompleted) ? renownCompleted : 0} completed &middot; ${Number.isFinite(renownRep) ? renownRep.toFixed(1) : "0.0"} rep</span>
+          ${(KILL_TEAM_RENOWN_UNLOCKS[directive.tier || "Unproven"] || []).length ? `<span class="killteam-plate-unlocks">UNLOCKS: ${escapeHtml((KILL_TEAM_RENOWN_UNLOCKS[directive.tier || "Unproven"] || []).join(", "))}</span>` : ""}
+        </div>
       </button>`;
   }).join("");
 
@@ -2008,11 +2337,7 @@ function renderCompany(companyId) {
         <span class="unit-dormant-tag">COGITATOR RECORD</span>
         <span>Company ${COMPANY_NAMES[companyId]} is currently unfounded &middot; No battle-brothers assigned to this battle line.</span>
       </div>` : ""}
-    ${companyDirective.tier || companyDirective.completed ? `
-      <div class="formation-directive-stat">
-        <span class="directive-tier-tag">${escapeHtml(companyDirective.tier || 'Sworn')}</span>
-        <span>Strike Directives: <strong>${companyDirective.completed || companyDirective.completions_28d || 0}</strong> completed &middot; <strong>${Number(companyDirective.rep_earned || companyDirective.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
-      </div>` : ""}
+    ${renownSummaryHtml(companyDirective, "company")}
     <p class="company-lore">${escapeHtml(COMPANY_LORE[companyId] || "This company serves the Fortress wherever the Vigil calls.")}</p>
     ${cmdHtml ? commandSectionHtml("Company Command", `<div class="tier tier-company-command tree-row">${cmdHtml}</div>`, unitHonoursHtml(state.members.filter(m => m.company === companyId), "Honours of the Company")) : ""}
     ${teams ? `<div class="tier-label">Kill Teams (${teamList.length})</div><div class="tier tier-killteams tree-row">${teams}</div>` : ""}
@@ -2027,6 +2352,8 @@ function renderFormation(key) {
   const rest = sortByRank(members.filter(m => m !== lead && !equerries.includes(m)));
   const directive = state.directiveStats.formations[key] || {};
   const isDormant = members.length === 0;
+  const cadreMembers = [...new Set([...members, ...equerries])];
+  const honoursHtml = unitHonoursHtml(cadreMembers, "Honours of the Cadre");
 
   const leadHtml = [lead ? plateHtml({
     id: lead.id, member: lead, name: lead.name,
@@ -2044,19 +2371,18 @@ function renderFormation(key) {
     </tr>`).join("");
 
   document.getElementById("app").innerHTML = `
-    <div class="tier-label formation-tier-label" style="--formation-accent:${FORMATION_COLORS[key]}">${escapeHtml(f.name)}</div>
+    <div class="tier-label formation-tier-label" style="--formation-accent:${FORMATION_COLORS[key]}">${escapeHtml(f.name)}${formationSymbolHtml(key)}</div>
     <p class="formation-lore">${escapeHtml(FORMATION_LORE[key] || "This formation serves the Watch according to its own discipline and mandate.")}</p>
     ${isDormant ? `
       <div class="unit-dormant-banner">
         <span class="unit-dormant-tag">CADRE DORMANT</span>
         <span>No specialists currently active in the ${escapeHtml(f.name)} &middot; All seats awaiting summons.</span>
       </div>` : ""}
-    ${directive.tier || directive.completed ? `
-      <div class="formation-directive-stat">
-        <span class="directive-tier-tag">${escapeHtml(directive.tier || 'Sworn')}</span>
-        <span>Strike Directives: <strong>${directive.completed || directive.completions_28d || 0}</strong> completed &middot; <strong>${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
-      </div>` : ""}
-    ${leadHtml ? commandSectionHtml("Cadre Leadership", `<div class="tier tier-formation-lead">${leadHtml}</div>`, unitHonoursHtml([...new Set([...members, ...equerries])], "Honours of the Cadre")) : ""}
+    ${renownSummaryHtml(directive, "formation")}
+    ${honoursHtml ? `<div class="formation-record-grid">
+      <section class="formation-leadership"><div class="tier-label">Cadre Leadership</div><div class="tier tier-formation-lead">${leadHtml}</div></section>
+      ${honoursHtml}
+    </div>` : (leadHtml ? commandSectionHtml("Cadre Leadership", `<div class="tier tier-formation-lead">${leadHtml}</div>`, "") : "")}
     <div class="tier-label">Formation Roster (${rest.length})</div>
     <table class="roster-table">
       <thead><tr><th>Name</th><th>Rank</th><th>Chapter of Origin</th></tr></thead>
@@ -2085,11 +2411,7 @@ function renderKillTeam(companyId, killTeam) {
       <h2 class="killteam-header-title">${escapeHtml(name)}</h2>
       <div class="killteam-header-sub">Company ${COMPANY_NAMES[companyId]} &middot; ${rest.length + (lead ? 1 : 0)} battle-brothers sworn</div>
     </div>
-    ${directive.tier || directive.completed ? `
-      <div class="formation-directive-stat">
-        <span class="directive-tier-tag">${escapeHtml(directive.tier || 'Unproven')}</span>
-        <span>Strike Directives: <strong>${directive.completed || directive.completions_28d || 0}</strong> completed &middot; <strong>${Number(directive.rep_earned || directive.rep_earned_28d || 0).toFixed(1)}</strong> rep</span>
-      </div>` : ""}
+    ${renownSummaryHtml(directive, "killteam")}
     ${commandSectionHtml("Command", `<div class="tier tier-killteam-lead">${leadHtml}</div>`, unitHonoursHtml([lead, ...rest].filter(Boolean), "Honours of the Kill-team"))}
     <div class="tier-label">Roster (${rest.length})</div>
     <table class="roster-table">
@@ -2124,35 +2446,33 @@ const PAULDRON_ART = Object.fromEntries([
 ].map(name => [name, `${name}.png`]));
 PAULDRON_ART["Celestial Lions"] = "Celestial lions.png";
 
-let bloodPageSize = window.matchMedia("(max-width: 600px)").matches ? 4 : 8;
+let bloodPageSize = 12;
 
 function visibleBloodChapters(chapters) {
-  const pageSize = window.matchMedia("(max-width: 600px)").matches ? 4 : 8;
-  if (pageSize !== bloodPageSize) {
-    state.bloodPage = Math.floor(state.bloodPage * bloodPageSize / pageSize);
-    bloodPageSize = pageSize;
-  }
+  const pageSize = bloodPageSize;
   const pages = Math.max(1, Math.ceil(chapters.length / pageSize));
   state.bloodPage = Math.min(state.bloodPage, pages - 1);
   const start = state.bloodPage * pageSize;
   return { visible: chapters.slice(start, start + pageSize), start, pages };
 }
 
-async function openChapterRecord(name) {
+async function openChapterRecord(name, originEl = null) {
   if (state.dataStatus !== "live") return;
   const chapters = chaptersOnRecord();
   const index = chapters.findIndex(chapter => chapter.name === name);
   if (index < 0) return;
   visibleBloodChapters(chapters);
+  if (state.page === "blood") recordNavigation({ kind: "chapter-link", chapter: name });
+  else await setPage("blood", true, originEl);
+  closeMemberModal();
   state.bloodPage = Math.floor(index / bloodPageSize);
   state.selectedChapter = name;
-  closeMemberModal();
-  if (state.page === "blood") renderRecordOfBlood();
-  else await setPage("blood", true);
-  document.getElementById("blood-roster")?.focus();
+  renderRecordOfBlood();
+  document.getElementById("chapter-record-close")?.focus();
 }
 
 const bloodAudio = new Audio("/assets/ambience/fortress-ambience.mp3");
+bloodAudio.preload = "none";
 bloodAudio.loop = true;
 bloodAudio.volume = 0.35;
 let bloodAudioAvailable = false;
@@ -2161,10 +2481,11 @@ function updateBloodAudioButton() {
   const button = document.getElementById("blood-audio");
   if (!button) return;
   button.disabled = !bloodAudioAvailable;
+  button.classList.toggle("audio-unavailable", !bloodAudioAvailable);
   const playing = !bloodAudio.paused;
   button.setAttribute("aria-pressed", String(playing));
-  button.title = bloodAudioAvailable ? (playing ? "Stop fortress ambience" : "Play fortress ambience") : "Ambience recording not installed";
-  button.querySelector("span").textContent = bloodAudioAvailable ? (playing ? "Ambience on" : "Ambience off") : "Ambience unavailable";
+  button.title = bloodAudioAvailable ? (playing ? "Stop fortress ambience" : "Play fortress ambience") : "Add assets/ambience/fortress-ambience.mp3 to enable ambience";
+  button.querySelector("span").textContent = bloodAudioAvailable ? (playing ? "Ambience on" : "Ambience off") : "No local recording installed";
 }
 
 function pauseBloodAudio() {
@@ -2177,7 +2498,7 @@ async function checkBloodAudio() {
   if (state.page !== "blood" || !window.location.protocol.startsWith("http")) return;
   try {
     const response = await fetch("/assets/ambience/fortress-ambience.mp3", { method: "HEAD" });
-    bloodAudioAvailable = response.ok;
+    bloodAudioAvailable = response.ok && response.headers.get("X-Asset-Available") !== "false";
   } catch {
     bloodAudioAvailable = false;
   }
@@ -2198,15 +2519,15 @@ async function toggleBloodAudio() {
   updateBloodAudioButton();
 }
 
-function chapterRosterHtml(chapters) {
-  const selected = chapters.find(chapter => chapter.name === state.selectedChapter);
-  if (!selected) return "";
+function chapterRosterHtml(selected) {
   const members = sortByRank(selected.members);
-  return `<section class="blood-roster" id="blood-roster" aria-labelledby="blood-roster-title" tabindex="-1">
+  const lore = state.chapterLore?.[selected.name];
+  return `<section class="chapter-record-roster" aria-labelledby="chapter-record-title">
     <div class="blood-roster-heading">
-      <div><div class="blood-overline">The brothers who bear its colours</div><h3 id="blood-roster-title">${escapeHtml(selected.name)}</h3></div>
-      <button class="blood-close" type="button" data-close-chapter aria-label="Close Chapter roster" title="Close Chapter roster">&times;</button>
+      <div><div class="blood-overline">Chapter origin // active watch</div><h2 id="chapter-record-title" class="overlay-title">${escapeHtml(selected.name)}</h2></div>
     </div>
+    <p class="chapter-lore">${lore ? escapeHtml(lore) : "No lore summary is published for this Chapter in the connected reference."}</p>
+    <div class="blood-overline">${members.length} brothers on the Jericho roster</div>
     <div class="blood-roster-list">${members.map(member => `
       <button class="blood-brother" type="button" data-member="${escapeHtml(member.id)}">
         <span>${escapeHtml(displayName(member.name))}</span>
@@ -2216,9 +2537,15 @@ function chapterRosterHtml(chapters) {
 }
 
 function chapterPreviewHtml(chapter) {
-  return `<span class="blood-preview" aria-hidden="true">
-    <span class="blood-preview-title">${escapeHtml(chapter.name)}</span>
-    ${sortByRank(chapter.members).map(member => `<span class="blood-preview-member">${escapeHtml(displayName(member.name))}</span>`).join("")}
+  const ranked = chapter.members.map(member => ({ member, years: serviceMetrics(member).vigilYears }))
+    .sort((a, b) => (b.years ?? -1) - (a.years ?? -1) || displayName(a.member.name).localeCompare(displayName(b.member.name)))
+    .slice(0, 5);
+  return `<span class="blood-preview" aria-label="Top five by years of service">
+    <span class="blood-preview-title">Longest service</span>
+    ${ranked.map(({ member, years }) => {
+      const fullName = `${RANK_LABELS[member.rank] || member.rank || "Brother"} ${displayName(member.name)}`;
+      return `<span class="blood-preview-member"><span class="blood-preview-name">${escapeHtml(fullName)}</span><span class="blood-preview-years">${years === null ? "PENDING" : `${years.toFixed(1)} YRS`}</span></span>`;
+    }).join("")}
   </span>`;
 }
 
@@ -2238,38 +2565,57 @@ function renderRecordOfBlood() {
         ${art ? "" : `<svg viewBox="0 0 200 170" focusable="false"><path class="blood-plate" d="M17 61 Q30 18 100 14 Q170 18 183 61 L174 110 Q158 153 100 159 Q42 153 26 110 Z"/><path class="blood-trim" d="M23 65 Q40 27 100 22 Q160 27 177 65 L167 107 Q149 143 100 150 Q51 143 33 107 Z"/><path class="blood-grain" d="M44 59 Q63 41 97 39 M37 105 Q64 132 100 135"/><circle cx="34" cy="73" r="3"/><circle cx="166" cy="73" r="3"/><circle cx="100" cy="145" r="3"/></svg>`}
         ${art ? `<img src="/assets/pauldrons/${encodeURIComponent(art)}" alt="" loading="lazy" onerror="this.hidden=true">` : ""}
       </span>
+      <span class="blood-entry-copy"><span class="blood-entry-name">${escapeHtml(chapter.name)}</span><span class="blood-entry-count">${chapter.members.length} MEMBERS ON RECORD</span></span>
       ${chapterPreviewHtml(chapter)}
     </button>`;
   }).join("") : "";
+  const brotherTotal = chapters.reduce((total, chapter) => total + chapter.members.length, 0);
+  const archiveStatus = state.dataStatus === "live" ? "ACTIVE // VERIFIED" : state.dataStatus === "error" ? "RELAY UNAVAILABLE" : "AWAITING LIVE ROSTER";
 
   document.getElementById("app").innerHTML = `
-    <div class="blood-room">
+    <section class="blood-room" aria-label="Cogitator Chapter archive">
       <div class="blood-heading">
-        <div class="blood-overline">Watch Fortress Jericho / The living roll</div>
+        <div class="blood-overline">&gt; COGITATOR ARCHIVE // CHAPTER ORIGIN INDEX</div>
         <h2>Record of Blood</h2>
+        <p class="blood-description">A living record of the home Chapters represented by brothers currently serving at Watch Fortress Jericho. Each insignia identifies a Chapter still represented in the Vigil; select one to review its sworn members.</p>
         <div class="blood-heading-foot"><span>${state.dataStatus === "live" ? `${chapters.length} Chapters &middot; ${chapters.reduce((total, chapter) => total + chapter.members.length, 0)} brothers` : "Awaiting fortress record"}</span>
-          <button id="blood-audio" type="button" aria-pressed="false" title="Play fortress ambience">&#9835; <span>Ambience off</span></button></div>
+          <button id="blood-audio" type="button" aria-pressed="false" title="Play fortress ambience">&#9835; <span>Checking local recording&hellip;</span></button></div>
       </div>
-      <div class="blood-wall">
-        <div class="blood-light" aria-hidden="true"></div>
+      <div class="blood-console">
+        <div class="blood-console-bar"><span>CHAPTER INDEX / ACTIVE WATCH</span><strong>DATASTREAM: ${state.dataStatus === "live" ? "VERIFIED" : "AWAITING RELAY"}</strong></div>
         ${mounts ? `<div class="blood-mounts">${mounts}</div>` : `<p class="blood-empty">${empty}</p>`}
+        ${mounts ? `<div class="blood-console-bar"><span>QUERY COMPLETE</span><span>${String(state.bloodPage + 1).padStart(2, "0")} // ${pages.toString().padStart(2, "0")}</span></div>` : ""}
       </div>
-      ${chapters.length > bloodPageSize && state.dataStatus === "live" ? `<nav class="blood-controls" aria-label="Browse Chapters">
-        <button type="button" data-blood-page="previous" aria-label="Previous pauldrons" title="Previous pauldrons" ${state.bloodPage === 0 ? "disabled" : ""}>&larr;</button>
+      ${chapters.length > bloodPageSize && state.dataStatus === "live" ? `<nav class="blood-controls" aria-label="Browse Chapter records">
+        <button type="button" data-blood-page="previous" aria-label="Previous Chapter records" title="Previous page" ${state.bloodPage === 0 ? "disabled" : ""}>&larr;</button>
         <span role="status" aria-live="polite">${start + 1}&ndash;${start + visible.length} of ${chapters.length} Chapters</span>
-        <button type="button" data-blood-page="next" aria-label="Next pauldrons" title="Next pauldrons" ${state.bloodPage >= pages - 1 ? "disabled" : ""}>&rarr;</button>
+        <button type="button" data-blood-page="next" aria-label="Next Chapter records" title="Next page" ${state.bloodPage >= pages - 1 ? "disabled" : ""}>&rarr;</button>
       </nav>` : ""}
-      ${chapterRosterHtml(chapters)}
-    </div>`;
+      ${terminalTransmissionHtml("RECORD_OF_BLOOD", "ACCESSING CHAPTER ORIGIN ARCHIVE&hellip;", [
+        { label: "Location", value: "Watch Fortress Jericho, Jericho Reach" },
+        { label: "Requesting Authority", value: "Ordo Xenos Inquisitorial Seal // VERIFIED" },
+        { label: "Records Retrieved", value: `${chapters.length} Chapters // ${brotherTotal} battle-brothers` },
+        { label: "Standing Orders", value: "Confirm gene-line provenance; maintain the origin record for every brother on the Long Vigil." },
+        { label: "Record Status", value: archiveStatus, tone: state.dataStatus === "live" ? "active" : "alert" }
+      ])}
+    </section>`;
+  const selected = chapters.find(chapter => chapter.name === state.selectedChapter);
+  const chapterOverlay = document.getElementById("chapter-record-overlay");
+  chapterOverlay.classList.toggle("open", Boolean(selected));
+  document.getElementById("chapter-record-body").innerHTML = selected ? chapterRosterHtml(selected) : "";
   updateBloodAudioButton();
+  updateBackButton();
 }
 
 function render(originPct, direction) {
   document.body.classList.toggle("blood-page", state.page === "blood");
+  document.body.classList.toggle("atlas-page", state.page === "fortress" && state.view === "landing");
   renderBreadcrumb();
   updateSiteNav();
+  updateBackButton();
   if (state.page === "reach") renderReach();
   else if (state.page === "blood") renderRecordOfBlood();
+  else if (state.view === "landing") renderLanding();
   else if (state.view === "strategium") renderStrategium();
   else if (state.view === "company") renderCompany(state.companyId);
   else if (state.view === "killteam") renderKillTeam(state.companyId, state.killTeamId);
@@ -2278,7 +2624,7 @@ function render(originPct, direction) {
 
   const app = document.getElementById("app");
   app.classList.remove("zoom-in", "zoom-out");
-  if (state.page === "blood") return;
+  if (state.page === "blood" || state.view === "landing") return;
   void app.offsetWidth; /* force reflow so the animation retriggers */
   if (direction === "in" && originPct) {
     app.style.transformOrigin = `${originPct.x}% ${originPct.y}%`;
@@ -2294,22 +2640,193 @@ function updateStatusBadge() {
   const slateCount = document.getElementById("slate-count");
   if (slateCount) {
     if (state.page === "reach") {
-      slateCount.textContent = "ACTIVE DIRECTIVES: " + activeReachDirectives().length;
+      slateCount.textContent = "ACTIVE SECTOR DEPLOYMENTS: " + activeReachDirectives().length;
       slateCount.style.display = "";
       return;
     }
     if (state.page === "blood") {
-      slateCount.textContent = state.dataStatus === "live" ? "CHAPTERS ON RECORD: " + chaptersOnRecord().length : "ROSTER RELAY OFFLINE";
+      slateCount.textContent = state.dataStatus === "live" ? "CHAPTER ORIGIN FILES: " + chaptersOnRecord().length : "ROSTER RELAY OFFLINE";
       slateCount.style.display = "";
       return;
     }
-    slateCount.textContent = "ASTARTES ON RECORD: " + fortressTotal();
+    if (state.view === "landing") {
+      slateCount.textContent = "FORTRESS ATLAS NODES: 17";
+      slateCount.style.display = "";
+      return;
+    }
+    slateCount.textContent = "PERSONNEL DOSSIERS: " + fortressTotal();
     slateCount.style.display = state.view === "strategium" ? "" : "none";
   }
 }
 
-function navigate(view, params, originEl, direction) {
+function navigationSnapshot(returnTarget = null) {
+  return {
+    page: state.page,
+    view: state.view,
+    companyId: state.companyId,
+    killTeamId: state.killTeamId,
+    formationId: state.formationId,
+    selectedChapter: state.selectedChapter,
+    bloodPage: state.bloodPage,
+    modalMemberId: state.modalMemberId,
+    returnTarget
+  };
+}
+
+function returnTargetFor(element) {
+  if (!element) return null;
+  if (element.dataset.atlasHome !== undefined) return { kind: "atlas" };
+  if (element.dataset.page) return { kind: "page", page: element.dataset.page };
+  if (element.dataset.chapterLink) return { kind: "chapter-link", chapter: element.dataset.chapterLink };
+  if (element.dataset.nav) return {
+    kind: "nav",
+    view: element.dataset.nav,
+    companyId: element.dataset.company ? Number(element.dataset.company) : null,
+    killTeamId: element.dataset.killteam || null,
+    formationId: element.dataset.formation || null
+  };
+  return null;
+}
+
+function recordNavigation(returnTarget = null) {
+  state.navigationHistory.push(navigationSnapshot(returnTarget));
+  if (state.navigationHistory.length > 40) state.navigationHistory.shift();
+}
+
+function updateBackButton() {
+  const button = document.getElementById("back-btn");
+  if (!button) return;
+  const currentDossierOpen = Boolean(state.modalMemberId);
+  button.hidden = !(state.navigationHistory.length || state.selectedChapter || currentDossierOpen || state.page !== "fortress" || state.view !== "landing");
+  if (button.hidden) return;
+  const previous = state.navigationHistory[state.navigationHistory.length - 1];
+  let destination = "Personnel Docket";
+  if (currentDossierOpen) {
+    destination = state.page === "blood" ? "Chapter Origins" : state.view === "company" ? `Company ${COMPANY_NAMES[state.companyId]}` : "Previous View";
+  } else if (previous?.modalMemberId) {
+    destination = "Marine Dossier";
+  } else if (previous?.page === "reach") {
+    destination = "Sector Operations";
+  } else if (previous?.page === "blood") {
+    destination = "Chapter Origins";
+  } else if (previous?.page === "fortress" && previous.view === "landing") {
+    destination = "Fortress Atlas";
+  } else if (previous?.page === "fortress" && previous.view === "company") {
+    destination = `Company ${COMPANY_NAMES[previous.companyId]}`;
+  } else if (previous?.page === "fortress" && previous.view === "formation") {
+    destination = FORMATIONS[previous.formationId]?.name || "Formation Dossier";
+  } else if (state.page === "blood" && state.selectedChapter && !previous) {
+    destination = "Chapter Origins";
+  }
+  const label = `Return to ${destination}`;
+  button.querySelector("span:last-child").textContent = label;
+  button.setAttribute("aria-label", label);
+  button.title = label;
+}
+
+function focusReturnTarget(target) {
+  if (!target) return;
+  let element = null;
+  if (target.kind === "atlas") {
+    element = document.querySelector(".site-nav [data-atlas-home]");
+  } else if (target.kind === "page") {
+    element = [...document.querySelectorAll(".site-nav [data-page]")].find(link => link.dataset.page === target.page);
+  } else if (target.kind === "chapter-link") {
+    element = [...document.querySelectorAll("[data-chapter-link]")].find(link => link.dataset.chapterLink === target.chapter);
+  } else if (target.kind === "nav") {
+    element = [...document.querySelectorAll("[data-nav]")].find(link =>
+      link.dataset.nav === target.view &&
+      (link.dataset.company ? Number(link.dataset.company) : null) === target.companyId &&
+      (link.dataset.killteam || null) === target.killTeamId &&
+      (link.dataset.formation || null) === target.formationId
+    );
+  }
+  element?.focus();
+}
+
+async function restoreNavigation(snapshot) {
+  if (state.page === "blood" && snapshot.page !== "blood") pauseBloodAudio();
+  closeMemberModal();
+  state.page = snapshot.page;
+  state.view = snapshot.view;
+  state.companyId = snapshot.companyId;
+  state.killTeamId = snapshot.killTeamId;
+  state.formationId = snapshot.formationId;
+  state.selectedChapter = snapshot.selectedChapter;
+  state.bloodPage = snapshot.bloodPage;
+  if (state.page === "reach" && state.reachStatus === "idle") await loadReach();
+  render(null, "out");
+  const path = state.page === "reach" ? "/reach" : state.page === "blood" ? "/record-of-blood" : "/";
+  if (window.location.protocol.startsWith("http")) history.replaceState({ page: state.page }, "", path);
+  if (state.page === "blood") checkBloodAudio();
+  if (snapshot.modalMemberId) openMemberModal(snapshot.modalMemberId);
+  focusReturnTarget(snapshot.returnTarget);
+}
+
+async function goBack() {
+  if (state.modalMemberId) {
+    const returnTarget = state.modalReturnTarget;
+    closeMemberModal();
+    if (returnTarget?.kind === "member") {
+      const trigger = [...document.querySelectorAll("[data-member]")].find(element =>
+        element.dataset.member === returnTarget.id && element.getClientRects().length
+      );
+      (trigger || document.getElementById("search-btn"))?.focus();
+    }
+    updateBackButton();
+    return;
+  }
+  const previous = state.navigationHistory.pop();
+  if (previous) {
+    await restoreNavigation(previous);
+    return;
+  }
+  if (state.page === "blood" && state.selectedChapter && !state.modalMemberId) {
+    const chapter = state.selectedChapter;
+    state.selectedChapter = null;
+    renderRecordOfBlood();
+    [...document.querySelectorAll("[data-chapter]")].find(button => button.dataset.chapter === chapter)?.focus();
+    updateBackButton();
+    return;
+  }
+  if (state.page !== "fortress" || state.view !== "landing") {
+    await restoreNavigation({ page: "fortress", view: "landing", companyId: null, killTeamId: null, formationId: null, selectedChapter: null, bloodPage: 0, modalMemberId: null });
+  }
+}
+
+function openAtlas(originEl = null) {
+  if (state.page === "fortress" && state.view === "landing") return;
+  recordNavigation(returnTargetFor(originEl));
+  if (state.page === "blood") pauseBloodAudio();
+  state.page = "fortress";
+  state.view = "landing";
+  state.companyId = null;
+  state.killTeamId = null;
+  state.formationId = null;
+  closeMemberModal();
+  closePlanetModal();
+  closeSearch();
+  if (window.location.protocol.startsWith("http")) history.pushState({ page: "fortress", view: "landing" }, "", "/");
+  render(null, "out");
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function openAtlasLocation(id, originEl) {
+  const location = ATLAS_LOCATIONS.find(item => item.id === id);
+  if (!location) return;
+  if (location.page) {
+    setPage(location.page, true, originEl);
+    return;
+  }
+  navigate(location.view, {
+    companyId: location.companyId ?? null,
+    formationId: location.formationId ?? null
+  }, originEl, "in");
+}
+
+function navigate(view, params, originEl, direction, saveHistory = true) {
   params = params || {};
+  if (saveHistory) recordNavigation(returnTargetFor(originEl));
   let originPct = null;
   if (originEl && direction === "in") {
     const rect = originEl.getBoundingClientRect();
@@ -2429,15 +2946,21 @@ function renderMemberModalContent(m, isEditing = false) {
 
   document.getElementById("member-modal-body").innerHTML = `
     <div class="modal-heading">
-      <div class="modal-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}${m.title ? " \u00b7 " + escapeHtml(m.title) : ""}</div>
-      <div class="modal-name">${escapeHtml(displayName(m.name))}</div>
-      ${m.serviceStudPips ? `<div class="modal-studs"><div class="modal-studs-label">Service Studs</div>${serviceStudsHtml(m)}</div>` : ""}
+      <div class="modal-identity">
+        <div class="modal-rank">${escapeHtml(RANK_LABELS[m.rank] || m.rank)}${m.title ? " \u00b7 " + escapeHtml(m.title) : ""}</div>
+        <div class="modal-name">${escapeHtml(displayName(m.name))}</div>
+      </div>
+      <div class="modal-award-center">
+        <div class="modal-award-label">Recorded Honours</div>
+        ${memberAwardsHtml(m)}
+      </div>
+      <div class="modal-studs"><div class="modal-studs-label">Service Studs</div>${serviceStudsHtml(m)}</div>
     </div>
     <div class="modal-row"><span>Chapter of Origin</span><span>${chapter ? `<button class="modal-link" type="button" data-chapter-link="${escapeHtml(chapter.name)}">${escapeHtml(chapter.name)} &rsaquo;</button>` : escapeHtml(m.chapter || "Unrecorded")}</span></div>
     ${locationRows(m)}
     <div class="modal-row"><span>AAR Points</span><span>${escapeHtml(Number.isFinite(Number(m.aarPoints ?? m.stats?.aar_points)) ? Number(m.aarPoints ?? m.stats.aar_points) : "Unrecorded")}</span></div>
     <div class="modal-row"><span>Strike Directives</span><span>${escapeHtml(Number.isFinite(Number(m.strikeDirectives)) ? `${m.strikeDirectives} completed` : (Number.isFinite(Number(m.stats?.strike_directives)) ? `${m.stats.strike_directives} completed` : "0 completed"))}</span></div>
-    <div class="modal-row"><span>Years given to the Long Vigil</span><span class="service-years-value">${escapeHtml(m.vigilYears === undefined ? "Unrecorded" : `${m.vigilYears} years`)}</span></div>
+    <div class="modal-row"><span>Years given to the Long Vigil</span><span class="service-years-value">${escapeHtml(serviceMetrics(m).vigilYears === null ? "Unrecorded" : `${serviceMetrics(m).vigilYears.toFixed(1)} years`)}</span></div>
     <div class="modal-row"><span>Joined the Long Vigil</span><span>${escapeHtml(watchEntryLabel(m))}</span></div>
     ${statsHtml}
     ${m.vigil ? `<div class="modal-vigil-tag">${escapeHtml(m.vigil)}</div>` : ""}
@@ -2494,6 +3017,9 @@ function openMemberModal(id) {
   if (!m) return;
   const overlay = document.getElementById("member-modal");
   const panel = overlay.querySelector(".overlay-panel");
+  state.modalMemberId = id;
+  const trigger = document.activeElement;
+  state.modalReturnTarget = trigger?.dataset.member ? { kind: "member", id: trigger.dataset.member } : null;
   renderMemberModalContent(m, false);
   overlay.classList.add("open");
   panel.classList.remove("unfurl");
@@ -2503,6 +3029,8 @@ function openMemberModal(id) {
 
 function closeMemberModal() {
   document.getElementById("member-modal").classList.remove("open");
+  state.modalMemberId = null;
+  state.modalReturnTarget = null;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2741,29 +3269,54 @@ function pageFromLocation() {
 }
 
 function updateSiteNav() {
+  const atlasActive = state.page === "fortress" && state.view === "landing";
+  const atlasLink = document.querySelector(".site-nav [data-atlas-home]");
+  atlasLink?.classList.toggle("active", atlasActive);
+  if (atlasActive) atlasLink?.setAttribute("aria-current", "page");
+  else atlasLink?.removeAttribute("aria-current");
   document.querySelectorAll(".site-nav [data-page]").forEach(link => {
-    const active = link.dataset.page === state.page;
+    const active = link.dataset.page === state.page && !(link.dataset.page === "fortress" && atlasActive);
     link.classList.toggle("active", active);
     if (active) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
 }
 
-async function setPage(page, push) {
+async function setPage(page, push, originEl = null) {
   if (page === state.page) {
     if (page === "fortress" && push) navigate("strategium", {}, null, "out");
     return;
   }
+  if (push) recordNavigation(returnTargetFor(originEl));
   state.page = page;
+  if (page === "fortress") state.view = "strategium";
+  if (page !== "blood") {
+    state.selectedChapter = null;
+    document.getElementById("chapter-record-overlay").classList.remove("open");
+  }
   closePlanetModal();
   if (page !== "blood") pauseBloodAudio();
   if (push && window.location.protocol.startsWith("http")) {
     history.pushState({ page }, "", page === "reach" ? "/reach" : page === "blood" ? "/record-of-blood" : "/");
   }
   if (page === "reach" && state.reachStatus === "idle") await loadReach();
+  if (page === "blood" && state.chapterLore === null) await loadChapterLore();
   render(null, "out");
   if (page === "blood") checkBloodAudio();
   window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+async function loadChapterLore() {
+  state.chapterLore = {};
+  if (!window.location.protocol.startsWith("http")) return;
+  try {
+    const response = await fetch(apiUrl("/api/chapter-lore"), { cache: "no-cache" });
+    if (!response.ok) return;
+    const lore = await response.json();
+    if (lore && typeof lore === "object" && !Array.isArray(lore)) state.chapterLore = lore;
+  } catch (error) {
+    console.error("Chapter lore fetch failed", error);
+  }
 }
 
 async function loadReach() {
@@ -2968,10 +3521,16 @@ function reachSvg(reach, directives) {
 function renderReach() {
   const app = document.getElementById("app");
   if (state.reachStatus !== "live" || !state.reach) {
-    const message = state.reachStatus === "error"
+    const failed = state.reachStatus === "error";
+    const message = failed
       ? "&gt; Cogitator link severed<br>The Reach chart could not be retrieved from the Strategium."
       : "&gt; Awaiting astropathic relay<br>No star chart has been received from the Servitor yet.";
-    app.innerHTML = `<div class="reach-viewport"><div class="reach-empty">${message}</div></div>`;
+    app.innerHTML = `<div class="reach-viewport"><div class="reach-empty">${message}</div></div>${terminalTransmissionHtml("JERICHO_REACH_OPERATIONS", "ACCESSING ASTROPATHIC OPERATIONS LEDGER...", [
+      { label: "Location", value: "The Jericho Reach, Ultima Segmentum" },
+      { label: "Requesting Authority", value: "Ordo Xenos Inquisitorial Seal // VERIFIED" },
+      { label: "Standing Orders", value: "Maintain sector watch; verify relay traffic before committing fortress assets." },
+      { label: "Record Status", value: failed ? "COGITATOR LINK SEVERED" : "AWAITING ASTROPATHIC RELAY", tone: "alert" }
+    ])}`;
     return;
   }
   const reach = state.reach;
@@ -3040,6 +3599,14 @@ function renderReach() {
       <thead><tr><th>Directive</th><th>World</th><th>Status</th><th>Assigned</th><th>Brothers</th><th>Deadline</th></tr></thead>
       <tbody>${rows || `<tr><td colspan="6" class="roster-empty">No active directives match the current filters.</td></tr>`}</tbody>
     </table>
+    ${terminalTransmissionHtml("JERICHO_REACH_OPERATIONS", "ACCESSING ASTROPATHIC OPERATIONS LEDGER...", [
+      { label: "Location", value: "The Jericho Reach, Ultima Segmentum" },
+      { label: "Requesting Authority", value: "Ordo Xenos Inquisitorial Seal // VERIFIED" },
+      { label: "Active Directives", value: `${active.length} // ${deployedBrotherIds(active).size} brothers in the field` },
+      { label: "Ordo Xenos Standing", value: `${rep >= 0 ? "+" : ""}${rep.toFixed(2)}` },
+      { label: "Standing Orders", value: "Track deployments across the Reach; contain, identify, and purge confirmed xenos threats." },
+      { label: "Record Status", value: "LIVE // ASTROPATHIC RELAY VERIFIED", tone: "active" }
+    ])}
   `;
   setupReachViewport();
 }
@@ -3366,9 +3933,21 @@ function closeSearch() {
 function wireEvents() {
   window.addEventListener("resize", () => requestAnimationFrame(() => {
     drawMapConnectors(); applyReachView();
-    if (state.page === "blood" && (window.matchMedia("(max-width: 600px)").matches ? 4 : 8) !== bloodPageSize) renderRecordOfBlood();
+    if (state.page === "blood") renderRecordOfBlood();
   }));
-  window.addEventListener("popstate", () => setPage(pageFromLocation(), false));
+  window.addEventListener("popstate", (event) => {
+    const page = pageFromLocation();
+    if (page === "fortress" && event.state?.view === "landing") {
+      state.page = "fortress";
+      state.view = "landing";
+      render(null, "out");
+      return;
+    }
+    setPage(page, false);
+  });
+  document.getElementById("back-btn").addEventListener("click", goBack);
+  document.getElementById("boot-skip").addEventListener("click", () => finishCogitatorBoot());
+  document.getElementById("member-modal-return").addEventListener("click", goBack);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) pauseBloodAudio();
   });
@@ -3407,15 +3986,26 @@ function wireEvents() {
     }
   });
   document.body.addEventListener("click", (e) => {
+    const atlasHome = e.target.closest("[data-atlas-home]");
+    if (atlasHome) {
+      e.preventDefault();
+      openAtlas(atlasHome);
+      return;
+    }
+    const atlasLocation = e.target.closest("[data-atlas-location]");
+    if (atlasLocation) {
+      openAtlasLocation(atlasLocation.dataset.atlasLocation, atlasLocation);
+      return;
+    }
     const pageLink = e.target.closest("[data-page]");
     if (pageLink) {
       e.preventDefault();
-      setPage(pageLink.dataset.page, true);
+      setPage(pageLink.dataset.page, true, pageLink);
       return;
     }
     const chapterLink = e.target.closest("[data-chapter-link]");
     if (chapterLink) {
-      openChapterRecord(chapterLink.dataset.chapterLink);
+      openChapterRecord(chapterLink.dataset.chapterLink, chapterLink);
       return;
     }
     if (e.target.closest("#blood-audio")) {
@@ -3435,10 +4025,10 @@ function wireEvents() {
     if (chapterBtn) {
       state.selectedChapter = chapterBtn.dataset.chapter;
       renderRecordOfBlood();
-      document.getElementById("blood-roster")?.focus();
+      document.getElementById("chapter-record-close")?.focus();
       return;
     }
-    if (e.target.closest("[data-close-chapter]")) {
+    if (e.target.closest("#chapter-record-close") || e.target.id === "chapter-record-overlay") {
       const selected = state.selectedChapter;
       state.selectedChapter = null;
       renderRecordOfBlood();
@@ -3465,6 +4055,7 @@ function wireEvents() {
         formationId: navBtn.dataset.formation || null
       };
       if (navBtn.closest(".overlay")) {
+        recordNavigation(returnTargetFor(navBtn));
         closeMemberModal();
         closePlanetModal();
         closeSearch();
@@ -3472,7 +4063,7 @@ function wireEvents() {
           state.page = "fortress";
           if (window.location.protocol.startsWith("http")) history.pushState({ page: "fortress" }, "", "/");
         }
-        navigate(view, params, null, "out");
+        navigate(view, params, null, "out", false);
         return;
       }
       const isBreadcrumb = navBtn.classList.contains("crumb");
@@ -3493,7 +4084,20 @@ function wireEvents() {
   });
 
   document.addEventListener("keydown", (e) => {
+    const atlasRegion = e.target.closest?.("[data-atlas-location]");
+    if (atlasRegion && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      openAtlasLocation(atlasRegion.dataset.atlasLocation, atlasRegion);
+      return;
+    }
     if (e.key === "Escape") {
+      if (document.getElementById("chapter-record-overlay").classList.contains("open")) {
+        const selected = state.selectedChapter;
+        state.selectedChapter = null;
+        renderRecordOfBlood();
+        [...document.querySelectorAll("[data-chapter]")].find(button => button.dataset.chapter === selected)?.focus();
+        return;
+      }
       const memberOpen = document.getElementById("member-modal").classList.contains("open");
       document.querySelectorAll(".ribbon.open").forEach(open => {
         open.classList.remove("open");
@@ -3534,13 +4138,121 @@ function wireEvents() {
 /* Init                                                                    */
 /* ---------------------------------------------------------------------- */
 
+let bootSequenceId = 0;
+
+function bootSeen() {
+  try { return sessionStorage.getItem("jericho-cogitator-booted") === "1"; }
+  catch { return false; }
+}
+
+function rememberBoot() {
+  try { sessionStorage.setItem("jericho-cogitator-booted", "1"); }
+  catch { /* Storage is optional. */ }
+}
+
+function bootDelay(ms, sequenceId) {
+  return new Promise(resolve => setTimeout(() => resolve(sequenceId === bootSequenceId), ms));
+}
+
+async function typeBootValue(element, text, sequenceId, speed = 24) {
+  element.textContent = "";
+  element.classList.add("typing");
+  for (const character of text) {
+    if (sequenceId !== bootSequenceId) {
+      element.classList.remove("typing");
+      return false;
+    }
+    element.textContent += character;
+    if (!await bootDelay(speed, sequenceId)) {
+      element.classList.remove("typing");
+      return false;
+    }
+  }
+  element.classList.remove("typing");
+  return true;
+}
+
+function finishCogitatorBoot() {
+  bootSequenceId += 1;
+  rememberBoot();
+  const overlay = document.getElementById("cogitator-boot");
+  if (overlay.hidden) return;
+  overlay.classList.add("access-closing");
+  overlay.classList.add("complete");
+  setTimeout(() => {
+    overlay.hidden = true;
+    overlay.classList.remove("running", "authorized", "console-open", "console-closing", "access-closing", "complete");
+    document.body.classList.remove("atlas-booting");
+    document.body.classList.add("atlas-reveal");
+  }, 700);
+}
+
+async function runCogitatorBoot() {
+  if (state.page !== "fortress" || state.view !== "landing" || bootSeen()) return;
+  const overlay = document.getElementById("cogitator-boot");
+  const sequenceId = ++bootSequenceId;
+  document.body.classList.remove("atlas-reveal");
+  document.body.classList.add("atlas-booting");
+  overlay.hidden = false;
+  overlay.classList.remove("authorized", "complete", "console-open", "console-closing", "access-closing", "running");
+  document.getElementById("boot-verdict").textContent = "Awaiting operator authentication";
+  const accessText = document.getElementById("boot-access-text");
+  accessText.textContent = "";
+  accessText.classList.remove("typing");
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lines = [...overlay.querySelectorAll(".boot-line")];
+  if (!await bootDelay(reducedMotion ? 100 : 4000, sequenceId)) return;
+  overlay.classList.add("console-open", "running");
+
+  if (reducedMotion) {
+    lines.forEach(line => line.classList.add("visible"));
+    document.getElementById("boot-ident").textContent = "INQUISITOR // SIGIL VERIFIED";
+    document.getElementById("boot-cipher").textContent = "•••••••••••• // ACCEPTED";
+    document.getElementById("boot-clearance").textContent = "OMEGA-VERMILLION // GRANTED";
+  } else {
+    for (const line of lines) {
+      if (!await bootDelay(275, sequenceId)) return;
+      line.classList.add("visible");
+    }
+    if (!await typeBootValue(document.getElementById("boot-ident"), "INQUISITOR // SIGIL VERIFIED", sequenceId, 27)) return;
+    if (!await typeBootValue(document.getElementById("boot-cipher"), "•••••••••••• // ACCEPTED", sequenceId, 34)) return;
+    if (!await typeBootValue(document.getElementById("boot-clearance"), "OMEGA-VERMILLION // GRANTED", sequenceId, 30)) return;
+  }
+
+  document.getElementById("boot-verdict").textContent = "Authentication complete // sealing terminal";
+  if (!await bootDelay(reducedMotion ? 100 : 450, sequenceId)) return;
+  overlay.classList.add("console-closing");
+  if (!await bootDelay(reducedMotion ? 100 : 420, sequenceId)) return;
+  overlay.classList.remove("console-open", "console-closing", "running");
+  overlay.classList.add("authorized");
+  if (reducedMotion) {
+    accessText.textContent = "ACCESS GRANTED";
+  } else if (!await typeBootValue(accessText, "ACCESS GRANTED", sequenceId, 115)) {
+    return;
+  }
+  if (!await bootDelay(reducedMotion ? 300 : 3000, sequenceId)) return;
+  finishCogitatorBoot();
+}
+
 async function init() {
   wireEvents();
   state.page = pageFromLocation();
   await loadSavedSettings();
-  await Promise.all([loadData(), state.page === "reach" ? loadReach() : null]);
+  await Promise.all([
+    loadData(),
+    state.page === "reach" ? loadReach() : null,
+    state.page === "blood" ? loadChapterLore() : null
+  ]);
   await loadAuth();
+  if (state.page === "fortress" && state.view === "landing" && !bootSeen()) {
+    document.body.classList.add("atlas-booting");
+  }
   render();
+  if (state.page === "fortress" && window.location.protocol.startsWith("http")) {
+    history.replaceState({ page: "fortress", view: "landing" }, "", "/");
+  }
+  runCogitatorBoot();
   if (state.page === "blood") checkBloodAudio();
   setInterval(refreshReach, REACH_REFRESH_MS);
 }

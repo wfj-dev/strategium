@@ -1,5 +1,5 @@
-import time
 import threading
+import time
 import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -13,9 +13,9 @@ from server import (
     _backstory_error,
     _cookie_flags,
     _origin_matches,
+    _pauldron_path,
     _request_is_secure,
     _ribbon_path,
-    _pauldron_path,
     _session_user,
     _session_value,
     _validate_awards,
@@ -149,6 +149,20 @@ def test_record_of_blood_direct_route(local_site) -> None:
             assert (b"Record of Blood" in response.read()) is (method == "GET")
 
 
+def test_chapter_lore_endpoint_returns_only_named_summaries(local_site, tmp_path, monkeypatch) -> None:
+    reference = tmp_path / "chapters.json"
+    reference.write_text(
+        '{"chapters":[{"name":"Example Chapter","lore_summary":"A concise record."},'
+        '{"name":"No Summary","lore_summary":3},{"lore_summary":"Missing name"}]}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(server, "CHAPTERS_REFERENCE_PATH", reference)
+    with urllib.request.urlopen(local_site + "/api/chapter-lore") as response:
+        assert response.status == 200
+        assert response.headers["Cache-Control"] == "no-cache"
+        assert response.read() == b'{"Example Chapter":"A concise record."}'
+
+
 def test_record_wall_is_served_only_at_fixed_path(local_site, tmp_path, monkeypatch) -> None:
     wall = tmp_path / "record of blood wall.png"
     monkeypatch.setattr(server, "RECORD_WALL_PATH", wall)
@@ -163,6 +177,80 @@ def test_record_wall_is_served_only_at_fixed_path(local_site, tmp_path, monkeypa
             assert response.read() == (b"wall" if method == "GET" else b"")
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(local_site + "/assets/record-of-blood-wall.png/other")
+    assert error.value.code == 404
+
+
+def test_jericho_symbol_is_served_only_at_fixed_path(local_site, tmp_path, monkeypatch) -> None:
+    symbol = tmp_path / "jericho symbol.png"
+    monkeypatch.setattr(server, "JERICHO_SYMBOL_PATH", symbol)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.JERICHO_SYMBOL_URL)
+    assert error.value.code == 404
+    symbol.write_bytes(b"symbol")
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + server.JERICHO_SYMBOL_URL, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/png"
+            assert response.headers["Content-Length"] == "6"
+            assert response.read() == (b"symbol" if method == "GET" else b"")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.JERICHO_SYMBOL_URL + "/other")
+    assert error.value.code == 404
+
+
+def test_inquisitorial_rosette_is_served_only_at_fixed_path(local_site, tmp_path, monkeypatch) -> None:
+    rosette = tmp_path / "Inquisitorial_Rosette.png"
+    monkeypatch.setattr(server, "INQUISITORIAL_ROSETTE_PATH", rosette)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.INQUISITORIAL_ROSETTE_URL)
+    assert error.value.code == 404
+    rosette.write_bytes(b"rosette")
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + server.INQUISITORIAL_ROSETTE_URL, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/png"
+            assert response.headers["Content-Length"] == "7"
+            assert response.read() == (b"rosette" if method == "GET" else b"")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.INQUISITORIAL_ROSETTE_URL + "/other")
+    assert error.value.code == 404
+
+
+def test_formation_symbols_are_allowlisted(local_site, tmp_path, monkeypatch) -> None:
+    symbols = {
+        "armory": "Armory.png",
+        "apothecarion": "Apothecarion.png",
+        "librarius": "Librarians.png",
+        "reclusiam": "Reclusiam.png",
+        "black_vault": "Recon.png",
+        "hall_of_blades": "Watch_Blades.png",
+    }
+    monkeypatch.setattr(server, "FORMATION_SYMBOLS_DIR", tmp_path)
+    monkeypatch.setattr(server, "FORMATION_SYMBOLS", symbols)
+    for key, filename in symbols.items():
+        (tmp_path / filename).write_bytes(key.encode("ascii"))
+        for method in ("GET", "HEAD"):
+            with urllib.request.urlopen(urllib.request.Request(local_site + f"/assets/formation-symbols/{key}.png", method=method)) as response:
+                assert response.headers["Content-Type"] == "image/png"
+                assert response.read() == (key.encode("ascii") if method == "GET" else b"")
+    for path in ("unknown", "../server.py", "armory.png/extra"):
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(local_site + "/assets/formation-symbols/" + path + ".png")
+        assert error.value.code == 404
+
+
+def test_fortress_map_is_served_only_at_fixed_path(local_site, tmp_path, monkeypatch) -> None:
+    fortress_map = tmp_path / "Watch_Fortress_Jericho_Map.png"
+    monkeypatch.setattr(server, "FORTRESS_MAP_PATH", fortress_map)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.FORTRESS_MAP_URL)
+    assert error.value.code == 404
+    fortress_map.write_bytes(b"atlas")
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + server.FORTRESS_MAP_URL, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/png"
+            assert response.headers["Content-Length"] == "5"
+            assert response.read() == (b"atlas" if method == "GET" else b"")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(local_site + server.FORTRESS_MAP_URL + "/other")
     assert error.value.code == 404
 
 
@@ -187,6 +275,9 @@ def test_pauldron_assets_are_allowlisted(local_site, tmp_path, monkeypatch) -> N
 def test_ambience_is_optional_and_served_from_fixed_path(local_site, tmp_path, monkeypatch) -> None:
     track = tmp_path / "fortress-ambience.mp3"
     monkeypatch.setattr(server, "AMBIENCE_PATH", track)
+    with urllib.request.urlopen(urllib.request.Request(local_site + server.AMBIENCE_URL, method="HEAD")) as response:
+        assert response.status == 204
+        assert response.headers["X-Asset-Available"] == "false"
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(local_site + server.AMBIENCE_URL)
     assert error.value.code == 404
