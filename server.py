@@ -135,6 +135,7 @@ PAGE_PATHS = {"/", "/reach", "/record-of-blood"}
 SECURITY_LOG = logging.getLogger("strategium.security")
 
 _LOCK = threading.RLock()
+_GEOGRAPHY_CACHE: tuple[Path, int, int, bytes] | None = None
 
 
 def _normalize_origin(value: str) -> str:
@@ -219,6 +220,16 @@ def _save_json(path: Path, value: Any) -> None:
 
 def _json_bytes(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def _geography_bytes() -> bytes:
+    global _GEOGRAPHY_CACHE
+    with _LOCK:
+        stat = GEOGRAPHY_PATH.stat()
+        key = (GEOGRAPHY_PATH, stat.st_mtime_ns, stat.st_size)
+        if _GEOGRAPHY_CACHE is None or _GEOGRAPHY_CACHE[:3] != key:
+            _GEOGRAPHY_CACHE = (*key, _json_bytes(load_geography(GEOGRAPHY_PATH)))
+        return _GEOGRAPHY_CACHE[3]
 
 
 def _signature(body: bytes) -> str:
@@ -438,7 +449,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
     def _send(
         self, status: int, payload: Any, headers: dict[str, str] | None = None
     ) -> None:
-        body = _json_bytes(payload)
+        body = payload if isinstance(payload, bytes) else _json_bytes(payload)
         request_origin = self.headers.get("Origin", "")
         if request_origin and not _origin_matches(request_origin, ALLOWED_ORIGIN):
             cors_origin = None
@@ -567,9 +578,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.OK, reach if isinstance(reach, dict) else {}, {"Cache-Control": "no-cache"})
         elif parsed.path == "/api/geography":
             try:
-                with _LOCK:
-                    geography = load_geography(GEOGRAPHY_PATH)
-                self._send(HTTPStatus.OK, geography, {"Cache-Control": "no-cache"})
+                self._send(HTTPStatus.OK, _geography_bytes(), {"Cache-Control": "no-cache"})
             except (OSError, TypeError, ValueError, json.JSONDecodeError):
                 SECURITY_LOG.exception("geography read failed")
                 self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "geography_unavailable"})
