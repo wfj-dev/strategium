@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 import time
 import urllib.error
@@ -175,7 +176,7 @@ def test_geography_api_serves_validated_hierarchy(local_site) -> None:
 
     assert response.status == 200
     assert payload["schemaVersion"] == 1
-    assert len(payload["sectors"]) == 7
+    assert len(payload["sectors"]) == 10
     assert payload["landmarks"]["fortressBodyId"] == "watch_fortress_jericho"
 
 
@@ -351,6 +352,33 @@ def test_fortress_highlight_layers_are_allowlisted(local_site, tmp_path, monkeyp
         assert error.value.code == 404
 
 
+def test_optimized_map_assets_are_served_and_allowlisted(local_site, tmp_path, monkeypatch) -> None:
+    for attr, url in (("FORTRESS_MAP_WEBP_PATH", server.FORTRESS_MAP_WEBP_URL),
+                      ("REACH_BACKGROUND_WEBP_PATH", server.REACH_BACKGROUND_WEBP_URL),
+                      ("REACH_STARFIELD_WEBP_PATH", server.REACH_STARFIELD_WEBP_URL),
+                      ("JERICHO_SYMBOL_WEBP_PATH", server.JERICHO_SYMBOL_WEBP_URL),
+                      ("INQUISITORIAL_ROSETTE_WEBP_PATH", server.INQUISITORIAL_ROSETTE_WEBP_URL),
+                      ("REACH_SECTOR_EDGES_PATH", server.REACH_SECTOR_EDGES_URL)):
+        image = tmp_path / (attr + ".webp")
+        image.write_bytes(b"webp")
+        monkeypatch.setattr(server, attr, image)
+        for method in ("GET", "HEAD"):
+            with urllib.request.urlopen(urllib.request.Request(local_site + url, method=method)) as response:
+                assert response.headers["Content-Type"] == "image/webp"
+                assert response.read() == (b"webp" if method == "GET" else b"")
+    monkeypatch.setattr(server, "FORTRESS_LAYERS_DIR", tmp_path)
+    (tmp_path / "1-Strategium.webp").write_bytes(b"layer")
+    for method in ("GET", "HEAD"):
+        url = local_site + server.FORTRESS_LAYER_WEBP_URL_PREFIX + "strategium.webp"
+        with urllib.request.urlopen(urllib.request.Request(url, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/webp"
+            assert response.read() == (b"layer" if method == "GET" else b"")
+    for path in ("unknown.webp", "../server.py", "strategium.webp/extra"):
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(local_site + server.FORTRESS_LAYER_WEBP_URL_PREFIX + path)
+        assert error.value.code == 404
+
+
 def test_fortress_hover_mask_is_served_only_at_fixed_path(local_site, tmp_path, monkeypatch) -> None:
     mask = tmp_path / "atlas-hover-mask.png"
     monkeypatch.setattr(server, "FORTRESS_HOVER_MASK_PATH", mask)
@@ -367,6 +395,22 @@ def test_fortress_hover_mask_is_served_only_at_fixed_path(local_site, tmp_path, 
     assert error.value.code == 404
 
 
+def test_media_revalidates_with_last_modified(local_site, tmp_path, monkeypatch) -> None:
+    mask = tmp_path / "atlas-hover-mask.png"
+    mask.write_bytes(b"mask")
+    monkeypatch.setattr(server, "FORTRESS_HOVER_MASK_PATH", mask)
+    with urllib.request.urlopen(local_site + server.FORTRESS_HOVER_MASK_URL) as response:
+        last_modified = response.headers["Last-Modified"]
+        assert response.headers["Cache-Control"] == "public, max-age=300"
+    request = urllib.request.Request(local_site + server.FORTRESS_HOVER_MASK_URL, headers={"If-Modified-Since": last_modified})
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 304
+    os.utime(mask, (mask.stat().st_atime, mask.stat().st_mtime + 60))
+    with urllib.request.urlopen(request) as response:
+        assert response.read() == b"mask"
+
+
 def test_pauldron_assets_are_allowlisted(local_site, tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(server, "PAULDRONS_DIR", tmp_path)
     (tmp_path / "Blood Angels.png").write_bytes(b"image")
@@ -378,10 +422,30 @@ def test_pauldron_assets_are_allowlisted(local_site, tmp_path, monkeypatch) -> N
                 assert response.headers["Content-Type"] == mime
                 assert response.headers["X-Content-Type-Options"] == "nosniff"
                 assert bool(response.read()) is (method == "GET")
-    for name in ("../server.py", "test.svg", "Blood Angels.png/extra", "missing.png", "%2e%2e%2fserver.py"):
+    monkeypatch.setattr(server, "PAULDRON_THUMBS_DIR", tmp_path)
+    (tmp_path / "Mortifactors.webp").write_bytes(b"webp")
+    with urllib.request.urlopen(local_site + "/assets/pauldrons/Mortifactors.webp") as response:
+        assert response.headers["Content-Type"] == "image/webp"
+        assert response.read() == b"webp"
+    for name in ("../server.py", "test.svg", "Blood Angels.png/extra", "missing.png", "missing.webp", "%2e%2e%2fserver.py"):
         assert _pauldron_path(urllib.parse.unquote(name)) is None
         with pytest.raises(urllib.error.HTTPError) as error:
             urllib.request.urlopen(local_site + "/assets/pauldrons/" + name.replace(" ", "%20"))
+        assert error.value.code == 404
+
+
+def test_rank_ribbons_serve_only_known_images(local_site, tmp_path, monkeypatch) -> None:
+    ribbon = tmp_path / "1-Watch Brother.png"
+    ribbon.write_bytes(b"rank")
+    monkeypatch.setattr(server, "RANK_IMAGES", {"Watch Brother.png": ribbon})
+    for method in ("GET", "HEAD"):
+        url = local_site + server.RANK_URL_PREFIX + "Watch%20Brother.png"
+        with urllib.request.urlopen(urllib.request.Request(url, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/png"
+            assert response.read() == (b"rank" if method == "GET" else b"")
+    for name in ("Unknown.png", "%2e%2e%2fserver.py"):
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(local_site + server.RANK_URL_PREFIX + name)
         assert error.value.code == 404
 
 

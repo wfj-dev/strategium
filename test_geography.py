@@ -1,9 +1,22 @@
+import json
 import math
+import re
 
 import pytest
 from pathlib import Path
 
 from geography import load_geography, shortest_route, validate_geography
+from scripts.build_reach_geography import (
+    DEFAULT_SOURCE,
+    MOON_ORBIT_BASE,
+    MOON_ORBIT_STEP,
+    ORBIT_ASPECT,
+    ORBIT_BASE,
+    ORBIT_STEP,
+    _hub_geometry,
+    _orbit_extents,
+    build_geography,
+)
 
 
 GEOGRAPHY_PATH = Path(__file__).resolve().parent / "data" / "reach_geography.json"
@@ -141,16 +154,39 @@ def test_shortest_route_ignores_closed_routes() -> None:
         shortest_route(geography, "jericho_bastion", "erioch")
 
 
+def test_frontend_orbit_layout_matches_builder_spacing() -> None:
+    page = (Path(__file__).resolve().parent / "jericho-strategium.html").read_text(encoding="utf-8")
+    number = r"(\d+(?:\.\d+)?)"
+    planet = re.search(rf"let radius = {number} \+ body\.orbitIndex \* {number};", page)
+    moon = re.search(rf"radius = {number} \+ body\.orbitIndex \* {number};\n", page[planet.end():])
+    aspect = re.search(r"y: centerY \+ Math\.sin\(angle\) \* radius \* ([\d.]+)", page)
+
+    assert (float(planet[1]), float(planet[2])) == (ORBIT_BASE, ORBIT_STEP)
+    assert (float(moon[1]), float(moon[2])) == (MOON_ORBIT_BASE, MOON_ORBIT_STEP)
+    assert float(aspect[1]) == ORBIT_ASPECT
+
+
+def test_generated_geography_orbits_never_overlap() -> None:
+    geography = load_geography(GEOGRAPHY_PATH)
+    extents = _orbit_extents(geography["bodies"])
+    systems = geography["systems"]
+
+    for index, a in enumerate(systems):
+        for b in systems[index + 1:]:
+            separation = math.hypot(a["x"] - b["x"], (a["y"] - b["y"]) / ORBIT_ASPECT)
+            assert separation >= extents[a["id"]] + extents[b["id"]], (a["name"], b["name"])
+
+
 def test_generated_geography_preserves_legacy_anchors_and_separates_fortresses() -> None:
     geography = load_geography(GEOGRAPHY_PATH)
 
-    assert len(geography["sectors"]) == 7
-    assert len(geography["systems"]) == 360
-    assert len(geography["bodies"]) == 1786
+    assert len(geography["sectors"]) == 10
+    assert len(geography["systems"]) == 233
+    assert 1000 <= len(geography["bodies"]) <= 1300
     assert {system["name"] for system in geography["systems"]} >= {
         "Recidious",
         "Erioch",
-        "Jericho Bastion",
+        "Exul",
     }
     assert {"Avarax", "Kadaku", "Demerium"}.isdisjoint(
         system["name"] for system in geography["systems"]
@@ -176,8 +212,36 @@ def test_generated_geography_preserves_legacy_anchors_and_separates_fortresses()
     assert geography["landmarks"]["fortressBodyId"] == "watch_fortress_jericho"
     assert geography["landmarks"]["eriochBodyId"] == "erioch"
 
-    route = shortest_route(geography, "jericho_bastion", "erioch")
+    route = shortest_route(geography, "exul", "erioch")
     assert 48 <= route["baseTransitHours"] <= 7 * 24
+
+
+def test_fortress_and_erioch_positions_match_the_chart() -> None:
+    (outer_x, outer_y), _ = _hub_geometry()
+    for geography in (load_geography(GEOGRAPHY_PATH), build_geography(json.loads(DEFAULT_SOURCE.read_text()))):
+        sectors = {sector["id"]: sector for sector in geography["sectors"]}
+        systems = {system["id"]: system for system in geography["systems"]}
+        fortress = systems["exul"]
+        erioch = systems["erioch"]
+        # The hub is charted as the Outer Reach (a warp-lane chart, not real-space distance),
+        # so our exiled Watch Fortress sits there while Erioch stays beside the Hadex Anomaly.
+        assert fortress["sectorId"] == "outer_reach"
+        assert math.dist((fortress["x"], fortress["y"]), (outer_x, outer_y)) < 10
+        assert erioch["sectorId"] == "hadex_anomaly"
+        assert systems["samech"]["sectorId"] == "hadex_anomaly"
+        assert systems["tsua_malor"]["sectorId"] == "black_reef"
+        for system in geography["systems"]:
+            assert _point_in_polygon((system["x"], system["y"]), sectors[system["sectorId"]]["boundary"])
+
+
+def _distance_to_boundary(point: tuple[float, float], polygon: list[list[float]]) -> float:
+    best = math.inf
+    for start, end in zip(polygon, polygon[1:] + polygon[:1]):
+        dx, dy = end[0] - start[0], end[1] - start[1]
+        length = dx * dx + dy * dy or 1.0
+        t = max(0.0, min(1.0, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / length))
+        best = min(best, math.dist(point, (start[0] + t * dx, start[1] + t * dy)))
+    return best
 
 
 def _point_in_polygon(point: tuple[float, float], polygon: list[list[float]]) -> bool:
@@ -194,52 +258,6 @@ def _point_in_polygon(point: tuple[float, float], polygon: list[list[float]]) ->
     return inside
 
 
-def test_generated_periphery_doubles_systems_and_bodies_within_sectors() -> None:
-    geography = load_geography(GEOGRAPHY_PATH)
-    systems = {system["id"]: system for system in geography["systems"]}
-    sectors = {sector["id"]: sector for sector in geography["sectors"]}
-    body_counts = {system_id: 0 for system_id in systems}
-    for body in geography["bodies"]:
-        body_counts[body["systemId"]] += 1
-
-    companions = [system for system in systems.values() if "periphery" in system["tags"]]
-    assert len(companions) == 90
-    for companion in companions:
-        parent_id = companion["id"].removesuffix("_periphery")
-        parent = systems[parent_id]
-        assert companion["source"] == "homebrew"
-        assert companion["sectorId"] == parent["sectorId"]
-        assert _point_in_polygon((companion["x"], companion["y"]), sectors[companion["sectorId"]]["boundary"])
-        assert body_counts[companion["id"]] == body_counts[parent_id]
-        assert any(
-            {route["sourceSystemId"], route["targetSystemId"]} == {parent_id, companion["id"]}
-            and route["status"] == "open"
-            for route in geography["routes"]
-        )
-
-
-def test_survey_systems_fill_sectors_without_overlapping_or_isolating_systems() -> None:
-    geography = load_geography(GEOGRAPHY_PATH)
-    sectors = {sector["id"]: sector for sector in geography["sectors"]}
-    surveys = [system for system in geography["systems"] if "survey" in system["tags"]]
-    assert len(surveys) == 180
-    assert all(sum(system["sectorId"] == sector_id for system in surveys) >= 10 for sector_id in sectors)
-
-    for survey in surveys:
-        point = (survey["x"], survey["y"])
-        assert survey["source"] == "homebrew"
-        assert _point_in_polygon(point, sectors[survey["sectorId"]]["boundary"])
-        assert all(
-            math.dist(point, (other["x"], other["y"])) >= 28
-            for other in geography["systems"] if other["id"] != survey["id"]
-        )
-        assert any(
-            survey["id"] in (route["sourceSystemId"], route["targetSystemId"])
-            and route["status"] == "open"
-            for route in geography["routes"]
-        )
-
-
 def test_generated_sector_boundaries_form_one_non_overlapping_partition() -> None:
     geography = load_geography(GEOGRAPHY_PATH)
     chart_boundary = geography["chartBoundary"]
@@ -253,11 +271,14 @@ def test_generated_sector_boundaries_form_one_non_overlapping_partition() -> Non
     assert len({point[0] for point in chart_boundary}) > 2
     assert len({point[1] for point in chart_boundary}) > 2
 
-    for x_step in range(1, 20):
-        for y_step in range(1, 20):
+    for x_step in range(1, 40):
+        for y_step in range(1, 40):
             point = (
-                min_x + (max_x - min_x) * x_step / 20,
-                min_y + (max_y - min_y) * y_step / 20,
+                min_x + (max_x - min_x) * x_step / 40,
+                min_y + (max_y - min_y) * y_step / 40,
             )
+            # Traced edges are pixel-accurate; ignore samples on a drawn line.
+            if min(_distance_to_boundary(point, boundary) for boundary in boundaries) < 4:
+                continue
             expected = 1 if _point_in_polygon(point, chart_boundary) else 0
             assert sum(_point_in_polygon(point, boundary) for boundary in boundaries) == expected

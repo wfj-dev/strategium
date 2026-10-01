@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import random
 import re
 import sys
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -20,65 +22,78 @@ from geography import shortest_route, validate_geography  # noqa: E402
 DEFAULT_SOURCE = ROOT.parent / "discord-bots" / "op-scribe-servitor" / "reference" / "jericho_reach_graph.json"
 DEFAULT_OUTPUT = ROOT / "data" / "reach_geography.json"
 
+# The whole chart is the Jericho Reach; these are its canon regions (salients,
+# warzones, and stellar phenomena), not separate Imperial sectors.
 SECTOR_NAMES = {
-    "iron_collar": "Iron Collar",
-    "acheros_salient": "Acheros Salient",
-    "orpheus_salient": "Orpheus Salient",
-    "canis_salient": "Canis Salient",
-    "cellebos_warzone": "Cellebos Warzone",
     "hadex_anomaly": "Hadex Anomaly",
-    "slinnar_drift": "Slinnar Drift",
+    "iron_collar": "Iron Collar",
+    "orpheus_salient": "Orpheus Salient",
+    "acheros_salient": "Acheros Salient",
+    "cellebos_warzone": "Cellebos Warzone",
+    "canis_salient": "Canis Salient",
+    "greyhell_front": "Greyhell Front",
+    "black_reef": "Black Reef",
+    "coreward_marches": "Coreward Marches",
+    "outer_reach": "Outer Reach",
 }
 
 MAP_X_SCALE = 1.75
 
-_SECTOR_SITES = {
-    "iron_collar": (165.0, 120.0),
-    "acheros_salient": (235.0, 335.0),
-    "orpheus_salient": (690.0, 175.0),
-    "canis_salient": (300.0, 705.0),
-    "cellebos_warzone": (470.0, 330.0),
-    "hadex_anomaly": (610.0, 500.0),
-    "slinnar_drift": (980.0, 545.0),
-}
-SECTOR_SITES = {
-    sector_id: (x * MAP_X_SCALE, y)
-    for sector_id, (x, y) in _SECTOR_SITES.items()
+# Region shapes are traced from this artwork. The frontend draws the same artwork
+# over the world rectangle ART_ORIGIN + pixel * ART_SCALE (keep REACH_ART in sync).
+SECTOR_EDGES_IMAGE = ROOT / "assets" / "Jericho_Warp_Storm_-_Sector_Edges.webp"
+ART_ORIGIN = (-70.0, 10.0)
+ART_SCALE = 1.34
+SECTOR_INSET_PX = 9
+SYSTEM_SPACING_PX = 15
+# Mirrors the frontend bodyPosition(): orbit radius in world units and the flattened y axis.
+ORBIT_BASE = 5.0
+ORBIT_STEP = 4.0
+MOON_ORBIT_BASE = 2.0
+MOON_ORBIT_STEP = 1.1
+ORBIT_ASPECT = 0.46
+# Extra world-unit clearance between neighbouring systems' outermost orbits.
+ORBIT_CLEARANCE = 4.0
+MIN_SYSTEMS_PER_SECTOR = 3
+
+# One artwork pixel inside each hand-drawn region, arranged like the canon Reach map.
+# The map is charted by known warp-lanes, not real-space distance, so the drawn hub
+# (the circle) is the Outer Reach -- the Watch Master's exile posting -- while Hadex
+# Anomaly, the Reach's true (and uninhabitable) heart, sits in an outer wedge instead.
+SECTOR_SEEDS = {
+    "hadex_anomaly": (1214, 555),
+    "iron_collar": (540, 163),
+    "orpheus_salient": (1004, 261),
+    "acheros_salient": (562, 381),
+    "cellebos_warzone": (828, 389),
+    "canis_salient": (349, 399),
+    "greyhell_front": (526, 616),
+    "black_reef": (646, 687),
+    "coreward_marches": (915, 621),
+    "outer_reach": (648, 583),
 }
 
-_CHART_BOUNDARY = [
-    (-40.0, 170.0),
-    (45.0, 45.0),
-    (270.0, 10.0),
-    (520.0, 45.0),
-    (760.0, 20.0),
-    (1040.0, 75.0),
-    (1220.0, 230.0),
-    (1200.0, 520.0),
-    (1240.0, 760.0),
-    (1060.0, 930.0),
-    (780.0, 965.0),
-    (545.0, 1015.0),
-    (300.0, 980.0),
-    (70.0, 835.0),
-    (-35.0, 600.0),
-    (15.0, 390.0),
-]
-CHART_BOUNDARY = [(x * MAP_X_SCALE, y) for x, y in _CHART_BOUNDARY]
-
-DIRECT_SECTOR = {
-    "iron_collar": "iron_collar",
-    "acheros_salient": "acheros_salient",
-    "orpheus_salient": "orpheus_salient",
-    "canis_salient": "canis_salient",
-    "cellebos_warzone": "cellebos_warzone",
+# Legacy graph regions -> Reach regions; named worlds follow their canon region.
+LEGACY_REGIONS = {
     "hadex": "hadex_anomaly",
-    "slinnar_drift": "slinnar_drift",
-    "quarantined": "acheros_salient",
-    "black_reef": "canis_salient",
+    "iron_collar": "iron_collar",
+    "orpheus_salient": "orpheus_salient",
+    "acheros_salient": "acheros_salient",
+    "cellebos_warzone": "cellebos_warzone",
+    "canis_salient": "canis_salient",
+    "quarantined": "canis_salient",
+    "black_reef": "black_reef",
+    "slinnar_drift": "outer_reach",
+    "contested": "coreward_marches",
+}
+WORLD_REGIONS = {
+    **dict.fromkeys(("Bekrin", "Baraban", "Dakinor", "Veren", "Ravacene"), "greyhell_front"),
+    **dict.fromkeys(("Zurcon", "Iphigenia"), "black_reef"),
+    **dict.fromkeys(("Tabius Rasa", "Ries", "Iobel", "Melancholia", "Castiel", "Nunc", "Octavian"), "cellebos_warzone"),
+    "Polyphemos": "outer_reach",
 }
 
-FORTRESS_SYSTEM_ID = "jericho_bastion"
+FORTRESS_SYSTEM_ID = "exul"
 FORTRESS_BODY_ID = "watch_fortress_jericho"
 ERIOCH_BODY_ID = "erioch"
 RECIDIOUS_SYSTEM_ID = "recidious"
@@ -90,76 +105,221 @@ def _slug(value: str) -> str:
     return slug[:80]
 
 
-def _centroid(points: list[tuple[float, float]]) -> tuple[float, float]:
+def _to_world(point: tuple[float, float]) -> tuple[float, float]:
     return (
-        sum(point[0] for point in points) / len(points),
-        sum(point[1] for point in points) / len(points),
+        round(ART_ORIGIN[0] + point[0] * ART_SCALE, 3),
+        round(ART_ORIGIN[1] + point[1] * ART_SCALE, 3),
     )
 
 
-def _clip_to_nearest_site(
-    polygon: list[tuple[float, float]],
-    site: tuple[float, float],
-    other: tuple[float, float],
-) -> list[tuple[float, float]]:
-    coefficient_x = 2 * (other[0] - site[0])
-    coefficient_y = 2 * (other[1] - site[1])
-    limit = other[0] ** 2 + other[1] ** 2 - site[0] ** 2 - site[1] ** 2
+@lru_cache(maxsize=1)
+def _traced_sectors() -> dict[str, Any]:
+    """Split the hand-drawn sector artwork into ten labelled regions."""
+    import cv2
+    import numpy as np
+    from PIL import Image
 
-    def signed_distance(point: tuple[float, float]) -> float:
-        return coefficient_x * point[0] + coefficient_y * point[1] - limit
+    alpha = np.array(Image.open(SECTOR_EDGES_IMAGE).convert("RGBA"))[:, :, 3]
+    lines = cv2.dilate((alpha > 20).astype(np.uint8), np.ones((3, 3), np.uint8))
+    _, components = cv2.connectedComponents((1 - lines).astype(np.uint8), connectivity=4)
+    outside = len(SECTOR_SEEDS) + 1
+    labels = np.zeros(components.shape, dtype=np.int32)
+    labels[components == components[0, 0]] = outside
+    used = {int(components[0, 0])}
+    for index, (x, y) in enumerate(SECTOR_SEEDS.values(), start=1):
+        component = int(components[y, x])
+        if component == 0 or component in used:
+            raise ValueError(f"sector seed {(x, y)} does not identify a distinct region")
+        used.add(component)
+        labels[components == component] = index
 
-    clipped: list[tuple[float, float]] = []
-    previous = polygon[-1]
-    previous_distance = signed_distance(previous)
-    previous_inside = previous_distance <= 1e-7
-    for current in polygon:
-        current_distance = signed_distance(current)
-        current_inside = current_distance <= 1e-7
-        if current_inside != previous_inside:
-            ratio = previous_distance / (previous_distance - current_distance)
-            clipped.append((
-                previous[0] + (current[0] - previous[0]) * ratio,
-                previous[1] + (current[1] - previous[1]) * ratio,
-            ))
-        if current_inside:
-            clipped.append(current)
-        previous = current
-        previous_distance = current_distance
-        previous_inside = current_inside
-    return clipped
+    # Line pixels join whichever region (or the outside) is nearest, so regions tile.
+    known = labels != 0
+    _, nearest = cv2.distanceTransformWithLabels((~known).astype(np.uint8), cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
+    lookup = np.zeros(int(nearest.max()) + 1, dtype=np.int32)
+    lookup[nearest[known]] = labels[known]
+    labels = np.where(known, labels, lookup[nearest])
 
+    def outline(mask: Any) -> list[tuple[float, float]]:
+        contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contour = max(contours, key=cv2.contourArea)
+        return [(float(x) + 0.5, float(y) + 0.5) for x, y in cv2.approxPolyDP(contour, 1.0, True)[:, 0, :]]
 
-def _sector_partitions() -> dict[str, list[list[float]]]:
-    partitions: dict[str, list[list[float]]] = {}
-    for sector_id, site in SECTOR_SITES.items():
-        polygon = CHART_BOUNDARY
-        for other_id, other_site in SECTOR_SITES.items():
-            if other_id != sector_id:
-                polygon = _clip_to_nearest_site(polygon, site, other_site)
-        partitions[sector_id] = [[round(x, 3), round(y, 3)] for x, y in polygon]
-    return partitions
-
-
-def _point_in_polygon(x: float, y: float, polygon: list[list[float]]) -> bool:
-    inside = False
-    previous_x, previous_y = polygon[-1]
-    for current_x, current_y in polygon:
-        if (current_y > y) != (previous_y > y):
-            boundary_x = (previous_x - current_x) * (y - current_y) / (previous_y - current_y) + current_x
-            if x < boundary_x:
-                inside = not inside
-        previous_x, previous_y = current_x, current_y
-    return inside
+    sectors: dict[str, dict[str, Any]] = {}
+    interior = np.zeros(labels.shape, dtype=np.int32)
+    for index, sector_id in enumerate(SECTOR_SEEDS, start=1):
+        mask = labels == index
+        depth = cv2.distanceTransform(mask.astype(np.uint8), cv2.DIST_L2, 5)
+        y, x = np.unravel_index(int(depth.argmax()), depth.shape)
+        interior[depth >= SECTOR_INSET_PX] = index
+        sectors[sector_id] = {
+            "outline": outline(mask),
+            "label": (float(x) + 0.5, float(y) + 0.5),
+            "depth": float(depth.max()),
+        }
+    return {
+        "sectors": sectors,
+        "boundary": outline((labels > 0) & (labels < outside)),
+        "interior": interior,
+    }
 
 
-def _normalized_sector(node: dict[str, Any], centroids: dict[str, tuple[float, float]]) -> str:
-    region = str(node.get("region") or "")
-    if region != "contested":
-        return DIRECT_SECTOR[region]
-    x, y = float(node["x"]), float(node["y"])
-    candidates = ("acheros_salient", "canis_salient", "hadex_anomaly", "slinnar_drift")
-    return min(candidates, key=lambda sector_id: math.dist((x, y), centroids[sector_id]))
+def _hub_geometry() -> tuple[tuple[float, float], float]:
+    """Geometry of the drawn hub circle (charted as the Outer Reach)."""
+    core = _traced_sectors()["sectors"]["outer_reach"]
+    return _to_world(core["label"]), core["depth"] * ART_SCALE
+
+
+def _orbit_extents(bodies: list[dict[str, Any]]) -> dict[str, float]:
+    """World-unit x radius of each system's outermost orbit, moons included."""
+    by_id = {body["id"]: body for body in bodies}
+
+    def reach(body: dict[str, Any]) -> float:
+        if body["kind"] == "star":
+            return 0.0
+        parent = by_id.get(body["parentBodyId"] or "")
+        if parent:
+            return reach(parent) + MOON_ORBIT_BASE + body["orbitIndex"] * MOON_ORBIT_STEP
+        return ORBIT_BASE + body["orbitIndex"] * ORBIT_STEP
+
+    extents: dict[str, float] = defaultdict(float)
+    for body in bodies:
+        extents[body["systemId"]] = max(extents[body["systemId"]], reach(body))
+    return extents
+
+
+def _place_systems(
+    systems: list[dict[str, Any]], regions: dict[str, str], extents: dict[str, float]
+) -> set[str]:
+    """Place each system in its canon region, spread like the legacy chart and off the drawn lines.
+
+    Returns the ids of homebrew filler systems dropped because their orbits would overlap another's.
+    """
+    import numpy as np
+
+    traced = _traced_sectors()
+    interior = traced["interior"]
+    sector_ids = list(SECTOR_SEEDS)
+    ys, xs = np.nonzero(interior)
+    pixel_sector = interior[ys, xs]
+    available = np.ones(len(xs), dtype=bool)
+    spacing = SYSTEM_SPACING_PX ** 2
+
+    pixel: dict[str, tuple[float, float]] = {}
+
+    def claim(point: tuple[float, float], system: dict[str, Any], sector_index: int) -> None:
+        available[(xs - point[0]) ** 2 + (ys - point[1]) ** 2 < spacing] = False
+        pixel[system["id"]] = point
+        system["x"], system["y"] = _to_world(point)
+        system["sectorId"] = sector_ids[sector_index - 1]
+
+    def nearest_in(sector_index: int, point: tuple[float, float]) -> tuple[float, float]:
+        candidates = np.nonzero(available & (pixel_sector == sector_index))[0]
+        if not len(candidates):
+            raise ValueError(f"region {sector_ids[sector_index - 1]} has no room left")
+        best = candidates[int(np.argmin((xs[candidates] - point[0]) ** 2 + (ys[candidates] - point[1]) ** 2))]
+        return float(xs[best]), float(ys[best])
+
+    by_id = {system["id"]: system for system in systems}
+    # The Watch Master's fortress sits at the hub -- the Outer Reach is charted by
+    # warp-lane, not real-space, proximity, so the Reach's edge is drawn centrally.
+    # Erioch is ancient and veiled, kept near the Anomaly that swallowed the old sector capital.
+    outer_index = sector_ids.index("outer_reach") + 1
+    claim(traced["sectors"]["outer_reach"]["label"], by_id[FORTRESS_SYSTEM_ID], outer_index)
+    hadex_index = sector_ids.index("hadex_anomaly") + 1
+    claim(traced["sectors"]["hadex_anomaly"]["label"], by_id[ERIOCH_BODY_ID], hadex_index)
+
+    movable = [system for system in systems if system["id"] not in {FORTRESS_SYSTEM_ID, ERIOCH_BODY_ID}]
+    assigned = {system["id"]: sector_ids.index(regions[system["id"]]) + 1 for system in movable}
+    legacy = {system["id"]: (system["x"], system["y"]) for system in movable}
+    counts = {index: 0 for index in range(1, len(sector_ids) + 1)}
+    for index in assigned.values():
+        counts[index] += 1
+    counts[outer_index] += 1
+    counts[hadex_index] += 1
+    for index in counts:
+        label = traced["sectors"][sector_ids[index - 1]]["label"]
+        while counts[index] < MIN_SYSTEMS_PER_SECTOR:
+            donors = [system_id for system_id, source in assigned.items() if counts[source] > MIN_SYSTEMS_PER_SECTOR + 1]
+            donor = min(donors, key=lambda system_id: (math.dist(_to_world(label), legacy[system_id]), system_id))
+            counts[assigned[donor]] -= 1
+            assigned[donor] = index
+            counts[index] += 1
+
+    for index in counts:
+        members = [system for system in movable if assigned[system["id"]] == index]
+        if not members:
+            continue
+        pixels = pixel_sector == index
+        box_x = (float(xs[pixels].min()), float(xs[pixels].max()))
+        box_y = (float(ys[pixels].min()), float(ys[pixels].max()))
+        legacy_x = [legacy[system["id"]][0] for system in members]
+        legacy_y = [legacy[system["id"]][1] for system in members]
+        for system in members:
+            x, y = legacy[system["id"]]
+            rng = random.Random(f"scatter:{system['id']}")
+            # Jitter well beyond the remap grid so the result reads as natural clumps and gaps, not a lattice.
+            target_x = (
+                box_x[0] + (x - min(legacy_x)) / ((max(legacy_x) - min(legacy_x)) or 1.0) * (box_x[1] - box_x[0])
+                + rng.uniform(-1, 1) * (box_x[1] - box_x[0]) * .3
+            )
+            target_y = (
+                box_y[0] + (y - min(legacy_y)) / ((max(legacy_y) - min(legacy_y)) or 1.0) * (box_y[1] - box_y[0])
+                + rng.uniform(-1, 1) * (box_y[1] - box_y[0]) * .3
+            )
+            # The bounding box is rectangular but these regions are irregular polygons: a remapped
+            # target that lands outside the true shape always snaps to the nearest edge pixel,
+            # which clusters systems along borders. Fall back to a genuinely random interior pixel.
+            px, py = int(round(target_x)), int(round(target_y))
+            inside = 0 <= py < interior.shape[0] and 0 <= px < interior.shape[1] and interior[py, px] == index
+            if inside:
+                target = (target_x, target_y)
+            else:
+                candidates = np.nonzero(available & (pixel_sector == index))[0]
+                if not len(candidates):
+                    raise ValueError(f"region {sector_ids[index - 1]} has no room left")
+                choice = candidates[rng.randrange(len(candidates))]
+                target = (float(xs[choice]), float(ys[choice]))
+            claim(nearest_in(index, target), system, index)
+
+    # No system's orbits may overlap another's. Orbits are ellipses flattened by ORBIT_ASPECT, so
+    # stretching y by 1/ORBIT_ASPECT turns the test into plain circle separation (in art pixels).
+    radius = {system["id"]: (extents[system["id"]] + ORBIT_CLEARANCE / 2) / ART_SCALE for system in systems}
+
+    def overlaps(a: str, point: tuple[float, float], b: str) -> bool:
+        other = pixel[b]
+        return math.hypot(point[0] - other[0], (point[1] - other[1]) / ORBIT_ASPECT) < radius[a] + radius[b]
+
+    # Charted systems are never dropped; nudge each one that overlaps an already-settled one.
+    pinned = [by_id[FORTRESS_SYSTEM_ID], by_id[ERIOCH_BODY_ID]]
+    charted = [system for system in movable if not {"periphery", "expanse"} & set(system["tags"])]
+    settled = list(pinned)
+    for system in charted:
+        if any(overlaps(system["id"], pixel[system["id"]], other["id"]) for other in settled):
+            available[:] = True
+            for other in settled:
+                x, y = pixel[other["id"]]
+                reach = radius[system["id"]] + radius[other["id"]]
+                available[(xs - x) ** 2 + ((ys - y) / ORBIT_ASPECT) ** 2 < reach ** 2] = False
+            index = sector_ids.index(system["sectorId"]) + 1
+            claim(nearest_in(index, pixel[system["id"]]), system, index)
+        settled.append(system)
+
+    # Then repeatedly drop the filler system whose orbits overlap the most others.
+    points = np.array([pixel[system["id"]] for system in systems])
+    radii = np.array([radius[system["id"]] for system in systems])
+    dx = points[:, None, 0] - points[None, :, 0]
+    dy = (points[:, None, 1] - points[None, :, 1]) / ORBIT_ASPECT
+    crowded = np.hypot(dx, dy) < radii[:, None] + radii[None, :]
+    np.fill_diagonal(crowded, False)
+    filler = np.array([bool({"periphery", "expanse"} & set(system["tags"])) for system in systems])
+    alive = np.ones(len(systems), dtype=bool)
+    while True:
+        clashes = (crowded & alive[None, :]).sum(axis=1) * (alive & filler)
+        if not clashes.any():
+            break
+        alive[int(np.argmax(clashes))] = False
+    return {system["id"] for system, keep in zip(systems, alive) if not keep}
 
 
 def _route_hours(distance: float, same_sector: bool, proximity: str) -> float:
@@ -186,14 +346,6 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
     if not legacy_nodes:
         raise ValueError("legacy graph contains no nodes")
 
-    direct_points: dict[str, list[tuple[float, float]]] = defaultdict(list)
-    for node in legacy_nodes:
-        region = str(node.get("region") or "")
-        sector_id = DIRECT_SECTOR.get(region)
-        if sector_id:
-            direct_points[sector_id].append((float(node["x"]), float(node["y"])))
-    centroids = {sector_id: _centroid(points) for sector_id, points in direct_points.items()}
-
     id_by_name: dict[str, str] = {name: RECIDIOUS_SYSTEM_ID for name in RECIDIOUS_PLANETS}
     used_ids: set[str] = {RECIDIOUS_SYSTEM_ID}
     for node in legacy_nodes:
@@ -211,16 +363,12 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
     systems = []
     bodies = []
     original_regions: dict[str, str] = {}
-    sector_by_system: dict[str, str] = {}
     for index, node in enumerate(legacy_nodes):
         name = str(node["id"])
         if name in RECIDIOUS_PLANETS:
             continue
         system_id = id_by_name[name]
-        sector_id = _normalized_sector(node, centroids)
-        original_region = str(node.get("region") or "")
-        original_regions[system_id] = original_region
-        sector_by_system[system_id] = sector_id
+        original_regions[system_id] = str(node.get("region") or "")
         tags = []
         if node.get("game_planet"):
             tags.append("game_planet")
@@ -231,7 +379,7 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
         systems.append({
             "id": system_id,
             "name": name,
-            "sectorId": sector_id,
+            "sectorId": "hadex_anomaly",
             "x": float(node["x"]) * MAP_X_SCALE,
             "y": float(node["y"]),
             "classification": "watch_station_system" if node.get("type") == "watch_station" else "charted_system",
@@ -255,7 +403,7 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
             "id": system_id,
             "systemId": system_id,
             "parentBodyId": None,
-            "name": name,
+            "name": f"Watch Fortress {name}" if node.get("type") == "watch_station" else name,
             "kind": str(node.get("type") or "dead_world"),
             "orbitIndex": 1,
             "orbitAngle": (index * 137.508) % 360,
@@ -270,7 +418,7 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
     systems.append({
         "id": RECIDIOUS_SYSTEM_ID,
         "name": "Recidious",
-        "sectorId": "acheros_salient",
+        "sectorId": "hadex_anomaly",
         "x": recidious_x,
         "y": recidious_y,
         "classification": "charted_system",
@@ -278,7 +426,6 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
         "source": "canon",
         "tags": ["game_planet", "multi_body_system"],
     })
-    sector_by_system[RECIDIOUS_SYSTEM_ID] = "acheros_salient"
     original_regions[RECIDIOUS_SYSTEM_ID] = "acheros_salient"
     bodies.append({
         "id": "recidious_star",
@@ -311,22 +458,21 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
 
     systems.append({
         "id": FORTRESS_SYSTEM_ID,
-        "name": "Jericho Bastion",
-        "sectorId": "canis_salient",
-        "x": 500 * MAP_X_SCALE,
-        "y": 930,
+        "name": "Exul",
+        "sectorId": "hadex_anomaly",
+        "x": 0.0,
+        "y": 0.0,
         "classification": "watch_fortress_system",
-        "primaryBodyId": "jericho_bastion_star",
+        "primaryBodyId": "exul_star",
         "source": "homebrew",
         "tags": ["fortress", "logistics_hub"],
     })
-    sector_by_system[FORTRESS_SYSTEM_ID] = "canis_salient"
     bodies.extend([
         {
-            "id": "jericho_bastion_star",
+            "id": "exul_star",
             "systemId": FORTRESS_SYSTEM_ID,
             "parentBodyId": None,
-            "name": "Jericho Bastion Primary",
+            "name": "Exul Primary",
             "kind": "star",
             "orbitIndex": 0,
             "orbitAngle": 0,
@@ -360,6 +506,39 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
         },
     ])
 
+    # Double the charted systems, then add a further ~50% with a second homebrew sibling.
+    for system in list(systems):
+        if system["id"] in (FORTRESS_SYSTEM_ID, ERIOCH_BODY_ID, RECIDIOUS_SYSTEM_ID):
+            continue
+        for suffix_id, suffix_name in (("periphery", "Periphery"), ("outpost", "Outpost")):
+            sibling_id = f"{system['id']}_{suffix_id}"
+            rng = random.Random(sibling_id)
+            original_regions[sibling_id] = original_regions[system["id"]]
+            systems.append({
+                "id": sibling_id,
+                "name": f"{system['name']} {suffix_name}",
+                "sectorId": system["sectorId"],
+                "x": system["x"] + rng.uniform(-40, 40),
+                "y": system["y"] + rng.uniform(-40, 40),
+                "classification": "charted_system",
+                "primaryBodyId": f"{sibling_id}_star",
+                "source": "homebrew",
+                "tags": ["periphery"],
+            })
+            bodies.append({
+                "id": f"{sibling_id}_star",
+                "systemId": sibling_id,
+                "parentBodyId": None,
+                "name": f"{system['name']} {suffix_name} Primary",
+                "kind": "star",
+                "orbitIndex": 0,
+                "orbitAngle": 0,
+                "displayRadius": 5,
+                "battleEligible": False,
+                "source": "homebrew",
+            })
+
+
     supplemental_templates = (
         ("Secundus", "moon", True),
         ("Tertius", "moon", True),
@@ -388,15 +567,93 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
                 "source": "homebrew",
             })
 
-    partitions = _sector_partitions()
+    # Rebalance: some canon regions are drawn far larger than others, so pad sparse ones toward
+    # an area-proportional share instead of leaving them empty relative to crowded neighbours.
+    regions = {
+        system["id"]: WORLD_REGIONS.get(system["name"]) or LEGACY_REGIONS[original_regions[system["id"]]]
+        for system in systems if system["id"] in original_regions
+    }
+    interior = _traced_sectors()["interior"]
+    sector_ids = list(SECTOR_SEEDS)
+    areas = {sector_id: int((interior == index + 1).sum()) for index, sector_id in enumerate(sector_ids)}
+    # Square-root the area so tiny regions (e.g. Black Reef) aren't left near-empty next to huge ones.
+    weights = {sector_id: math.sqrt(area) for sector_id, area in areas.items()}
+    total_weight = sum(weights.values())
+    counts = {sector_id: 0 for sector_id in sector_ids}
+    for region in regions.values():
+        counts[region] += 1
+    counts["outer_reach"] += 1  # Exul
+    counts["hadex_anomaly"] += 1  # Erioch
+    total_pool = len(systems)
+    by_id = {system["id"]: system for system in systems}
+    global_x = sum(system["x"] for system in systems) / len(systems)
+    global_y = sum(system["y"] for system in systems) / len(systems)
+    for sector_id in sector_ids:
+        target_count = round(total_pool * weights[sector_id] / total_weight)
+        members = [system_id for system_id, region in regions.items() if region == sector_id]
+        for pad_index in range(max(0, target_count - counts[sector_id])):
+            pad_id = f"{sector_id}_expanse_{pad_index}"
+            rng = random.Random(pad_id)
+            basis_id = rng.choice(members) if members else None
+            basis = by_id[basis_id] if basis_id else None
+            basis_x, basis_y = (basis["x"], basis["y"]) if basis else (global_x, global_y)
+            name = f"{basis['name']} Expanse" if basis else f"{SECTOR_NAMES[sector_id]} Expanse {pad_index}"
+            systems.append({
+                "id": pad_id,
+                "name": name,
+                "sectorId": sector_id,
+                "x": basis_x + rng.uniform(-70, 70),
+                "y": basis_y + rng.uniform(-70, 70),
+                "classification": "charted_system",
+                "primaryBodyId": f"{pad_id}_star",
+                "source": "homebrew",
+                "tags": ["expanse"],
+            })
+            regions[pad_id] = sector_id
+            bodies.append({
+                "id": f"{pad_id}_star",
+                "systemId": pad_id,
+                "parentBodyId": None,
+                "name": f"{name} Primary",
+                "kind": "star",
+                "orbitIndex": 0,
+                "orbitAngle": 0,
+                "displayRadius": 5,
+                "battleEligible": False,
+                "source": "homebrew",
+            })
+            target_count_bodies = 3 + sum(ord(character) for character in pad_id) % 3
+            for body_index in range(target_count_bodies):
+                suffix, kind, battle_eligible = supplemental_templates[body_index % len(supplemental_templates)]
+                orbit_index = body_index + 1
+                bodies.append({
+                    "id": f"{pad_id}_body_{orbit_index}",
+                    "systemId": pad_id,
+                    "parentBodyId": None,
+                    "name": f"{name} {suffix}",
+                    "kind": kind,
+                    "orbitIndex": orbit_index,
+                    "orbitAngle": (sum(ord(character) for character in pad_id) + orbit_index * 97) % 360,
+                    "displayRadius": 4 + orbit_index % 3,
+                    "battleEligible": battle_eligible,
+                    "source": "homebrew",
+                })
+
+    removed = _place_systems(systems, regions, _orbit_extents(bodies))
+    systems = [system for system in systems if system["id"] not in removed]
+    bodies = [body for body in bodies if body["systemId"] not in removed]
+    for system_id in removed:
+        original_regions.pop(system_id, None)
+    sector_by_system = {system["id"]: system["sectorId"] for system in systems}
+    traced = _traced_sectors()
     sectors = []
     for sector_id, name in SECTOR_NAMES.items():
-        label_x, label_y = SECTOR_SITES[sector_id]
+        shape = traced["sectors"][sector_id]
         sectors.append({
             "id": sector_id,
             "name": name,
-            "boundary": partitions[sector_id],
-            "label": [round(label_x, 1), round(label_y, 1)],
+            "boundary": [list(_to_world(point)) for point in shape["outline"]],
+            "label": list(_to_world(shape["label"])),
         })
 
     grouped_subregions: dict[tuple[str, str], list[str]] = defaultdict(list)
@@ -420,6 +677,7 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
     ]
 
     routes_by_pair: dict[tuple[str, str], dict[str, Any]] = {}
+    by_id = {system["id"]: system for system in systems}
     for edge in legacy_edges:
         source_id = id_by_name[str(edge["source"])]
         target_id = id_by_name[str(edge["target"])]
@@ -441,6 +699,83 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
         if current is None or route["baseTransitHours"] < current["baseTransitHours"]:
             routes_by_pair[pair] = route
 
+    for system in systems:
+        if "periphery" not in system["tags"]:
+            continue
+        parent_id = system["id"].removesuffix("_periphery").removesuffix("_outpost")
+        pair = tuple(sorted((parent_id, system["id"])))
+        routes_by_pair.setdefault(pair, {
+            "id": f"{pair[0]}__{pair[1]}",
+            "sourceSystemId": pair[0],
+            "targetSystemId": pair[1],
+            "routeType": "charted_warp",
+            "baseTransitHours": 8.0,
+            "risk": "low",
+            "status": "open",
+        })
+
+    for system in systems:
+        if "expanse" not in system["tags"]:
+            continue
+        nearest_id = min(
+            (other["id"] for other in systems if other["id"] != system["id"]),
+            key=lambda other_id: math.dist((system["x"], system["y"]), (by_id[other_id]["x"], by_id[other_id]["y"])),
+        )
+        pair = tuple(sorted((nearest_id, system["id"])))
+        routes_by_pair.setdefault(pair, {
+            "id": f"{pair[0]}__{pair[1]}",
+            "sourceSystemId": pair[0],
+            "targetSystemId": pair[1],
+            "routeType": "charted_warp",
+            "baseTransitHours": 10.0,
+            "risk": "moderate",
+            "status": "open",
+        })
+
+    # Guarantee every system can reach every other: union disconnected clusters with their
+    # single nearest cross-cluster pair, same as a minimum-spanning-tree completion pass.
+    parent = {system["id"]: system["id"] for system in systems}
+
+    def find(system_id: str) -> str:
+        while parent[system_id] != system_id:
+            parent[system_id] = parent[parent[system_id]]
+            system_id = parent[system_id]
+        return system_id
+
+    def union(a: str, b: str) -> None:
+        parent[find(a)] = find(b)
+
+    for route in routes_by_pair.values():
+        union(route["sourceSystemId"], route["targetSystemId"])
+
+    clusters: dict[str, list[str]] = defaultdict(list)
+    for system in systems:
+        clusters[find(system["id"])].append(system["id"])
+    cluster_list = list(clusters.values())
+    while len(cluster_list) > 1:
+        base = cluster_list[0]
+        best = None
+        for other in cluster_list[1:]:
+            for a in base:
+                for b in other:
+                    distance = math.dist((by_id[a]["x"], by_id[a]["y"]), (by_id[b]["x"], by_id[b]["y"]))
+                    if best is None or distance < best[0]:
+                        best = (distance, a, b, other)
+        _, a, b, other = best
+        pair = tuple(sorted((a, b)))
+        routes_by_pair.setdefault(pair, {
+            "id": f"{pair[0]}__{pair[1]}",
+            "sourceSystemId": pair[0],
+            "targetSystemId": pair[1],
+            "routeType": "charted_warp",
+            "baseTransitHours": 16.0,
+            "risk": "high",
+            "status": "open",
+        })
+        union(a, b)
+        base.extend(other)
+        cluster_list.remove(other)
+
     routes = list(routes_by_pair.values())
 
     for target_name, hours, risk in (
@@ -460,161 +795,9 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
             "status": "open",
         })
 
-    original_systems = tuple(systems)
-    occupied = [(system["x"], system["y"]) for system in original_systems]
-    periphery_kinds = ("frontier_world", "mining_world", "dead_world", "orbital_station", "asteroid_belt")
-    for system in original_systems:
-        companion_id = f"{system['id']}_periphery"
-        companion_name = f"{system['name']} Periphery"
-        position = None
-        for radius in (42, 56, 72, 90, 115, 145, *range(175, 901, 30)):
-            for step in range(24):
-                angle = (sum(ord(character) for character in system["id"]) + step * 137.508) * math.pi / 180
-                x = round(system["x"] + radius * math.cos(angle), 2)
-                y = round(system["y"] + radius * math.sin(angle), 2)
-                if _point_in_polygon(x, y, partitions[system["sectorId"]]) and all(
-                    math.dist((x, y), other) >= 28 for other in occupied
-                ):
-                    position = (x, y)
-                    break
-            if position:
-                break
-        if position is None:
-            raise ValueError(f"no free position in sector for {companion_id}")
-        occupied.append(position)
-        systems.append({
-            "id": companion_id,
-            "name": companion_name,
-            "sectorId": system["sectorId"],
-            "x": position[0],
-            "y": position[1],
-            "classification": "charted_system",
-            "primaryBodyId": f"{companion_id}_star",
-            "source": "homebrew",
-            "tags": ["periphery"],
-        })
-        bodies.append({
-            "id": f"{companion_id}_star",
-            "systemId": companion_id,
-            "parentBodyId": None,
-            "name": f"{companion_name} Primary",
-            "kind": "star",
-            "orbitIndex": 0,
-            "orbitAngle": 0,
-            "displayRadius": 6,
-            "battleEligible": False,
-            "source": "homebrew",
-        })
-        body_count = sum(body["systemId"] == system["id"] for body in bodies) - 1
-        for orbit_index in range(1, body_count + 1):
-            kind = periphery_kinds[orbit_index - 1]
-            bodies.append({
-                "id": f"{companion_id}_body_{orbit_index}",
-                "systemId": companion_id,
-                "parentBodyId": None,
-                "name": f"{companion_name} {orbit_index}",
-                "kind": kind,
-                "orbitIndex": orbit_index,
-                "orbitAngle": (orbit_index * 137.508) % 360,
-                "displayRadius": 4 + orbit_index % 3,
-                "battleEligible": kind not in {"asteroid_belt"},
-                "source": "homebrew",
-            })
-        distance = math.dist(position, (system["x"], system["y"]))
-        proximity = "far" if distance > 240 else "medium" if distance > 150 else "close"
-        routes.append({
-            "id": f"{system['id']}__{companion_id}",
-            "sourceSystemId": system["id"],
-            "targetSystemId": companion_id,
-            "routeType": "charted_warp",
-            "baseTransitHours": _route_hours(distance, proximity == "close", proximity),
-            "risk": _route_risk(proximity, proximity == "close"),
-            "status": "open",
-        })
-
-    chart_x = [point[0] for point in CHART_BOUNDARY]
-    chart_y = [point[1] for point in CHART_BOUNDARY]
-    candidates = []
-    for row, y in enumerate(range(int(min(chart_y)) + 18, int(max(chart_y)), 36)):
-        for x in range(int(min(chart_x)) + 18 + row % 2 * 18, int(max(chart_x)), 36):
-            sector_id = next(
-                (sector_id for sector_id, polygon in partitions.items() if _point_in_polygon(x, y, polygon)),
-                None,
-            )
-            if sector_id is not None:
-                nearest = min(math.dist((x, y), other) for other in occupied)
-                candidates.append((x, y, sector_id, nearest))
-
-    survey_counts: dict[str, int] = defaultdict(int)
-    for _ in range(180):
-        x, y, sector_id, clearance = max(candidates, key=lambda candidate: candidate[3])
-        if clearance < 28:
-            raise ValueError("no room for additional charted systems")
-        survey_counts[sector_id] += 1
-        survey_id = f"{sector_id}_survey_{survey_counts[sector_id]:02d}"
-        survey_name = f"{SECTOR_NAMES[sector_id]} Survey {survey_counts[sector_id]:02d}"
-        parent = min(
-            (system for system in systems if system["sectorId"] == sector_id),
-            key=lambda system: math.dist((x, y), (system["x"], system["y"])),
-        )
-        systems.append({
-            "id": survey_id,
-            "name": survey_name,
-            "sectorId": sector_id,
-            "x": x,
-            "y": y,
-            "classification": "charted_system",
-            "primaryBodyId": f"{survey_id}_star",
-            "source": "homebrew",
-            "tags": ["survey"],
-        })
-        bodies.append({
-            "id": f"{survey_id}_star",
-            "systemId": survey_id,
-            "parentBodyId": None,
-            "name": f"{survey_name} Primary",
-            "kind": "star",
-            "orbitIndex": 0,
-            "orbitAngle": 0,
-            "displayRadius": 6,
-            "battleEligible": False,
-            "source": "homebrew",
-        })
-        for orbit_index in range(1, 4 + survey_counts[sector_id] % 3):
-            kind = periphery_kinds[(orbit_index + survey_counts[sector_id]) % len(periphery_kinds)]
-            bodies.append({
-                "id": f"{survey_id}_body_{orbit_index}",
-                "systemId": survey_id,
-                "parentBodyId": None,
-                "name": f"{survey_name} {orbit_index}",
-                "kind": kind,
-                "orbitIndex": orbit_index,
-                "orbitAngle": (orbit_index * 137.508) % 360,
-                "displayRadius": 4 + orbit_index % 3,
-                "battleEligible": kind != "asteroid_belt",
-                "source": "homebrew",
-            })
-        distance = math.dist((x, y), (parent["x"], parent["y"]))
-        proximity = "far" if distance > 240 else "medium" if distance > 150 else "close"
-        routes.append({
-            "id": f"{parent['id']}__{survey_id}",
-            "sourceSystemId": parent["id"],
-            "targetSystemId": survey_id,
-            "routeType": "charted_warp",
-            "baseTransitHours": _route_hours(distance, proximity == "close", proximity),
-            "risk": _route_risk(proximity, proximity == "close"),
-            "status": "open",
-        })
-        occupied.append((x, y))
-        candidates = [
-            (other_x, other_y, other_sector, min(nearest, math.dist((x, y), (other_x, other_y))))
-            for other_x, other_y, other_sector, nearest in candidates
-            if (other_x, other_y) != (x, y)
-        ]
-
     return validate_geography({
         "schemaVersion": 1,
-        "chartBoundary": [[x, y] for x, y in CHART_BOUNDARY],
+        "chartBoundary": [list(_to_world(point)) for point in traced["boundary"]],
         "sectors": sectors,
         "subregions": subregions,
         "systems": systems,
@@ -637,14 +820,17 @@ def main() -> None:
     graph = json.loads(args.source.read_text(encoding="utf-8"))
     geography = build_geography(graph)
     legacy_names = {str(node["id"]) for node in graph.get("nodes", [])}
-    migrated_names = {system["name"] for system in geography["systems"] if system["source"] != "homebrew"}
+    migrated_names = {
+        system["name"] for system in geography["systems"]
+        if system["id"] != FORTRESS_SYSTEM_ID and not ({"periphery", "expanse"} & set(system["tags"]))
+    }
     expected_system_names = (legacy_names - set(RECIDIOUS_PLANETS)) | {"Recidious"}
     if expected_system_names != migrated_names:
         raise ValueError("migration did not preserve every legacy system anchor")
-    if not legacy_names <= {body["name"] for body in geography["bodies"]}:
+    if not legacy_names <= {body["name"].removeprefix("Watch Fortress ") for body in geography["bodies"]}:
         raise ValueError("migration did not preserve every legacy location as a body")
-    if len(geography["sectors"]) != 7:
-        raise ValueError("migration must produce exactly seven macro-sectors")
+    if len(geography["sectors"]) != 10:
+        raise ValueError("migration must produce exactly ten map sectors")
 
     fortress_system = next(body["systemId"] for body in geography["bodies"] if body["id"] == FORTRESS_BODY_ID)
     erioch_system = next(body["systemId"] for body in geography["bodies"] if body["id"] == ERIOCH_BODY_ID)

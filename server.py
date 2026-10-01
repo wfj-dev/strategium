@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import email.utils
 import hashlib
 import hmac
 import http.cookies
@@ -62,23 +63,41 @@ GEOGRAPHY_PATH = DATA_DIR / "reach_geography.json"
 RIBBONS_DIR = ROOT / "assets" / "ribbons"
 RIBBON_URL_PREFIX = "/assets/ribbons/"
 PAULDRONS_DIR = ROOT / "assets" / "Painted Pauldrons" / "Completed"
+WEB_ASSETS_DIR = ROOT / "assets" / "web"
+PAULDRON_THUMBS_DIR = WEB_ASSETS_DIR / "pauldrons"
 PAULDRON_URL_PREFIX = "/assets/pauldrons/"
+RANKS_DIR = WEB_ASSETS_DIR / "ranks"
+RANK_URL_PREFIX = "/assets/ranks/"
+RANK_IMAGES = {path.name: path for path in RANKS_DIR.glob("*.webp")} if RANKS_DIR.is_dir() else {}
 AMBIENCE_PATH = ROOT / "assets" / "ambience" / "fortress-ambience.mp3"
 AMBIENCE_URL = "/assets/ambience/fortress-ambience.mp3"
 RECORD_WALL_PATH = ROOT / "assets" / "record of blood wall.png"
 RECORD_WALL_URL = "/assets/record-of-blood-wall.png"
 JERICHO_SYMBOL_PATH = ROOT / "assets" / "jericho symbol.png"
 JERICHO_SYMBOL_URL = "/assets/jericho-symbol.png"
+JERICHO_SYMBOL_WEBP_PATH = WEB_ASSETS_DIR / "jericho-symbol.webp"
+JERICHO_SYMBOL_WEBP_URL = "/assets/jericho-symbol.webp"
 INQUISITORIAL_ROSETTE_PATH = ROOT / "assets" / "Inquisitorial_Rosette.png"
 INQUISITORIAL_ROSETTE_URL = "/assets/inquisitorial-rosette.png"
+INQUISITORIAL_ROSETTE_WEBP_PATH = WEB_ASSETS_DIR / "inquisitorial-rosette.webp"
+INQUISITORIAL_ROSETTE_WEBP_URL = "/assets/inquisitorial-rosette.webp"
 DISCORD_MARK_PATH = ROOT / "assets" / "discord-mark.svg"
 DISCORD_MARK_URL = "/assets/discord-mark.svg"
 FORTRESS_MAP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.png"
 FORTRESS_MAP_URL = "/assets/watch-fortress-jericho-map.png"
+FORTRESS_MAP_WEBP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.webp"
+FORTRESS_MAP_WEBP_URL = "/assets/watch-fortress-jericho-map.webp"
+REACH_BACKGROUND_WEBP_PATH = ROOT / "assets" / "Jericho_Warp_Storm.webp"
+REACH_BACKGROUND_WEBP_URL = "/assets/reach-warp-storm.webp"
+REACH_STARFIELD_WEBP_PATH = ROOT / "assets" / "Quiet_Stars.webp"
+REACH_STARFIELD_WEBP_URL = "/assets/reach-starfield.webp"
+REACH_SECTOR_EDGES_PATH = ROOT / "assets" / "Jericho_Warp_Storm_-_Sector_Edges.webp"
+REACH_SECTOR_EDGES_URL = "/assets/reach-sector-edges.webp"
 FORTRESS_HOVER_MASK_PATH = ROOT / "assets" / "atlas-hover-mask.png"
 FORTRESS_HOVER_MASK_URL = "/assets/atlas-hover-mask.png"
 FORTRESS_LAYERS_DIR = ROOT / "assets" / "Jericho Fortress Layers"
 FORTRESS_LAYER_URL_PREFIX = "/assets/fortress-layers/"
+FORTRESS_LAYER_WEBP_URL_PREFIX = FORTRESS_LAYER_URL_PREFIX
 FORTRESS_LAYERS = {
     "strategium": "1-Strategium.png",
     "armory": "2-Armory.png",
@@ -105,6 +124,7 @@ FORMATION_SYMBOLS = {
     "hall_of_blades": "Watch_Blades.png",
 }
 FORMATION_SYMBOLS_DIR = ROOT / "assets"
+FORMATION_SYMBOL_THUMBS_DIR = WEB_ASSETS_DIR / "formation-symbols"
 FORMATION_SYMBOL_URL_PREFIX = "/assets/formation-symbols/"
 MAX_AWARDS_PER_MEMBER = 40
 HOST = os.getenv("STRATEGIUM_HOST", "127.0.0.1")
@@ -333,12 +353,58 @@ def _ribbon_path(name: str) -> Path | None:
 
 
 def _pauldron_path(name: str) -> Path | None:
-    if not re.fullmatch(r"[A-Za-z][A-Za-z ]*\.png", name):
+    match = re.fullmatch(r"[A-Za-z][A-Za-z ]*\.(png|webp)", name)
+    if not match:
         return None
-    candidate = (PAULDRONS_DIR / name).resolve()
-    if candidate.parent != PAULDRONS_DIR.resolve() or not candidate.is_file():
+    directory = PAULDRON_THUMBS_DIR if match.group(1) == "webp" else PAULDRONS_DIR
+    candidate = (directory / name).resolve()
+    if candidate.parent != directory.resolve() or not candidate.is_file():
         return None
     return candidate
+
+
+def _existing(path: Path | None) -> Path | None:
+    return path if path is not None and path.is_file() else None
+
+
+def _static_asset_path(path: str) -> Path | None:
+    """Resolve an allowlisted media URL to a file, or None."""
+    fixed = {
+        AMBIENCE_URL: AMBIENCE_PATH,
+        RECORD_WALL_URL: RECORD_WALL_PATH,
+        JERICHO_SYMBOL_URL: JERICHO_SYMBOL_PATH,
+        JERICHO_SYMBOL_WEBP_URL: JERICHO_SYMBOL_WEBP_PATH,
+        INQUISITORIAL_ROSETTE_URL: INQUISITORIAL_ROSETTE_PATH,
+        INQUISITORIAL_ROSETTE_WEBP_URL: INQUISITORIAL_ROSETTE_WEBP_PATH,
+        DISCORD_MARK_URL: DISCORD_MARK_PATH,
+        FORTRESS_MAP_URL: FORTRESS_MAP_PATH,
+        FORTRESS_MAP_WEBP_URL: FORTRESS_MAP_WEBP_PATH,
+        REACH_BACKGROUND_WEBP_URL: REACH_BACKGROUND_WEBP_PATH,
+        REACH_STARFIELD_WEBP_URL: REACH_STARFIELD_WEBP_PATH,
+        REACH_SECTOR_EDGES_URL: REACH_SECTOR_EDGES_PATH,
+        FORTRESS_HOVER_MASK_URL: FORTRESS_HOVER_MASK_PATH,
+    }
+    if path in fixed:
+        return _existing(fixed[path])
+    if path.startswith(PAULDRON_URL_PREFIX):
+        return _pauldron_path(urllib.parse.unquote(path[len(PAULDRON_URL_PREFIX):]))
+    if path.startswith(RANK_URL_PREFIX):
+        return _existing(RANK_IMAGES.get(urllib.parse.unquote(path[len(RANK_URL_PREFIX):])))
+    if path.startswith(FORTRESS_LAYER_URL_PREFIX):
+        key, _, suffix = path[len(FORTRESS_LAYER_URL_PREFIX):].rpartition(".")
+        filename = FORTRESS_LAYERS.get(key)
+        if not filename or suffix not in {"png", "webp"}:
+            return None
+        return _existing(FORTRESS_LAYERS_DIR / Path(filename).with_suffix("." + suffix))
+    if path.startswith(FORMATION_SYMBOL_URL_PREFIX):
+        key, _, suffix = path[len(FORMATION_SYMBOL_URL_PREFIX):].rpartition(".")
+        filename = FORMATION_SYMBOLS.get(key)
+        if not filename:
+            return None
+        if suffix == "webp":
+            return _existing(FORMATION_SYMBOL_THUMBS_DIR / Path(filename).with_suffix(".webp"))
+        return _existing(FORMATION_SYMBOLS_DIR / filename) if suffix == "png" else None
+    return None
 
 
 def _text(value: Any, limit: int = 120) -> str:
@@ -510,48 +576,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             return
-        if path.startswith(PAULDRON_URL_PREFIX):
-            self._send_media(_pauldron_path(urllib.parse.unquote(path[len(PAULDRON_URL_PREFIX):])), head=True)
+        if path == AMBIENCE_URL and not AMBIENCE_PATH.is_file():
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.send_header("X-Asset-Available", "false")
+            self.end_headers()
             return
-        if path == AMBIENCE_URL:
-            if AMBIENCE_PATH.is_file():
-                self._send_media(AMBIENCE_PATH, head=True)
-            else:
-                self.send_response(HTTPStatus.NO_CONTENT)
-                self.send_header("X-Asset-Available", "false")
-                self.end_headers()
-            return
-        if path == RECORD_WALL_URL:
-            self._send_media(RECORD_WALL_PATH if RECORD_WALL_PATH.is_file() else None, head=True)
-            return
-        if path == JERICHO_SYMBOL_URL:
-            self._send_media(JERICHO_SYMBOL_PATH if JERICHO_SYMBOL_PATH.is_file() else None, head=True)
-            return
-        if path == INQUISITORIAL_ROSETTE_URL:
-            self._send_media(INQUISITORIAL_ROSETTE_PATH if INQUISITORIAL_ROSETTE_PATH.is_file() else None, head=True)
-            return
-        if path == DISCORD_MARK_URL:
-            self._send_media(DISCORD_MARK_PATH if DISCORD_MARK_PATH.is_file() else None, head=True)
-            return
-        if path == FORTRESS_MAP_URL:
-            self._send_media(FORTRESS_MAP_PATH if FORTRESS_MAP_PATH.is_file() else None, head=True)
-            return
-        if path == FORTRESS_HOVER_MASK_URL:
-            self._send_media(FORTRESS_HOVER_MASK_PATH if FORTRESS_HOVER_MASK_PATH.is_file() else None, head=True)
-            return
-        if path.startswith(FORTRESS_LAYER_URL_PREFIX):
-            key = path[len(FORTRESS_LAYER_URL_PREFIX):].removesuffix(".png")
-            filename = FORTRESS_LAYERS.get(key)
-            layer = FORTRESS_LAYERS_DIR / filename if filename else None
-            self._send_media(layer if layer and layer.is_file() else None, head=True)
-            return
-        if path.startswith(FORMATION_SYMBOL_URL_PREFIX):
-            key = path[len(FORMATION_SYMBOL_URL_PREFIX):].removesuffix(".png")
-            filename = FORMATION_SYMBOLS.get(key)
-            symbol = FORMATION_SYMBOLS_DIR / filename if filename else None
-            self._send_media(symbol if symbol and symbol.is_file() else None, head=True)
-            return
-        self.send_error(HTTPStatus.NOT_FOUND)
+        self._send_media(_static_asset_path(path), head=True)
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
@@ -590,32 +620,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             )
         elif parsed.path.startswith(RIBBON_URL_PREFIX):
             self._send_ribbon(urllib.parse.unquote(parsed.path[len(RIBBON_URL_PREFIX):]))
-        elif parsed.path.startswith(PAULDRON_URL_PREFIX):
-            self._send_media(_pauldron_path(urllib.parse.unquote(parsed.path[len(PAULDRON_URL_PREFIX):])))
-        elif parsed.path == AMBIENCE_URL:
-            self._send_media(AMBIENCE_PATH if AMBIENCE_PATH.is_file() else None)
-        elif parsed.path == RECORD_WALL_URL:
-            self._send_media(RECORD_WALL_PATH if RECORD_WALL_PATH.is_file() else None)
-        elif parsed.path == JERICHO_SYMBOL_URL:
-            self._send_media(JERICHO_SYMBOL_PATH if JERICHO_SYMBOL_PATH.is_file() else None)
-        elif parsed.path == INQUISITORIAL_ROSETTE_URL:
-            self._send_media(INQUISITORIAL_ROSETTE_PATH if INQUISITORIAL_ROSETTE_PATH.is_file() else None)
-        elif parsed.path == DISCORD_MARK_URL:
-            self._send_media(DISCORD_MARK_PATH if DISCORD_MARK_PATH.is_file() else None)
-        elif parsed.path == FORTRESS_MAP_URL:
-            self._send_media(FORTRESS_MAP_PATH if FORTRESS_MAP_PATH.is_file() else None)
-        elif parsed.path == FORTRESS_HOVER_MASK_URL:
-            self._send_media(FORTRESS_HOVER_MASK_PATH if FORTRESS_HOVER_MASK_PATH.is_file() else None)
-        elif parsed.path.startswith(FORTRESS_LAYER_URL_PREFIX):
-            key = parsed.path[len(FORTRESS_LAYER_URL_PREFIX):].removesuffix(".png")
-            filename = FORTRESS_LAYERS.get(key)
-            layer = FORTRESS_LAYERS_DIR / filename if filename else None
-            self._send_media(layer if layer and layer.is_file() else None)
-        elif parsed.path.startswith(FORMATION_SYMBOL_URL_PREFIX):
-            key = parsed.path[len(FORMATION_SYMBOL_URL_PREFIX):].removesuffix(".png")
-            filename = FORMATION_SYMBOLS.get(key)
-            symbol = FORMATION_SYMBOLS_DIR / filename if filename else None
-            self._send_media(symbol if symbol and symbol.is_file() else None)
+        elif parsed.path.startswith("/assets/"):
+            self._send_media(_static_asset_path(parsed.path))
         elif parsed.path == "/api/auth/discord/start":
             self._discord_start()
         elif parsed.path == "/api/auth/logout":
@@ -654,13 +660,23 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         mime = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".mp3": "audio/mpeg"}[path.suffix]
-        self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(path.stat().st_size))
-        self.send_header("Cache-Control", "public, max-age=86400")
+        stat = path.stat()
+        modified = int(stat.st_mtime)
+        try:
+            since = email.utils.parsedate_to_datetime(self.headers.get("If-Modified-Since", "")).timestamp()
+        except (TypeError, ValueError):
+            since = None
+        status = HTTPStatus.NOT_MODIFIED if since is not None and since >= modified else HTTPStatus.OK
+        self.send_response(status)
+        if status == HTTPStatus.OK:
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(stat.st_size))
+        # Short lifetime plus revalidation so regenerated art reaches browsers without URL versioning.
+        self.send_header("Cache-Control", "public, max-age=300")
+        self.send_header("Last-Modified", email.utils.formatdate(modified, usegmt=True))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
-        if not head:
+        if not head and status == HTTPStatus.OK:
             self.wfile.write(path.read_bytes())
 
     def _send_page(self) -> None:
