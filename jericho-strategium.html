@@ -4212,6 +4212,9 @@ function canvasSmoothstep(edge0, edge1, value) {
 
 // World frame of the Reach artwork; mirrors ART_ORIGIN/ART_SCALE in scripts/build_reach_geography.py.
 const REACH_ART = { x: -70, y: 10, scale: 1.34, width: 1672, height: 941 };
+// Zoom ratios (vs. full-map fit) before stars, then planets, respond to hover and click.
+const SYSTEM_HOVER_RATIO = 1.8;
+const BODY_HOVER_RATIO = 4.5;
 const reachArtImages = {};
 
 function reachArtImage(key, source) {
@@ -4982,7 +4985,7 @@ function setupGeographyCanvas() {
     const ratio = camera.zoom / camera.baseZoom;
     const now = performance.now();
     let target = null;
-    if (ratio > 2.5) {
+    if (ratio > BODY_HOVER_RATIO) {
       geography.systems.forEach(system => (bodiesBySystem.get(system.id) || [])
         .filter(body => body.kind !== "star")
         .forEach(body => {
@@ -5000,7 +5003,7 @@ function setupGeographyCanvas() {
           }
         }));
     }
-    if (!target) {
+    if (!target && ratio >= SYSTEM_HOVER_RATIO) {
       geography.systems.forEach(system => {
         const screen = worldToScreen(system.x, system.y);
         const distance = Math.hypot(screen.x - point.x, screen.y - point.y);
@@ -5112,7 +5115,7 @@ function setupGeographyCanvas() {
     const camera = state.reachCanvasCamera;
     const ratio = camera.zoom / camera.baseZoom;
     const world = screenToWorld(clickPoint.x, clickPoint.y);
-    if (ratio > 4.5) {
+    if (ratio > BODY_HOVER_RATIO) {
       let nearestBody = null;
       const now = performance.now();
       geography.systems.forEach(system => (bodiesBySystem.get(system.id) || []).filter(body => body.kind !== "star").forEach(body => {
@@ -5130,7 +5133,7 @@ function setupGeographyCanvas() {
       const distance = Math.hypot(system.x - world.x, system.y - world.y) * camera.zoom;
       return !nearest || distance < nearest.distance ? { system, distance } : nearest;
     }, null);
-    if (nearestSystem && nearestSystem.distance < 22) {
+    if (ratio >= SYSTEM_HOVER_RATIO && nearestSystem && nearestSystem.distance < 22) {
       zoomAnchor = null;
       state.selectedSystem = nearestSystem.system.id;
       camera.targetX = nearestSystem.system.x;
