@@ -4269,27 +4269,6 @@ function setupGeographyCanvas() {
     systemMarker.directives.push(...marker.directives);
     systemMarker.theatre ||= marker.theatre;
   });
-  const starRand = mulberry32(44041);
-  const ambientStars = Array.from({ length: 620 }, () => ({
-    x: bounds.x - 100 + starRand() * (bounds.w + 200),
-    y: bounds.y - 100 + starRand() * (bounds.h + 200),
-    radius: .25 + starRand() * 1.15,
-    phase: starRand() * Math.PI * 2
-  }));
-  const nebulaPalette = ["#2f8a52", "#3f7fb0", "#3fae8a", "#8a5fc4", "#b07a3f", "#9d3f6f", "#4a5a70"];
-  const nebulaRand = mulberry32(91337);
-  const nebulaClouds = geography.sectors.flatMap((sector, sectorIndex) =>
-    Array.from({ length: 3 + hashStr(sector.id) % 3 }, (_, cloudIndex) => ({
-      x: sector.label[0] + (nebulaRand() - .5) * 360,
-      y: sector.label[1] + (nebulaRand() - .5) * 260,
-      radiusX: 190 + nebulaRand() * 330,
-      radiusY: 90 + nebulaRand() * 190,
-      rotation: (nebulaRand() - .5) * .9,
-      phase: nebulaRand() * Math.PI * 2,
-      color: nebulaPalette[(sectorIndex + cloudIndex * 2) % nebulaPalette.length],
-      opacity: .08 + nebulaRand() * .12
-    }))
-  );
   let width = 0;
   let height = 0;
   let deviceScale = 1;
@@ -4389,8 +4368,7 @@ function setupGeographyCanvas() {
   }
 
   function drawArt(camera, ratio) {
-    // Retire the raster nebula backdrop before a deep zoom would stretch it; the starfield tile
-    // and procedural nebula clouds carry the scene from there.
+    // Retire the raster nebula backdrop before a deep zoom would stretch it; the starfield carries the scene from there.
     const stormAlpha = 1 - canvasSmoothstep(3, 8, ratio);
     const edgesAlpha = .5 * (1 - canvasSmoothstep(2.4, 6, ratio));
     if (stormAlpha <= .01 && edgesAlpha <= .01) return false;
@@ -4415,43 +4393,6 @@ function setupGeographyCanvas() {
     if (edges && edgesAlpha > .01) draw(edges, edgesAlpha);
     context.globalAlpha = 1;
     return stormAlpha > .01 && Boolean(storm);
-  }
-
-  function drawNebulae(camera, now) {
-    nebulaClouds.forEach((cloud, index) => {
-      const center = worldToScreen(cloud.x, cloud.y, camera);
-      const pulse = 1 + Math.sin(now * .00011 + cloud.phase) * .09;
-      const driftX = Math.sin(now * .000045 + cloud.phase) * (18 + index % 4 * 5);
-      const driftY = Math.cos(now * .000038 + cloud.phase) * (10 + index % 3 * 4);
-      const radiusX = Math.max(80, cloud.radiusX * camera.zoom * pulse);
-      const radiusY = Math.max(45, cloud.radiusY * camera.zoom * pulse);
-      context.save();
-      context.translate(center.x + driftX, center.y + driftY);
-      context.rotate(cloud.rotation);
-      context.scale(1, radiusY / radiusX);
-      const gradient = context.createRadialGradient(0, 0, 0, 0, 0, radiusX);
-      gradient.addColorStop(0, `${cloud.color}${Math.round(cloud.opacity * 255).toString(16).padStart(2, "0")}`);
-      gradient.addColorStop(.35, `${cloud.color}${Math.round(cloud.opacity * .75 * 255).toString(16).padStart(2, "0")}`);
-      gradient.addColorStop(.72, `${cloud.color}${Math.round(cloud.opacity * .24 * 255).toString(16).padStart(2, "0")}`);
-      gradient.addColorStop(1, `${cloud.color}00`);
-      context.fillStyle = gradient;
-      context.fillRect(-radiusX, -radiusX, radiusX * 2, radiusX * 2);
-      context.restore();
-    });
-  }
-
-  function drawAmbientStars(camera, now) {
-    ambientStars.forEach(star => {
-      const screen = worldToScreen(star.x, star.y, camera);
-      if (screen.x < -4 || screen.y < -4 || screen.x > width + 4 || screen.y > height + 4) return;
-      const twinkle = .35 + (Math.sin(now * .001 + star.phase) + 1) * .22;
-      context.globalAlpha = twinkle;
-      context.fillStyle = "#d9ead5";
-      context.beginPath();
-      context.arc(screen.x, screen.y, star.radius, 0, Math.PI * 2);
-      context.fill();
-    });
-    context.globalAlpha = 1;
   }
 
   function drawSectors(camera, ratio) {

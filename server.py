@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import email.utils
 import hashlib
 import hmac
 import http.cookies
@@ -659,13 +660,23 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         mime = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".mp3": "audio/mpeg"}[path.suffix]
-        self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(path.stat().st_size))
-        self.send_header("Cache-Control", "public, max-age=86400")
+        stat = path.stat()
+        modified = int(stat.st_mtime)
+        try:
+            since = email.utils.parsedate_to_datetime(self.headers.get("If-Modified-Since", "")).timestamp()
+        except (TypeError, ValueError):
+            since = None
+        status = HTTPStatus.NOT_MODIFIED if since is not None and since >= modified else HTTPStatus.OK
+        self.send_response(status)
+        if status == HTTPStatus.OK:
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(stat.st_size))
+        # Short lifetime plus revalidation so regenerated art reaches browsers without URL versioning.
+        self.send_header("Cache-Control", "public, max-age=300")
+        self.send_header("Last-Modified", email.utils.formatdate(modified, usegmt=True))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
-        if not head:
+        if not head and status == HTTPStatus.OK:
             self.wfile.write(path.read_bytes())
 
     def _send_page(self) -> None:

@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 import time
 import urllib.error
@@ -392,6 +393,22 @@ def test_fortress_hover_mask_is_served_only_at_fixed_path(local_site, tmp_path, 
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(local_site + server.FORTRESS_HOVER_MASK_URL + "/other")
     assert error.value.code == 404
+
+
+def test_media_revalidates_with_last_modified(local_site, tmp_path, monkeypatch) -> None:
+    mask = tmp_path / "atlas-hover-mask.png"
+    mask.write_bytes(b"mask")
+    monkeypatch.setattr(server, "FORTRESS_HOVER_MASK_PATH", mask)
+    with urllib.request.urlopen(local_site + server.FORTRESS_HOVER_MASK_URL) as response:
+        last_modified = response.headers["Last-Modified"]
+        assert response.headers["Cache-Control"] == "public, max-age=300"
+    request = urllib.request.Request(local_site + server.FORTRESS_HOVER_MASK_URL, headers={"If-Modified-Since": last_modified})
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 304
+    os.utime(mask, (mask.stat().st_atime, mask.stat().st_mtime + 60))
+    with urllib.request.urlopen(request) as response:
+        assert response.read() == b"mask"
 
 
 def test_pauldron_assets_are_allowlisted(local_site, tmp_path, monkeypatch) -> None:
