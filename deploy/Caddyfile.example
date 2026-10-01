@@ -1,5 +1,6 @@
 # Replace the hostname with the public HTTPS hostname for this deployment.
 jericho-strategium.duckdns.org {
+    encode zstd gzip
     # The bot publishes over loopback directly to port 8787.
     # Never expose the signed ingestion endpoint through the public proxy.
     handle /internal/* {
