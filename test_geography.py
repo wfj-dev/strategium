@@ -1,5 +1,6 @@
 import json
 import math
+import re
 
 import pytest
 from pathlib import Path
@@ -7,7 +8,11 @@ from pathlib import Path
 from geography import load_geography, shortest_route, validate_geography
 from scripts.build_reach_geography import (
     DEFAULT_SOURCE,
+    MOON_ORBIT_BASE,
+    MOON_ORBIT_STEP,
     ORBIT_ASPECT,
+    ORBIT_BASE,
+    ORBIT_STEP,
     _hub_geometry,
     _orbit_extents,
     build_geography,
@@ -147,6 +152,18 @@ def test_shortest_route_ignores_closed_routes() -> None:
 
     with pytest.raises(ValueError, match="No open route"):
         shortest_route(geography, "jericho_bastion", "erioch")
+
+
+def test_frontend_orbit_layout_matches_builder_spacing() -> None:
+    page = (Path(__file__).resolve().parent / "jericho-strategium.html").read_text(encoding="utf-8")
+    number = r"(\d+(?:\.\d+)?)"
+    planet = re.search(rf"let radius = {number} \+ body\.orbitIndex \* {number};", page)
+    moon = re.search(rf"radius = {number} \+ body\.orbitIndex \* {number};\n", page[planet.end():])
+    aspect = re.search(r"y: centerY \+ Math\.sin\(angle\) \* radius \* ([\d.]+)", page)
+
+    assert (float(planet[1]), float(planet[2])) == (ORBIT_BASE, ORBIT_STEP)
+    assert (float(moon[1]), float(moon[2])) == (MOON_ORBIT_BASE, MOON_ORBIT_STEP)
+    assert float(aspect[1]) == ORBIT_ASPECT
 
 
 def test_generated_geography_orbits_never_overlap() -> None:

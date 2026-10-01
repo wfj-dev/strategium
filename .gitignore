@@ -33,3 +33,9 @@ data/*
 .ruff_cache/
 *.tmp
 *.bak
+
+# Unreferenced scratch/backup artwork kept locally only
+assets/*_Backup.*
+assets/reach-sector-regions.png
+assets/Jericho_Reach.webp
+assets/Jericho_Warp_Storm_-_Sections.*
