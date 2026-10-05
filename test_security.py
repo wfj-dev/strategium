@@ -498,12 +498,14 @@ def test_rank_guide_route_serves_the_site_page(local_site) -> None:
     assert b"Rank Guide" in page
     for text in (
         b"Promotion System", b"After Action Report Points", b"Crucible",
-        b"15 points", b"each brother who extracts", b"at least one other",
+        b"20 operation points minus KIA", b"clamps KIA to 0-4", b"16-20 points", b"two to five brothers",
+        b"KIA: 0", b"at least one other",
         b"beyond Watch Veteran", b"does not guarantee promotion",
         b"compliance check", b"4 weeks and 400", b"16 weeks and 1,600",
         b"1429318686447108300", b"1432804829364748319", b"1429303902343401575",
     ):
         assert text in page
+    assert b"each brother who extracts" not in page
 
 
 def test_ambience_is_optional_and_served_from_fixed_path(local_site, tmp_path, monkeypatch) -> None:

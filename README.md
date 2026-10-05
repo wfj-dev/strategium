@@ -37,7 +37,7 @@ The live app loads roster data from its same-origin `/api/roster` endpoint. The 
 
 Visit `/rank-guide` for the 28 numbered Watch Fortress rank cards and their promotion requirements. Checked-in full-size WebPs in `assets/web/rank-cards/` are sufficient to regenerate gallery previews with `.venv/bin/python scripts/build_web_assets.py`. When source PNGs are available in the sibling bot repository at `../discord-bots/op-scribe-servitor/assets/ranks/`, the builder uses them to regenerate both sizes; set `STRATEGIUM_RANK_CARDS_SOURCE` to override that path.
 
-The Promotion System sections are available in both the track gallery and individual track views. They cover the 2/3/4/5/6-point mission tiers (Crucible awards 6), Omega's 15 points plus one per extracting brother, successful-report/team/approved-armor eligibility with Discord links, oaths beyond Watch Veteran, Watch Command proclamations and mandatory Techmarine compliance checks. Service studs require both time and points: Plasteel is 4 weeks plus 400 AAR points; Auramite is 16 weeks plus 1,600 AAR points.
+The Promotion System sections are available in both the track gallery and individual track views. They cover the 2/3/4/5/6-point mission tiers (Crucible awards 6), Omega's bot-authoritative 20 operation points minus parsed KIA (KIA clamped to 0-4, yielding 16-20 points independently of squad size; two to five brothers and an explicit KIA line required), successful-report/team/approved-armor eligibility with Discord links, oaths beyond Watch Veteran, Watch Command proclamations and mandatory Techmarine compliance checks. Service studs require both time and points: Plasteel is 4 weeks plus 400 AAR points; Auramite is 16 weeks plus 1,600 AAR points.
 
 ## Record of Blood
 
