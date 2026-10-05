@@ -389,6 +389,18 @@ def _static_asset_path(path: str) -> Path | None:
     }
     if path in fixed:
         return _existing(fixed[path])
+    if path.startswith("/assets/galactic-map/"):
+        filename = path.removeprefix("/assets/galactic-map/")
+        if filename not in {"base.webp", "sectors.png"} and not re.fullmatch(r"(?:[1-9]|1[0-9]|2[0-9])-(?:secure|critical|lost)\.webp", filename):
+            return None
+        return _existing(WEB_ASSETS_DIR / "galactic-map" / filename)
+    if path.startswith("/assets/map-icons/"):
+        filename = path.removeprefix("/assets/map-icons/")
+        allowed = {"planet", "station", "forge_world", "shrine_world", "penal_world", "mining_world", "fortress_world", "feral_world", "agri_world", "frontier_world", "hive_world", "pleasure_world", "death_world", "war_world", "dead_world", "watch_fortress", "special"}
+        allowed.update(f"star_{classification}" for classification in "obafgkm")
+        if filename not in {f"{key}.webp" for key in allowed}:
+            return None
+        return _existing(WEB_ASSETS_DIR / "map-icons" / filename)
     if path.startswith(PAULDRON_URL_PREFIX):
         return _pauldron_path(urllib.parse.unquote(path[len(PAULDRON_URL_PREFIX):]))
     if path.startswith(RANK_URL_PREFIX):
