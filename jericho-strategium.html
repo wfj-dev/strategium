@@ -926,7 +926,7 @@
   .reach-sync { font-size: 10px; color: var(--green-faint); text-transform: uppercase; letter-spacing: 0.08em; }
 
   .reach-viewport {
-    position: relative; height: min(72vh, 680px); min-height: 380px; overflow: hidden;
+    position: relative; aspect-ratio: 1672 / 941; overflow: hidden;
     border: 1px solid var(--border); touch-action: none; cursor: grab; user-select: none;
     background: radial-gradient(ellipse at 50% 45%, #0b130f 0%, #050806 60%, #020302 100%);
     box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
@@ -949,6 +949,7 @@
   .reach-canvas-tooltip.pending { visibility: hidden; }
   .reach-canvas-tooltip strong { display: block; color: var(--white); font: 11px 'Share Tech Mono', monospace; letter-spacing: 0; }
   .reach-canvas-tooltip.loading { opacity: 1; }
+  .map-body-icon { width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin-right: 7px; flex: 0 0 22px; }
   .canvas-callout-loading { display: block; animation: canvas-callout-hide .01s .65s steps(1,end) forwards; }
   .canvas-callout-data { display: block; opacity: 0; animation: canvas-callout-show .01s .65s steps(1,end) forwards; }
   @keyframes canvas-callout-hide { to { visibility: hidden; height: 0; overflow: hidden; } }
@@ -1208,6 +1209,21 @@
   .rank-guide-requirements li { position: relative; padding: 5px 0 5px 13px; border-bottom: 1px solid rgba(88, 125, 82, .18); color: #c8d0c3; font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
   .rank-guide-requirements li::before { content: "›"; position: absolute; left: 0; color: var(--green); }
   .rank-guide-note { margin: 7px 0 0; padding: 8px; border-left: 2px solid var(--gold-dim); background: rgba(207, 174, 104, .05); color: #d0c59f; font-size: 10px; line-height: 1.5; }
+  .rank-promotion { margin: 0 0 26px; border-top: 1px solid var(--border-dim); }
+  .rank-promotion > h3 { margin: 14px 0 8px; color: var(--gold); font: 700 14px 'Share Tech Mono', monospace; text-transform: uppercase; }
+  .rank-promotion details { border-bottom: 1px solid var(--border-dim); }
+  .rank-promotion summary { padding: 12px 0; color: var(--green); cursor: pointer; font-size: 12px; }
+  .rank-promotion summary:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; }
+  .rank-promotion-content { max-width: 84ch; padding: 0 0 14px; color: #c8d0c3; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+  .rank-promotion-content p { margin: 0 0 12px; }
+  .rank-promotion-content p:last-child { margin-bottom: 0; }
+  .rank-promotion-content a { color: var(--green); text-underline-offset: 3px; }
+  .rank-promotion-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; text-align: left; }
+  .rank-promotion-table th, .rank-promotion-table td { padding: 8px 10px 8px 0; border-bottom: 1px solid rgba(88, 125, 82, .18); vertical-align: top; overflow-wrap: anywhere; }
+  .rank-promotion-table th { color: var(--gold-dim); font-weight: 400; }
+  .rank-promotion-table th:first-child { width: 76px; }
+  .rank-promotion-table td:first-child { color: var(--white); }
+  .rank-stud-symbols { color: var(--white); white-space: nowrap; }
 
   @media (max-width: 900px) {
     .rank-guide-viewer { grid-template-columns: minmax(0, 1fr); }
@@ -2498,7 +2514,7 @@ function renderBreadcrumb() {
     return;
   }
   if (state.page === "reach") {
-    el.innerHTML = `<button class="crumb" data-page="reach">Sector Operations</button>${separator}${current("Jericho Reach")}`;
+    el.innerHTML = `<button class="crumb" data-page="reach">Sector Operations</button>${separator}${current("Galactic Map")}`;
     return;
   }
   if (state.page === "rank-guide") {
@@ -3139,6 +3155,55 @@ function chapterPreviewHtml(chapter) {
   </span>`;
 }
 
+function rankPromotionHtml() {
+  return `<section class="rank-promotion" aria-labelledby="rank-promotion-title">
+    <h3 id="rank-promotion-title">Promotion System</h3>
+    <details>
+      <summary>After Action Report Points</summary>
+      <div class="rank-promotion-content">
+        <p>Promotions within Watch Fortress Jericho are based on points accrued during operations and the requirements of each rank.</p>
+        <table class="rank-promotion-table" aria-label="After Action Report point awards">
+          <thead><tr><th scope="col">Points</th><th scope="col">Mission difficulty</th></tr></thead>
+          <tbody>
+            <tr><td>2</td><td>Ruthless Operations / Normal-Stratagem</td></tr>
+            <tr><td>3</td><td>Lethal Operations / 5 Normal Siege waves</td></tr>
+            <tr><td>4</td><td>Absolute Operations / 5 Hard Siege waves</td></tr>
+            <tr><td>5</td><td>Hard-Stratagem</td></tr>
+            <tr><td>6</td><td>Crucible</td></tr>
+            <tr><td>15+</td><td>Omega: 15 points, plus 1 point for each brother who extracts at mission end</td></tr>
+          </tbody>
+        </table>
+        <p>After successfully completing a mission, submit an <a href="https://discord.com/channels/1429264578440597517/1429318686447108300" target="_blank" rel="noopener noreferrer">After Action Report</a>. To count towards promotion, the brother must wear <a href="https://discord.com/channels/1429264578440597517/1429303709321662626/1455236121804931195" target="_blank" rel="noopener noreferrer">approved Watch Fortress Jericho armor</a> and be part of a team with at least one other Watch Fortress Brother or <a href="https://discord.com/channels/1429264578440597517/1502518473518088334" target="_blank" rel="noopener noreferrer">Alliance member</a>.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Oaths</summary>
+      <div class="rank-promotion-content">
+        <p>To be considered for promotion beyond Watch Veteran, a Watch Brother must post an oath in <a href="https://discord.com/channels/1429264578440597517/1432804829364748319" target="_blank" rel="noopener noreferrer">Oaths</a>, stating the role that calls to them. Any Watch Brother may make an oath at any time so Watch Command knows their aspirations.</p>
+        <p>To change your desired rank, post a new oath and delete the old one if you wish. Tag Watch Command so the update is not missed.</p>
+        <p><strong>An oath does not guarantee promotion.</strong> It enables Watch Command to shortlist potential candidates.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Promotions and Compliance</summary>
+      <div class="rank-promotion-content">
+        <p>When the required points and prerequisites are met, Watch Command will notify the brother by proclamation. Their server role will be changed, and they will be cleared to update their armor.</p>
+        <p>The promoted brother <strong>must</strong> submit a Watch Techmarine <a href="https://discord.com/channels/1429264578440597517/1429303902343401575" target="_blank" rel="noopener noreferrer">compliance check</a> to ensure they represent their new station correctly.</p>
+        <p>Certain ranks have additional requirements. These are listed on their individual rank cards.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Service Studs</summary>
+      <div class="rank-promotion-content">
+        <p>Service studs require <strong>both</strong> time in the Deathwatch and accumulated AAR points.</p>
+        <p><strong>1 Plasteel Stud:</strong> 25 years of service, earned through 4 weeks and 400 AAR points. <span class="rank-stud-symbols" aria-label="Four Plasteel studs">&#9900;&#9900;&#9900;&#9900;</span></p>
+        <p><strong>1 Auramite Stud:</strong> 100 years of service, earned through 16 weeks and 1,600 AAR points. <span class="rank-stud-symbols" aria-label="Four Auramite studs">&#9679;&#9679;&#9679;&#9679;</span></p>
+        <p>On earning a stud, the brother will receive a proclamation and be directed to report to their superior to receive the honor. Studs are displayed after the brother's name.</p>
+      </div>
+    </details>
+  </section>`;
+}
+
 function renderRankGuide() {
   const ranksByNumber = new Map(RANK_GUIDE.map(rank => [rank.number, rank]));
   const renderRequirements = rank => {
@@ -3176,6 +3241,7 @@ function renderRankGuide() {
           <span class="rank-guide-page-count" role="status" aria-live="polite">${String(selectedRankGuideIndex + 1).padStart(2, "0")} / ${String(track.ranks.length).padStart(2, "0")}</span>
           <button type="button" data-rank-step="1" aria-label="Next rank" title="Next rank" ${nextDisabled}>Next rank <span aria-hidden="true">&rarr;</span></button>
         </nav>
+        ${rankPromotionHtml()}
       </section>`;
     return;
   }
@@ -3207,6 +3273,7 @@ function renderRankGuide() {
         <p class="rank-guide-description">Choose a progression to view its rank cards and requirements.</p>
         <div class="rank-guide-total">${RANK_GUIDE_TRACKS.length} tracks &middot; ${RANK_GUIDE.length} rank cards</div>
       </header>
+      ${rankPromotionHtml()}
       ${sections}
     </section>`;
 }
@@ -4383,6 +4450,28 @@ function geographySvg() {
   </svg>`;
 }
 
+const STELLAR_TYPES = {
+  O: { name: "Blue Star (O Class)", color: "#79c8ff" },
+  B: { name: "Blue-White Star (B Class)", color: "#c4e2ff" },
+  A: { name: "White Star (A Class)", color: "#f5f6ff" },
+  F: { name: "Yellow-White Star (F Class)", color: "#fff2c2" },
+  G: { name: "Yellow Star (G Class)", color: "#efd17a" },
+  K: { name: "Light Orange Star (K Class)", color: "#eab27a" },
+  M: { name: "Orange-Red Star (M Class)", color: "#dd835b" }
+};
+
+function geographyBodyIcon(body) {
+  if (!body || body.kind === "asteroid_belt") return "";
+  if (body.kind === "star") {
+    const classification = body.stellarClass || "G";
+    if (!STELLAR_TYPES[classification]) return "";
+    return `<img class="map-body-icon" src="/assets/map-icons/star_${classification.toLowerCase()}.webp" alt="" aria-hidden="true" width="22" height="22">`;
+  }
+  const kinds = new Set(["forge_world", "shrine_world", "penal_world", "mining_world", "fortress_world", "feral_world", "agri_world", "frontier_world", "hive_world", "pleasure_world", "death_world", "war_world", "dead_world", "watch_fortress", "special"]);
+  const key = kinds.has(body.kind) ? body.kind : "planet";
+  return `<img class="map-body-icon" src="/assets/map-icons/${key}.webp" alt="" aria-hidden="true" width="22" height="22">`;
+}
+
 function openGeographySystem(systemId) {
   const geography = state.geography;
   const system = geography && geography.systems.find(item => item.id === systemId);
@@ -4395,10 +4484,9 @@ function openGeographySystem(systemId) {
     <div class="modal-rank">${escapeHtml(sector ? sector.name : "Uncharted Sector")} &middot; ${escapeHtml(titleCase(system.classification))}</div>
     <div class="modal-name">${escapeHtml(system.name)}</div>
     <div class="directive-section-label">System Bodies</div>
-    ${bodies.map(body => `<div class="modal-row"><span>${escapeHtml(body.name)}</span><span>${escapeHtml(titleCase(body.kind))}${body.battleEligible ? " &middot; Battle eligible" : ""}</span></div>`).join("")}
+    ${bodies.map(body => `<div class="modal-row"><span>${geographyBodyIcon(body)}${escapeHtml(body.name)}</span><span>${escapeHtml(body.kind === "star" ? STELLAR_TYPES[body.stellarClass || "G"].name : titleCase(body.kind))}${body.battleEligible ? " &middot; Battle eligible" : ""}</span></div>`).join("")}
     <div class="directive-section-label">Charted Warp Routes</div>
-    <div class="modal-row"><span>Connections</span><span>${routes.length}</span></div>
-    <div class="modal-row"><span>Source Classification</span><span>${escapeHtml(titleCase(system.source))}</span></div>`;
+    <div class="modal-row"><span>Connections</span><span>${routes.length}</span></div>`;
   const overlay = document.getElementById("planet-modal");
   const panel = overlay.querySelector(".overlay-panel");
   overlay.classList.add("open");
@@ -4416,11 +4504,8 @@ function canvasSmoothstep(edge0, edge1, value) {
   return amount * amount * (3 - 2 * amount);
 }
 
-// World frame of the Reach artwork; mirrors ART_ORIGIN/ART_SCALE in scripts/build_reach_geography.py.
-const REACH_ART = { x: -70, y: 10, scale: 1.34, width: 1672, height: 941 };
-// Zoom ratios (vs. full-map fit) before stars, then planets, respond to hover and click.
-const SYSTEM_HOVER_RATIO = 1.8;
-const BODY_HOVER_RATIO = 4.5;
+const SYSTEM_HOVER_RATIO = 4;
+const BODY_HOVER_RATIO = 7;
 const reachArtImages = {};
 
 function reachArtImage(key, source) {
@@ -4441,12 +4526,12 @@ function setupGeographyCanvas() {
   if (!canvas || !viewport || !state.geography) return;
   const context = canvas.getContext("2d", { alpha: false });
   const geography = state.geography;
-  const boundaryX = geography.chartBoundary.map(point => point[0]);
-  const boundaryY = geography.chartBoundary.map(point => point[1]);
+  const REACH_ART = geography.mapArt || { x: 0, y: 0, scale: 5, width: 1672, height: 941 };
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const bounds = {
-    x: Math.min(...boundaryX), y: Math.min(...boundaryY),
-    w: Math.max(...boundaryX) - Math.min(...boundaryX),
-    h: Math.max(...boundaryY) - Math.min(...boundaryY)
+    x: REACH_ART.x, y: REACH_ART.y,
+    w: REACH_ART.width * REACH_ART.scale,
+    h: REACH_ART.height * REACH_ART.scale
   };
   const systemsById = new Map(geography.systems.map(system => [system.id, system]));
   const bodiesBySystem = new Map();
@@ -4458,6 +4543,38 @@ function setupGeographyCanvas() {
   const systemPriority = system => system.tags.includes("fortress") || system.tags.includes("watch_station") ? 0
     : system.tags.includes("multi_body_system") ? 1 : 2;
   const systemsByPriority = [...geography.systems].sort((a, b) => systemPriority(a) - systemPriority(b) || a.name.localeCompare(b.name));
+  const approachBranches = [
+    { points: [[1660, 205], [1545, 205], [1470, 280], [1325, 270]], width: 13 },
+    { points: [[1660, 440], [1520, 415], [1455, 365], [1320, 395]], width: 17 },
+    { points: [[1660, 695], [1550, 680], [1430, 610], [1330, 620]], width: 12 },
+    { points: [[1495, 253], [1460, 235], [1380, 213], [1320, 220]], width: 7, parent: 0 },
+    { points: [[1470, 390], [1430, 430], [1360, 470], [1310, 495]], width: 8, parent: 1 },
+    { points: [[1465, 642], [1430, 680], [1375, 724], [1320, 740]], width: 6, parent: 2 },
+    { points: [[1660, 80], [1560, 90], [1430, 140], [1325, 125]], width: 11 },
+    { points: [[1660, 850], [1550, 835], [1440, 780], [1325, 820]], width: 15 },
+    { points: [[1450, 125], [1420, 105], [1370, 65], [1320, 75]], width: 5, parent: 6 },
+    { points: [[1475, 805], [1435, 840], [1360, 880], [1320, 890]], width: 7, parent: 7 }
+  ].map(branch => ({
+    width: branch.width,
+    parent: branch.parent,
+    points: Array.from({ length: 49 }, (_, index) => {
+      const amount = index / 48;
+      const inverse = 1 - amount;
+      return [0, 1].map(axis => REACH_ART[axis ? "y" : "x"] + REACH_ART.scale * (
+        inverse ** 3 * branch.points[0][axis] + 3 * inverse ** 2 * amount * branch.points[1][axis]
+        + 3 * inverse * amount ** 2 * branch.points[2][axis] + amount ** 3 * branch.points[3][axis]
+      ));
+    })
+  }));
+  approachBranches.forEach(branch => {
+    if (branch.parent === undefined) return;
+    const parent = approachBranches[branch.parent];
+    branch.joinIndex = parent.points.reduce((best, point, index) => {
+      const distance = Math.hypot(point[0] - branch.points[0][0], point[1] - branch.points[0][1]);
+      const previous = parent.points[best];
+      return distance < Math.hypot(previous[0] - branch.points[0][0], previous[1] - branch.points[0][1]) ? index : best;
+    }, 0);
+  });
   const reachNodesByName = new Map((state.reach?.nodes || []).map(node => [node.id, node]));
   const directivesByWorld = new Map();
   visibleReachDirectives().forEach(directive => {
@@ -4466,7 +4583,7 @@ function setupGeographyCanvas() {
   });
   const directiveMarkers = geography.bodies.map(body => ({
     body,
-    directives: directivesByWorld.get(body.name) || [],
+    directives: directivesByWorld.get(body.name) || directivesByWorld.get(({ Castobel: "Castolel", "Watch Fortress Erioch": "Erioch" })[body.name]) || [],
     theatre: Boolean(reachNodesByName.get(body.name)?.gamePlanet)
   })).filter(marker => marker.directives.length || marker.theatre);
   const systemMarkers = new Map();
@@ -4508,7 +4625,7 @@ function setupGeographyCanvas() {
       canvas.width = pixelWidth;
       canvas.height = pixelHeight;
     }
-    const baseZoom = Math.min((width - 8) / bounds.w, (height - 8) / bounds.h);
+    const baseZoom = Math.max((width + 2) / bounds.w, (height + 2) / bounds.h);
     if (!state.reachCanvasCamera) {
       const centerX = bounds.x + bounds.w / 2;
       const centerY = bounds.y + bounds.h / 2;
@@ -4578,11 +4695,9 @@ function setupGeographyCanvas() {
 
   function drawArt(camera, ratio) {
     // Retire the raster nebula backdrop before a deep zoom would stretch it; the starfield carries the scene from there.
-    const stormAlpha = 1 - canvasSmoothstep(3, 8, ratio);
-    const edgesAlpha = .5 * (1 - canvasSmoothstep(2.4, 6, ratio));
-    if (stormAlpha <= .01 && edgesAlpha <= .01) return false;
-    const storm = reachArtImage("storm", "/assets/reach-warp-storm.webp");
-    const edges = reachArtImage("edges", "/assets/reach-sector-edges.webp");
+    const stormAlpha = 1 - canvasSmoothstep(1.8, 4.5, ratio);
+    if (stormAlpha <= .01) return false;
+    const storm = reachArtImage("galactic-base", "/assets/galactic-map/base.webp");
     const topLeft = worldToScreen(REACH_ART.x, REACH_ART.y, camera);
     const pixel = REACH_ART.scale * camera.zoom;
     // Crop to the visible part so deep zoom never asks for an enormous destination rectangle.
@@ -4599,33 +4714,111 @@ function setupGeographyCanvas() {
         topLeft.x + sourceX * pixel, topLeft.y + sourceY * pixel, sourceW * pixel, sourceH * pixel);
     };
     if (storm && stormAlpha > .01) draw(storm, stormAlpha);
-    if (edges && edgesAlpha > .01) draw(edges, edgesAlpha);
     context.globalAlpha = 1;
     return stormAlpha > .01 && Boolean(storm);
   }
 
   function drawSectors(camera, ratio) {
-    const lineAlpha = 1 - canvasSmoothstep(4, 9, ratio) * .6;
+    const alpha = 1 - canvasSmoothstep(2.5, 4.5, ratio);
+    if (alpha <= .01) return;
+    const topLeft = worldToScreen(REACH_ART.x, REACH_ART.y, camera);
+    const pixel = REACH_ART.scale * camera.zoom;
     geography.sectors.forEach(sector => {
-      // Only the sector itself glows; hovering a system/body inside it must not relight the region.
-      const related = hoveredTarget?.kind === "sector" && hoveredTarget.id === sector.id;
-      if (!related) return;
-      tracePolygon(sector.boundary, camera);
-      context.fillStyle = `rgba(79,214,122,${.06 * lineAlpha})`;
-      context.fill();
-      context.save();
-      context.lineJoin = "round";
-      context.shadowColor = "rgba(79,214,122,.95)";
-      context.shadowBlur = 12;
-      context.lineWidth = 2.4;
-      context.strokeStyle = `rgba(126,240,150,${.95 * lineAlpha})`;
-      context.stroke();
-      context.shadowBlur = 0;
-      context.lineWidth = 1;
-      context.strokeStyle = `rgba(220,255,225,${.8 * lineAlpha})`;
-      context.stroke();
-      context.restore();
+      const selected = state.selectedSector === sector.id && !state.selectedSystem;
+      const hovered = hoveredTarget?.kind === "sector" && hoveredTarget.id === sector.id;
+      if (sector.status === "secure" && !selected && !hovered) return;
+      const image = reachArtImage(`sector-${sector.number}-${sector.status}`, `/assets/galactic-map/${sector.number}-${sector.status}.webp`);
+      if (!image) return;
+      context.globalAlpha = alpha;
+      context.drawImage(image, topLeft.x, topLeft.y, REACH_ART.width * pixel, REACH_ART.height * pixel);
     });
+    context.globalAlpha = 1;
+  }
+
+  function drawEasternApproach(camera, ratio, now) {
+    const alpha = .86 * (1 - canvasSmoothstep(2, 5, ratio));
+    if (alpha <= .01) return;
+    const clock = reducedMotion.matches ? 0 : now * .00032;
+    const renderedBranches = [];
+    context.save();
+    const topLeft = worldToScreen(REACH_ART.x, REACH_ART.y, camera);
+    context.beginPath();
+    context.rect(topLeft.x, topLeft.y, REACH_ART.width * REACH_ART.scale * camera.zoom, REACH_ART.height * REACH_ART.scale * camera.zoom);
+    context.clip();
+    approachBranches.forEach((branch, branchIndex) => {
+      const centers = branch.points.map((point, index) => {
+        const progress = index / (branch.points.length - 1);
+        const previous = branch.points[Math.max(0, index - 1)];
+        const next = branch.points[Math.min(branch.points.length - 1, index + 1)];
+        const normal = Math.atan2(next[1] - previous[1], next[0] - previous[0]) + Math.PI / 2;
+        const wave = (Math.sin(progress * Math.PI * 3 - clock * 3 + branchIndex * .65) * 20
+          + Math.sin(progress * Math.PI * 5 - clock * 2.1 + branchIndex) * 6) * Math.sin(progress * Math.PI / 2) * REACH_ART.scale;
+        const center = worldToScreen(point[0] + Math.cos(normal) * wave, point[1] + Math.sin(normal) * wave, camera);
+        if (branch.parent !== undefined) {
+          const join = renderedBranches[branch.parent][branch.joinIndex];
+          const root = worldToScreen(branch.points[0][0], branch.points[0][1], camera);
+          center.x += (join.x - root.x) * (1 - progress);
+          center.y += (join.y - root.y) * (1 - progress);
+        }
+        return center;
+      });
+      renderedBranches.push(centers);
+      const sides = [[], []];
+      centers.forEach((center, index) => {
+        const next = centers[Math.min(index + 1, centers.length - 1)];
+        const previous = centers[Math.max(0, index - 1)];
+        const angle = Math.atan2(next.y - previous.y, next.x - previous.x) + Math.PI / 2;
+        const taper = (1 - index / (centers.length - 1)) ** .7;
+        const radius = branch.width * REACH_ART.scale * camera.zoom * taper * (.9 + Math.sin(index * .65 - clock * 12) * .1);
+        sides[0].push([center.x + Math.cos(angle) * radius, center.y + Math.sin(angle) * radius]);
+        sides[1].push([center.x - Math.cos(angle) * radius, center.y - Math.sin(angle) * radius]);
+      });
+      context.globalAlpha = alpha;
+      context.fillStyle = "#3c1c29";
+      context.strokeStyle = "#703446";
+      context.lineWidth = .8;
+      context.beginPath();
+      [...sides[0], ...[...sides[1]].reverse()].forEach((point, index) => index ? context.lineTo(...point) : context.moveTo(...point));
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.globalAlpha = alpha * .55;
+      context.strokeStyle = "#995365";
+      context.lineWidth = .65;
+      for (const side of sides) {
+        context.beginPath();
+        centers.forEach((center, index) => {
+          const amount = .28 + Math.sin(index * .45 - clock * 5 + branchIndex) * .07;
+          const veinX = center.x + (side[index][0] - center.x) * amount;
+          const veinY = center.y + (side[index][1] - center.y) * amount;
+          if (index) context.lineTo(veinX, veinY);
+          else context.moveTo(veinX, veinY);
+        });
+        context.stroke();
+      }
+      context.globalAlpha = alpha * .4;
+      context.strokeStyle = "#ad6971";
+      for (let index = 4; index < centers.length - 4; index += 4) {
+        const center = centers[index];
+        const left = sides[0][index];
+        const right = sides[1][index];
+        const previous = centers[index - 2];
+        context.beginPath();
+        context.moveTo(center.x + (left[0] - center.x) * .85, center.y + (left[1] - center.y) * .85);
+        context.quadraticCurveTo(previous.x, previous.y, center.x + (right[0] - center.x) * .85, center.y + (right[1] - center.y) * .85);
+        context.stroke();
+      }
+      context.fillStyle = "#ba7766";
+      for (let pulse = 0; pulse < 4; pulse++) {
+        const amount = (clock + pulse / 4 + branchIndex * .13) % 1;
+        const center = centers[Math.floor(amount * (centers.length - 1))];
+        context.globalAlpha = alpha * Math.sin(amount * Math.PI) * .65;
+        context.beginPath();
+        context.arc(center.x, center.y, 1.2, 0, Math.PI * 2);
+        context.fill();
+      }
+    });
+    context.restore();
   }
 
   function visibleRouteIds() {
@@ -4661,6 +4854,9 @@ function setupGeographyCanvas() {
   }
 
   function bodyPosition(system, body, now = 0) {
+    if (system.primaryBodyId === body.id && body.kind !== "star") {
+      return { x: system.x, y: system.y, centerX: system.x, centerY: system.y, orbitX: 0, orbitY: 0 };
+    }
     let centerX = system.x;
     let centerY = system.y;
     // Keep in sync with ORBIT_* in scripts/build_reach_geography.py, which spaces systems so orbits never overlap.
@@ -4675,8 +4871,8 @@ function setupGeographyCanvas() {
       }
     }
     // Outer orbits drift slower, like real orbital mechanics; a full lap takes minutes, not seconds.
-    const degreesPerMs = .00028 / (body.orbitIndex + 1.4);
-    const angle = (body.orbitAngle + now * degreesPerMs) * Math.PI / 180;
+    const degreesPerMs = .0028 / (body.orbitIndex + 1.4);
+    const angle = (body.orbitAngle + (reducedMotion.matches ? 0 : now) * degreesPerMs) * Math.PI / 180;
     return {
       x: centerX + Math.cos(angle) * radius,
       y: centerY + Math.sin(angle) * radius * .46,
@@ -4689,6 +4885,7 @@ function setupGeographyCanvas() {
 
   function planetColor(kind) {
     return ({
+      death_world: "#6d9458",
       dead_world: "#899087", agri_world: "#7fb65a", hive_world: "#bd8540", war_world: "#bd4d3f",
       shrine_world: "#d6bb73", forge_world: "#d56b2a", feral_world: "#4f91bd", mining_world: "#9d7954",
       frontier_world: "#4ca9a0", pleasure_world: "#bd6f9d", penal_world: "#7761a3", fortress_world: "#718ead",
@@ -4698,13 +4895,33 @@ function setupGeographyCanvas() {
   }
 
   function stellarClass(star) {
-    const classes = ["B-type blue-white", "A-type white", "G-type yellow-white", "K-type orange", "M-type red"];
-    return classes[hashStr(star?.id || "star") % classes.length];
+    return STELLAR_TYPES[star?.stellarClass || "G"].name;
   }
 
   function drawPlanetBody(body, bodyScreen, radius, ratio, hovered) {
     const seed = hashStr(body.id);
     const base = planetColor(body.kind);
+    if (body.kind === "special") {
+      context.strokeStyle = hovered ? "#4fd67a" : "#9a75cb";
+      context.fillStyle = hovered ? "#bdf7c9" : "#d2c4dc";
+      context.lineWidth = 1;
+      if (body.id === "the_warp_gate") {
+        context.beginPath();
+        context.ellipse(bodyScreen.x, bodyScreen.y, radius, radius * .65, -.35, 0, Math.PI * 2);
+        context.stroke();
+        context.beginPath();
+        context.ellipse(bodyScreen.x, bodyScreen.y, radius * .55, radius * .35, -.35, 0, Math.PI * 2);
+        context.stroke();
+      } else {
+        for (let point = 0; point < 3; point++) {
+          const angle = point * Math.PI * 2 / 3;
+          context.beginPath();
+          context.arc(bodyScreen.x + Math.cos(angle) * radius * .55, bodyScreen.y + Math.sin(angle) * radius * .55, Math.max(1, radius * .2), 0, Math.PI * 2);
+          context.fill();
+        }
+      }
+      return;
+    }
     if (body.kind === "watch_fortress" || body.kind === "watch_station") {
       // A gothic void-fortress, not a planet: an angular hull with a central spire, not a sphere.
       context.save();
@@ -4900,49 +5117,45 @@ function setupGeographyCanvas() {
     }
   }
 
-  // Weighted toward the muted white/blue-white pinpoints seen in the backdrop photo;
-  // warm tones stay rare and desaturated rather than vivid.
-  const STAR_FAMILIES = [
-    { hue: 40, sat: 6, light: 97 },
-    { hue: 40, sat: 8, light: 95 },
-    { hue: 210, sat: 32, light: 92 },
-    { hue: 45, sat: 20, light: 88 },
-    { hue: 28, sat: 35, light: 80 },
-  ];
-
-  function starColor(seed, lightBoost = 0, alpha = 1) {
-    const family = STAR_FAMILIES[seed % STAR_FAMILIES.length];
-    const hue = family.hue + ((seed >> 3) % 21) - 10;
-    return `hsla(${hue}, ${family.sat}%, ${Math.min(99, family.light + lightBoost)}%, ${alpha})`;
+  function starColor(star, lightBoost = 0, alpha = 1) {
+    const color = STELLAR_TYPES[star?.stellarClass || "G"].color;
+    const value = parseInt(color.slice(1), 16);
+    const red = Math.min(255, ((value >> 16) & 255) + lightBoost * 5);
+    const green = Math.min(255, ((value >> 8) & 255) + lightBoost * 5);
+    const blue = Math.min(255, (value & 255) + lightBoost * 5);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
   }
 
   function drawSystems(camera, ratio, now) {
-    const systemAlpha = .4 + canvasSmoothstep(1.05, 2.2, ratio) * .3;
-    const labelAlpha = canvasSmoothstep(1.55, 2.65, ratio) * (1 - canvasSmoothstep(12, 20, ratio));
-    const bodyAlpha = canvasSmoothstep(2.5, 5.5, ratio);
+    const labelAlpha = canvasSmoothstep(3.5, 6, ratio) * (1 - canvasSmoothstep(18, 26, ratio));
+    const bodyAlpha = canvasSmoothstep(2.5, 4.5, ratio);
     const labelBoxes = [];
-    systemsByPriority.forEach((system, systemIndex) => {
+    systemsByPriority.forEach(system => {
       const center = worldToScreen(system.x, system.y, camera);
       if (center.x < -100 || center.y < -100 || center.x > width + 100 || center.y > height + 100) return;
       const bodies = bodiesBySystem.get(system.id) || [];
-      const star = bodies.find(body => body.kind === "star");
-      const starSeed = hashStr(star?.id || system.id);
-      const starPulse = 1 + Math.sin(now * .0012 + systemIndex) * (.1 + starSeed % 8 / 80);
       const systemHovered = hoveredTarget?.kind === "system" && hoveredTarget.id === system.id;
-      context.globalAlpha = systemAlpha;
-      const glow = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, 8 * starPulse);
-      glow.addColorStop(0, starColor(starSeed, 4, .85));
-      glow.addColorStop(.3, systemHovered ? "rgba(79,214,122,.75)" : starColor(starSeed, -10, .35));
-      glow.addColorStop(1, "rgba(79,214,122,0)");
-      context.fillStyle = glow;
-      context.beginPath();
-      context.arc(center.x, center.y, 8 * starPulse, 0, Math.PI * 2);
-      context.fill();
-      context.fillStyle = starColor(starSeed, 2);
-      context.beginPath();
-      context.arc(center.x, center.y, canvasClamp(1.7 + ratio * .15 + starSeed % 4 * .25, 1.8, 5.5), 0, Math.PI * 2);
-      context.fill();
+      const star = bodies.find(body => body.id === system.primaryBodyId && body.kind === "star");
+      if (star) {
+        const seed = hashStr(star.id);
+        const clock = reducedMotion.matches ? 0 : now;
+        const pulse = 1 + Math.sin(clock * .0012 + seed % 20) * .06;
+        const radius = canvasClamp(1.35 + ratio * .12, 1.5, 4.5) * pulse;
+        context.globalAlpha = .5 + canvasSmoothstep(2.5, 5, ratio) * .4;
+        const glow = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius * 3);
+        glow.addColorStop(0, starColor(star, 3, .55));
+        glow.addColorStop(1, starColor(star, 0, 0));
+        context.fillStyle = glow;
+        context.beginPath();
+        context.arc(center.x, center.y, radius * 3, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = starColor(star, 3);
+        context.beginPath();
+        context.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        context.fill();
+      }
       if (systemHovered) {
+        context.globalAlpha = 1;
         context.strokeStyle = "rgba(79,214,122,.88)";
         context.lineWidth = 1.2;
         context.beginPath();
@@ -4956,7 +5169,7 @@ function setupGeographyCanvas() {
           const position = bodyPosition(system, body, now);
           const bodyScreen = worldToScreen(position.x, position.y, camera);
           const orbitCenter = worldToScreen(position.centerX, position.centerY, camera);
-          const revealOrbits = hoveredTarget?.systemId === system.id || (hoveredTarget?.kind === "system" && hoveredTarget.id === system.id);
+          const revealOrbits = position.orbitX > 0 && (hoveredTarget?.systemId === system.id || (hoveredTarget?.kind === "system" && hoveredTarget.id === system.id));
           if (revealOrbits) {
             context.strokeStyle = "rgba(79,214,122,.42)";
             context.lineWidth = .7;
@@ -4967,21 +5180,31 @@ function setupGeographyCanvas() {
           const radius = canvasClamp(body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12);
           const bodyHovered = hoveredTarget?.kind === "body" && hoveredTarget.id === body.id;
           drawPlanetBody(body, bodyScreen, radius, ratio, bodyHovered);
-          if (bodyHovered || systemHovered) {
+          if (body.id !== system.primaryBodyId && (bodyHovered || systemHovered)) {
             context.font = "9px 'Share Tech Mono', monospace";
             context.textAlign = "center";
-            context.fillStyle = "rgba(79,214,122,.88)";
-            context.fillText(body.name, bodyScreen.x, bodyScreen.y + radius + 11);
+            const textWidth = context.measureText(body.name).width;
+            const labelY = bodyScreen.y + radius + 11;
+            const labelBox = { left: bodyScreen.x - textWidth / 2 - 3, right: bodyScreen.x + textWidth / 2 + 3, top: labelY - 10, bottom: labelY + 2 };
+            if (!labelBoxes.some(box => labelBox.left < box.right && labelBox.right > box.left && labelBox.top < box.bottom && labelBox.bottom > box.top)) {
+              labelBoxes.push(labelBox);
+              context.fillStyle = "rgba(79,214,122,.88)";
+              context.fillText(body.name, bodyScreen.x, labelY);
+            }
           }
         });
       }
 
-      if (labelAlpha > .02) {
-        context.globalAlpha = labelAlpha;
+      const bodyHovered = hoveredTarget?.kind === "body" && hoveredTarget.systemId === system.id;
+      if (labelAlpha > .02 || systemHovered || bodyHovered) {
+        context.globalAlpha = systemHovered || bodyHovered ? 1 : labelAlpha;
         context.font = `${canvasClamp(10 + ratio * .3, 10, 14)}px 'Share Tech Mono', monospace`;
         context.textAlign = "center";
         const textWidth = context.measureText(system.name).width;
-        const labelBox = { left: center.x - textWidth / 2 - 4, right: center.x + textWidth / 2 + 4, top: center.y + 7, bottom: center.y + 24 };
+        const orbitHeight = Math.max(0, ...bodies.filter(body => body.kind !== "star").map(body => (5 + body.orbitIndex * 4) * .46 * camera.zoom));
+        const bodyRadius = Math.max(0, ...bodies.filter(body => body.kind !== "star").map(body => canvasClamp(body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12)));
+        const labelY = center.y + orbitHeight + bodyRadius + 28;
+        const labelBox = { left: center.x - textWidth / 2 - 4, right: center.x + textWidth / 2 + 4, top: labelY - 14, bottom: labelY + 3 };
         const overlaps = labelBoxes.some(box => labelBox.left < box.right && labelBox.right > box.left && labelBox.top < box.bottom && labelBox.bottom > box.top);
         if (overlaps) {
           context.globalAlpha = 1;
@@ -4990,9 +5213,9 @@ function setupGeographyCanvas() {
         labelBoxes.push(labelBox);
         context.lineWidth = 3;
         context.strokeStyle = "rgba(2,5,3,.9)";
-        context.strokeText(system.name, center.x, center.y + 17);
+        context.strokeText(system.name, center.x, labelY);
         context.fillStyle = "rgba(79,214,122,.86)";
-        context.fillText(system.name, center.x, center.y + 17);
+        context.fillText(system.name, center.x, labelY);
       }
       context.globalAlpha = 1;
     });
@@ -5093,9 +5316,13 @@ function setupGeographyCanvas() {
 
   function updateStatus(ratio) {
     const focused = ratio >= 5 && state.selectedSystem && systemsById.get(state.selectedSystem);
-    const [headingText, statusText] = ratio < 1.7 ? ["Jericho Reach", "Strategic region projection"]
-      : ratio < 5 ? ["Stellar cartography", "Systems and warp routes resolving"]
-      : [focused ? `${focused.name} system` : "Local system detail", "Orbital bodies and theatres resolving"];
+    const sector = geography.sectors.find(item => item.id === state.selectedSector);
+    const counts = ["secure", "critical", "lost"].map(status => ({ status, count: geography.sectors.filter(item => item.status === status).length }));
+    const summary = counts.filter(item => item.count).map(item => `${item.count} ${titleCase(item.status)}`).join(" / ");
+    const [headingText, statusText] = focused ? [focused.name, "Charted location"]
+      : sector ? [sector.name, `${titleCase(sector.status)} / ${sector.id === "jericho_reach" ? "Charted" : "Uncharted"}`]
+      : ratio < 3 ? ["Galactic Map", summary]
+      : ["Jericho Reach", "Charted locations"];
     if (lastStatus === headingText + statusText) return;
     lastStatus = headingText + statusText;
     const heading = document.querySelector(".reach-map-level strong");
@@ -5110,7 +5337,7 @@ function setupGeographyCanvas() {
       return;
     }
     if (needsResize) resizeCanvas();
-    if (!visible) {
+    if (!visible || document.hidden) {
       // Hidden (e.g. the mobile navigator is shown instead); check back occasionally.
       window.setTimeout(() => { animationFrame = requestAnimationFrame(drawFrame); }, 500);
       return;
@@ -5145,19 +5372,18 @@ function setupGeographyCanvas() {
     context.fillStyle = "#020403";
     context.fillRect(0, 0, width, height);
     const ratio = camera.zoom / camera.baseZoom;
-    if (hoveredTarget?.kind === "sector" && (ratio >= 2.4 || camera.targetZoom / camera.baseZoom >= 2.4)) {
-      hoveredTarget = null;
-      canvas.style.cursor = "grab";
-      window.clearTimeout(tooltipResolveTimer);
-      if (tooltip) {
-        tooltip.classList.remove("pending", "loading");
-        tooltip.dataset.targetKey = "";
-        tooltip.hidden = true;
-      }
+    if (state.selectedSector && camera.targetZoom <= camera.baseZoom * 1.05) clearSectorSelection();
+    if (hoveredTarget?.kind === "body") {
+      const system = systemsById.get(hoveredTarget.systemId);
+      const position = bodyPosition(system, hoveredTarget.body, timestamp);
+      hoveredTarget.worldX = position.x;
+      hoveredTarget.worldY = position.y;
+      if (tooltip && !tooltip.hidden) positionCanvasTooltip(hoveredTarget);
     }
     drawStarfield();
     drawArt(camera, ratio);
     drawSectors(camera, ratio);
+    drawEasternApproach(camera, ratio, timestamp);
     drawRoutes(camera, ratio);
     drawSystems(camera, ratio, timestamp);
     drawDirectiveMarkers(camera, ratio, timestamp);
@@ -5169,6 +5395,19 @@ function setupGeographyCanvas() {
   function localPoint(event) {
     const rectangle = canvas.getBoundingClientRect();
     return { x: event.clientX - rectangle.left, y: event.clientY - rectangle.top };
+  }
+
+  function clearSectorSelection() {
+    state.selectedSector = null;
+    if (hoveredTarget?.kind !== "sector") return;
+    hoveredTarget = null;
+    canvas.style.cursor = "grab";
+    window.clearTimeout(tooltipResolveTimer);
+    if (tooltip) {
+      tooltip.classList.remove("pending", "loading");
+      tooltip.dataset.targetKey = "";
+      tooltip.hidden = true;
+    }
   }
 
   function positionCanvasTooltip(target) {
@@ -5203,7 +5442,8 @@ function setupGeographyCanvas() {
             target = {
               kind: "body", id: body.id, systemId: system.id, sectorId: system.sectorId,
               name: body.name,
-              meta: `${titleCase(body.kind)} · ${system.name} · Orbit ${body.orbitIndex}${body.parentBodyId ? " · Satellite" : ""} · ${titleCase(body.source)}${body.battleEligible ? " · Battle eligible" : ""}`,
+              meta: `${titleCase(body.kind)}${body.battleEligible ? " · Battle eligible" : ""}`,
+              body,
               worldX: position.x, worldY: position.y, distance
             };
           }
@@ -5214,25 +5454,25 @@ function setupGeographyCanvas() {
         const screen = worldToScreen(system.x, system.y);
         const distance = Math.hypot(screen.x - point.x, screen.y - point.y);
         if (distance <= 14 && (!target || distance < target.distance)) {
-          const bodies = (bodiesBySystem.get(system.id) || []).filter(body => body.kind !== "star").length;
-          const star = (bodiesBySystem.get(system.id) || []).find(body => body.kind === "star");
+          const primary = (bodiesBySystem.get(system.id) || []).find(body => body.id === system.primaryBodyId);
+          const bodyCount = (bodiesBySystem.get(system.id) || []).filter(body => body.kind !== "star").length;
           const routes = geography.routes.filter(route => route.sourceSystemId === system.id || route.targetSystemId === system.id).length;
           target = {
             kind: "system", id: system.id, systemId: system.id, sectorId: system.sectorId,
-            name: system.name, meta: `${stellarClass(star)} · ${bodies} bodies · ${routes} warp routes · ${titleCase(system.source)}`,
+            name: system.name, meta: `${stellarClass(primary)} · ${bodyCount} bodies · ${routes} warp routes`, body: primary,
             worldX: system.x, worldY: system.y, distance
           };
         }
       });
     }
-    if (!target && ratio < 2.4 && camera.targetZoom / camera.baseZoom < 2.4) {
+    if (!target && ratio < 10) {
       const world = screenToWorld(point.x, point.y);
       const sector = geographySectorAt(world, 6 / camera.zoom);
       if (sector) {
         const systems = geography.systems.filter(system => system.sectorId === sector.id).length;
         target = {
           kind: "sector", id: sector.id, sectorId: sector.id, name: sector.name,
-          meta: `Jericho Reach region · ${systems} charted systems`, worldX: sector.label[0], worldY: sector.label[1], distance: 0
+          meta: `${titleCase(sector.status)} · ${systems ? `${systems} charted systems` : "Uncharted"}`, worldX: sector.label[0], worldY: sector.label[1], distance: 0
         };
       }
     }
@@ -5263,7 +5503,8 @@ function setupGeographyCanvas() {
         tooltipResolveTimer = window.setTimeout(() => {
           if (tooltip.dataset.targetKey !== targetKey || !hoveredTarget || viewport.classList.contains("dragging")) return;
           tooltip.classList.remove("loading");
-          tooltip.innerHTML = `<strong>${escapeHtml(target.name)}</strong>${escapeHtml(target.meta)}`;
+          tooltip.innerHTML = `<strong>${geographyBodyIcon(target.body)}${escapeHtml(target.name)}</strong>${escapeHtml(target.meta)}`;
+          positionCanvasTooltip(target);
         }, 650);
       }, 650);
     }
@@ -5277,6 +5518,7 @@ function setupGeographyCanvas() {
       ...camera, x: camera.targetX, y: camera.targetY, zoom: camera.targetZoom
     });
     const factor = Math.exp(-event.deltaY * (event.deltaMode === 1 ? .045 : .0014));
+    if (factor < 1) clearSectorSelection();
     const nextZoom = canvasClamp(camera.targetZoom * factor, camera.baseZoom, camera.baseZoom * 120);
     camera.targetX = world.x - (point.x - width / 2) / nextZoom;
     camera.targetY = world.y - (point.y - height / 2) / nextZoom;
@@ -5331,6 +5573,7 @@ function setupGeographyCanvas() {
         if (!nearestBody || distance < nearestBody.distance) nearestBody = { body, distance };
       }));
       if (nearestBody && nearestBody.distance < 18) {
+        state.selectedSector = null;
         openGeographySystem(nearestBody.body.systemId);
         return;
       }
@@ -5342,17 +5585,20 @@ function setupGeographyCanvas() {
     if (ratio >= SYSTEM_HOVER_RATIO && nearestSystem && nearestSystem.distance < 22) {
       zoomAnchor = null;
       state.selectedSystem = nearestSystem.system.id;
-      camera.targetX = nearestSystem.system.x;
-      camera.targetY = nearestSystem.system.y;
-      camera.targetZoom = Math.max(camera.targetZoom, camera.baseZoom * 13);
+      state.selectedSector = null;
+      openGeographySystem(nearestSystem.system.id);
       return;
     }
     const sector = geographySectorAt(world);
-    if (sector && ratio < 3) {
+    if (sector && ratio < 10) {
       zoomAnchor = null;
+      state.selectedSector = sector.id;
+      state.selectedSystem = null;
       camera.targetX = sector.label[0];
       camera.targetY = sector.label[1];
-      camera.targetZoom = Math.max(camera.targetZoom, camera.baseZoom * 2.5);
+      const sectorWidth = Math.max(...sector.boundary.map(point => point[0])) - Math.min(...sector.boundary.map(point => point[0]));
+      const sectorHeight = Math.max(...sector.boundary.map(point => point[1])) - Math.min(...sector.boundary.map(point => point[1]));
+      camera.targetZoom = canvasClamp(Math.min(width / (sectorWidth * 1.35), height / (sectorHeight * 1.35)), camera.baseZoom, camera.baseZoom * 120);
     }
   }
 
@@ -5377,12 +5623,14 @@ function setupGeographyCanvas() {
     if (button.dataset.reachZoom === "reset") {
       zoomAnchor = null;
       state.selectedSystem = null;
+      state.selectedSector = null;
       camera.targetX = bounds.x + bounds.w / 2;
       camera.targetY = bounds.y + bounds.h / 2;
       camera.targetZoom = camera.baseZoom;
     } else {
       zoomAnchor = null;
       const factor = button.dataset.reachZoom === "in" ? 1.65 : 1 / 1.65;
+      if (factor < 1) clearSectorSelection();
       camera.targetZoom = canvasClamp(camera.targetZoom * factor, camera.baseZoom, camera.baseZoom * 120);
     }
   });
@@ -5399,17 +5647,17 @@ function mobileGeographyHtml() {
     if (body.kind === "star") return;
     bodyCounts.set(body.systemId, (bodyCounts.get(body.systemId) || 0) + 1);
   });
-  return `<section class="reach-mobile-nav" aria-label="Jericho Reach region navigator">
-    <div class="tier-label">Region Navigator</div>
+  return `<section class="reach-mobile-nav" aria-label="Galactic sector navigator">
+    <div class="tier-label">Sector Navigator</div>
     ${state.geography.sectors.map(sector => {
       const systems = state.geography.systems.filter(system => system.sectorId === sector.id)
         .sort((a, b) => a.name.localeCompare(b.name));
       return `<details class="reach-mobile-sector">
-        <summary><span>${escapeHtml(sector.name)}</span><small>${systems.length} systems</small></summary>
-        <div class="reach-mobile-systems">${systems.map(system => `
+        <summary><span>${escapeHtml(sector.name)}</span><small>${escapeHtml(titleCase(sector.status))} / ${systems.length ? `${systems.length} systems` : "Uncharted"}</small></summary>
+        <div class="reach-mobile-systems">${systems.length ? systems.map(system => `
           <button class="reach-mobile-system" type="button" data-mobile-system="${escapeHtml(system.id)}">
             <span>${escapeHtml(system.name)}</span><small>${bodyCounts.get(system.id) || 0} bodies</small>
-          </button>`).join("")}</div>
+          </button>`).join("") : `<div class="reach-mobile-empty">Uncharted</div>`}</div>
       </details>`;
     }).join("")}
   </section>`;
@@ -5442,7 +5690,7 @@ function renderReach() {
   const selectedSector = state.geography && state.geography.sectors.find(sector => sector.id === state.selectedSector);
   const selectedSystem = state.geography && state.geography.systems.find(system => system.id === state.selectedSystem);
   const mapHeading = state.reachMapLevel === "system" ? selectedSystem?.name || "System"
-    : state.reachMapLevel === "sector" ? selectedSector?.name || "Sector" : "Jericho Reach";
+    : state.reachMapLevel === "sector" ? selectedSector?.name || "Sector" : "Galactic Map";
   const mapSubheading = state.reachMapLevel === "system" ? "Planetary-system tactical view"
     : state.reachMapLevel === "sector" ? "System-level tactical chart" : "Sector-level command chart";
   const parentLabel = state.reachMapLevel === "system" ? `Return to ${selectedSector?.name || "sector"}` : "Return to Reach sectors";
@@ -5486,8 +5734,8 @@ function renderReach() {
       <select class="reach-select" data-reach-company aria-label="Filter by company">${companyOptions}</select>
     </div>
     <div class="reach-viewport" id="reach-viewport">
-      ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Continuous galactic map of the Jericho Reach"></canvas>` : reachSvg(reach, directives)}
-      ${geographyLive ? `<div class="reach-map-level"><strong>Jericho Reach</strong>Continuous stellar cartography</div><div id="reach-canvas-status" class="reach-canvas-status">Strategic region projection</div><div id="reach-canvas-tooltip" class="reach-canvas-tooltip" hidden></div>` : ""}
+      ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Galactic sector chart with the Jericho Reach at its center"></canvas>` : reachSvg(reach, directives)}
+      ${geographyLive ? `<div class="reach-map-level"><strong>Galactic Map</strong>Sector chart</div><div id="reach-canvas-status" class="reach-canvas-status">29 sectors / Secure</div><div id="reach-canvas-tooltip" class="reach-canvas-tooltip" hidden></div>` : ""}
       <div class="reach-controls">
         <button class="icon-btn" type="button" data-reach-zoom="in" aria-label="Zoom in">+</button>
         <button class="icon-btn" type="button" data-reach-zoom="out" aria-label="Zoom out">&minus;</button>
@@ -5495,13 +5743,15 @@ function renderReach() {
       </div>
       <div class="reach-legend" aria-hidden="true">
         ${legend}
-        <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:var(--gold);border-style:dashed"></span>Active theatre</div>
+        <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#4fd67a"></span>Secure</div>
+        <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#cf934b"></span>Critical</div>
+        <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#bd4d3f"></span>Lost</div>
         <div class="reach-legend-item"><span style="color:var(--gold)">&#9876;</span>Brothers deployed</div>
       </div>
-      <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))} &middot; ` : ""}drag to pan &middot; wheel to zoom &middot; select to focus</div>
+      <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))}` : ""}</div>
       <div class="reach-tooltip" id="reach-tooltip" hidden></div>
     </div>
-    ${geographyLive ? `<details class="reach-desktop-index"><summary>Region navigator</summary>${mobileGeographyHtml()}</details>` : ""}
+    ${geographyLive ? `<details class="reach-desktop-index"><summary>Sector navigator</summary>${mobileGeographyHtml()}</details>` : ""}
     ${geographyLive ? mobileGeographyHtml() : ""}
     <div class="tier-label" style="margin-top:26px">Active Deployments (${deployments.length})</div>
     <table class="roster-table reach-table">

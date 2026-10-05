@@ -1,5 +1,7 @@
 # OS/editor noise
 .DS_Store
+__MACOSX/
+._*
 Thumbs.db
 *.swp
 *.swo
