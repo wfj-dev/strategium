@@ -7,6 +7,7 @@ Source PNGs stay untouched; re-run after adding or repainting artwork:
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -16,6 +17,12 @@ from PIL import Image, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 WEB = ASSETS / "web"
+RANK_CARDS_SOURCE_DIR = Path(
+    os.getenv(
+        "STRATEGIUM_RANK_CARDS_SOURCE",
+        str(ROOT.parent / "discord-bots" / "op-scribe-servitor" / "assets" / "ranks"),
+    )
+)
 
 
 def _save(source: Path, target: Path, *, max_size: tuple[int, int] | None = None, quality: int = 82) -> None:
@@ -34,6 +41,12 @@ def main() -> None:
     for source in sorted((ASSETS / "Ranks").glob("*.png")):
         name = re.sub(r"^\d+-", "", source.stem)
         _save(source, WEB / "ranks" / f"{name}.webp", max_size=(360, 128))
+    if RANK_CARDS_SOURCE_DIR.is_dir():
+        for source in sorted(RANK_CARDS_SOURCE_DIR.glob("*.png")):
+            _save(source, WEB / "rank-cards" / f"{source.stem}-preview.webp", max_size=(720, 405), quality=80)
+            _save(source, WEB / "rank-cards" / f"{source.stem}.webp", max_size=(1200, 675), quality=86)
+    else:
+        print(f"Rank card source directory not found; keeping existing WebPs: {RANK_CARDS_SOURCE_DIR}")
     for source in ("Armory", "Apothecarion", "Librarians", "Reclusiam", "Recon", "Watch_Blades"):
         _save(ASSETS / f"{source}.png", WEB / "formation-symbols" / f"{source}.webp", max_size=(96, 96))
     _save(ASSETS / "jericho symbol.png", WEB / "jericho-symbol.webp", max_size=(96, 96))

@@ -69,6 +69,9 @@ PAULDRON_URL_PREFIX = "/assets/pauldrons/"
 RANKS_DIR = WEB_ASSETS_DIR / "ranks"
 RANK_URL_PREFIX = "/assets/ranks/"
 RANK_IMAGES = {path.name: path for path in RANKS_DIR.glob("*.webp")} if RANKS_DIR.is_dir() else {}
+RANK_CARDS_DIR = WEB_ASSETS_DIR / "rank-cards"
+RANK_CARD_URL_PREFIX = "/assets/rank-cards/"
+RANK_CARD_IMAGES = {path.name: path for path in RANK_CARDS_DIR.glob("*.webp")} if RANK_CARDS_DIR.is_dir() else {}
 AMBIENCE_PATH = ROOT / "assets" / "ambience" / "fortress-ambience.mp3"
 AMBIENCE_URL = "/assets/ambience/fortress-ambience.mp3"
 RECORD_WALL_PATH = ROOT / "assets" / "record of blood wall.png"
@@ -150,7 +153,7 @@ REACH_MAX_DIRECTIVES = 500
 REACH_STATUSES = {
     "unassigned", "distributed", "recruiting", "deployed", "completed", "failed", "lapsed"
 }
-PAGE_PATHS = {"/", "/reach", "/record-of-blood"}
+PAGE_PATHS = {"/", "/reach", "/record-of-blood", "/rank-guide"}
 
 SECURITY_LOG = logging.getLogger("strategium.security")
 
@@ -390,6 +393,8 @@ def _static_asset_path(path: str) -> Path | None:
         return _pauldron_path(urllib.parse.unquote(path[len(PAULDRON_URL_PREFIX):]))
     if path.startswith(RANK_URL_PREFIX):
         return _existing(RANK_IMAGES.get(urllib.parse.unquote(path[len(RANK_URL_PREFIX):])))
+    if path.startswith(RANK_CARD_URL_PREFIX):
+        return _existing(RANK_CARD_IMAGES.get(urllib.parse.unquote(path[len(RANK_CARD_URL_PREFIX):])))
     if path.startswith(FORTRESS_LAYER_URL_PREFIX):
         key, _, suffix = path[len(FORTRESS_LAYER_URL_PREFIX):].rpartition(".")
         filename = FORTRESS_LAYERS.get(key)
