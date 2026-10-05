@@ -1166,6 +1166,64 @@
   .blood-brother { display: flex; flex-direction: column; gap: 5px; text-align: left; padding: 11px; border: 1px solid #3a4037; background: #171d18; color: var(--white); cursor: pointer; }
   .blood-brother:hover { border-color: var(--gold); }
   .blood-brother small { color: #ada681; font-size: 10px; }
+
+  .rank-guide-page .page { max-width: 1420px; }
+  .rank-guide-room { color: var(--white); }
+  .rank-guide-heading { padding: 12px 0 20px; }
+  .rank-guide-overline { color: var(--green-dim); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; }
+  .rank-guide-heading h2 { margin: 5px 0 8px; color: var(--gold); font: 700 24px 'Share Tech Mono', monospace; text-transform: uppercase; }
+  .rank-guide-description { max-width: 72ch; margin: 0; color: var(--green-dim); font-size: 12px; line-height: 1.65; }
+  .rank-guide-total { margin-top: 14px; color: var(--gold-dim); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+  .rank-guide-section + .rank-guide-section { margin-top: 30px; }
+  .rank-guide-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 12px; padding-bottom: 7px; border-bottom: 1px solid var(--border-dim); }
+  .rank-guide-section-heading h3 { margin: 0; color: var(--gold); font: 700 14px 'Share Tech Mono', monospace; text-transform: uppercase; }
+  .rank-guide-section-heading p { margin: 0; color: var(--green-dim); font-size: 10px; line-height: 1.5; }
+  .rank-guide-track-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .rank-guide-track-card { display: flex; flex-direction: column; min-width: 0; padding: 0; border: 1px solid var(--border-dim); background: rgba(3, 8, 5, .72); color: var(--white); text-align: left; cursor: pointer; transition: border-color .16s, background .16s; }
+  .rank-guide-track-card:hover, .rank-guide-track-card:focus-visible { border-color: var(--green-dim); background: rgba(79, 214, 122, .045); }
+  .rank-guide-track-preview { display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-bottom: 1px solid var(--border-dim); background: #050705; }
+  .rank-guide-track-preview img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .rank-guide-track-copy { display: flex; flex-direction: column; gap: 7px; min-width: 0; padding: 12px 14px 14px; }
+  .rank-guide-track-name { color: var(--gold); font: 700 13px 'Share Tech Mono', monospace; text-transform: uppercase; }
+  .rank-guide-track-summary { color: #c8d0c3; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+  .rank-guide-track-open { display: flex; justify-content: space-between; gap: 12px; margin-top: 3px; color: var(--green); font-size: 9px; text-transform: uppercase; }
+  .rank-guide-viewer-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .rank-guide-all-tracks { border: 0; padding: 5px 0; background: transparent; color: var(--green); font: inherit; font-size: 10px; text-transform: uppercase; cursor: pointer; }
+  .rank-guide-all-tracks:hover { color: var(--gold); }
+  .rank-guide-viewer-track { color: var(--gold-dim); font-size: 10px; text-align: right; text-transform: uppercase; }
+  .rank-guide-viewer { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr); gap: 18px; align-items: start; }
+  .rank-guide-card-art { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; border: 1px solid var(--border-dim); background: #050705; }
+  .rank-guide-card-info { min-width: 0; padding: 2px 0; }
+  .rank-guide-card-index { color: var(--green-dim); font: 10px 'Share Tech Mono', monospace; text-transform: uppercase; }
+  .rank-guide-card-info h3 { margin: 5px 0 12px; color: var(--white); font: 700 20px 'Share Tech Mono', monospace; overflow-wrap: anywhere; }
+  .rank-guide-pagination { display: grid; grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr); align-items: center; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-dim); }
+  .rank-guide-pagination button { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border-dim); background: rgba(3, 8, 5, .72); color: var(--green); font: inherit; font-size: 10px; text-transform: uppercase; cursor: pointer; }
+  .rank-guide-pagination button:last-child { justify-content: flex-end; }
+  .rank-guide-pagination button:hover:not(:disabled) { border-color: var(--green-dim); color: var(--gold); }
+  .rank-guide-pagination button:disabled { opacity: .35; cursor: default; }
+  .rank-guide-page-count { color: var(--gold-dim); font: 11px 'Share Tech Mono', monospace; white-space: nowrap; }
+  .rank-guide-requirements { min-width: 0; }
+  .rank-guide-requirements h3 { margin: 2px 0 6px; color: var(--gold-dim); font-size: 9px; font-weight: 400; text-transform: uppercase; letter-spacing: .08em; }
+  .rank-guide-requirements ul { margin: 0 0 10px; padding: 0; list-style: none; }
+  .rank-guide-requirements li { position: relative; padding: 5px 0 5px 13px; border-bottom: 1px solid rgba(88, 125, 82, .18); color: #c8d0c3; font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+  .rank-guide-requirements li::before { content: "›"; position: absolute; left: 0; color: var(--green); }
+  .rank-guide-note { margin: 7px 0 0; padding: 8px; border-left: 2px solid var(--gold-dim); background: rgba(207, 174, 104, .05); color: #d0c59f; font-size: 10px; line-height: 1.5; }
+
+  @media (max-width: 900px) {
+    .rank-guide-viewer { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .rank-guide-page .page { padding: 14px 10px 32px; }
+    .rank-guide-heading { padding: 10px 5px 18px; }
+    .rank-guide-section-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+    .rank-guide-track-gallery { grid-template-columns: 1fr; }
+    .rank-guide-track-copy { padding: 10px 11px 12px; }
+    .rank-guide-viewer-top { align-items: flex-start; flex-direction: column; gap: 2px; }
+    .rank-guide-viewer-track { text-align: left; }
+    .rank-guide-pagination { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 5px; }
+    .rank-guide-pagination button { justify-content: center; gap: 5px; padding: 7px 5px; font-size: 8px; }
+    .rank-guide-page-count { font-size: 9px; }
+  }
   @media (max-width: 600px) {
     .blood-page .page { padding: 14px 10px 32px; }
     .blood-heading { padding: 10px 5px 20px; }
@@ -1182,8 +1240,8 @@
     .slate-navigation { align-items: flex-start; flex-direction: column; gap: 8px; margin: 24px 0 22px; }
     .slate-navigation .back-btn { align-self: flex-start; }
     #search-btn { margin-left: auto; }
-    .site-nav { order: 3; width: 100%; }
-    .site-nav a { flex: 1; text-align: center; }
+    .site-nav { order: 3; width: 100%; flex-wrap: wrap; }
+    .site-nav a { flex: 1 1 calc(33.333% - 4px); text-align: center; }
     .slate-corner.tl { top: 9px; left: 18px; right: 18px; overflow: hidden; text-overflow: ellipsis; }
     .slate-corner.tr { top: 25px; left: 18px; right: auto; }
     .reach-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1291,6 +1349,7 @@
         <a href="/" data-page="fortress">Personnel Docket</a>
         <a href="/reach" data-page="reach">Sector Operations</a>
         <a href="/record-of-blood" data-page="blood">Chapter Origins</a>
+        <a href="/rank-guide" data-page="rank-guide">Rank Guide</a>
       </nav>
       <div class="header-right">
         <div id="auth-container"></div>
@@ -1556,6 +1615,68 @@ const RANK_TIERS = [
   ["watch_veteran"],
   ["watch_brother"]
 ];
+
+const RANK_GUIDE = [
+  { number: 1, name: "Watch Brother", image: "1-Watch_Brother.webp", requirements: ["Complete Deathwatch Initiation."] },
+  { number: 2, name: "Watch Veteran", image: "2-Watch_Veteran.webp", requirements: ["Earn 200 AAR points.", "2 weeks service time."] },
+  { number: 3, name: "Oathsworn", image: "3-Oathsworn.webp", requirements: ["Served as a Watch Veteran.", "Earn 3 Plasteel Studs.", "Nominated by High Command.", "Confirmed by Watch Command."] },
+  { number: 4, name: "Watch Sergeant", image: "4-Watch_Sergeant.webp", requirements: ["Earn 1 Plasteel Stud.", "Earn 2 Campaign medals.", "Served as a Watch Veteran.", "Completed 10 Strike Directives.", "Nominated by High Command.", "Confirmed by Watch Command."] },
+  { number: 5, name: "Veteran Sergeant", image: "5-Veteran_Sergeant.webp", requirements: ["Earn 1 Auramite Stud.", "Earn 3 Distinguished Campaign medals.", "Served as Watch Sergeant.", "Earn the Crux Terminatus.", "Completed 20 Strike Directives.", "Nominated by High Command.", "Confirmed by Watch Command."] },
+  { number: 6, name: "Watch Lieutenant", image: "6-Watch_Lieutenant.webp", requirements: ["Earn 3 Plasteel Studs.", "Earn 2 Distinguished Campaign medals.", "Served as Watch Sergeant.", "Completed 20 Strike Directives.", "Nominated by High Command.", "Confirmed by Watch Command."] },
+  { number: 7, name: "Watch Captain", image: "7-Watch_Captain.webp", requirements: ["Earn 1 Auramite Stud.", "Earn all Distinguished Campaign medals.", "Earn the Crux Terminatus.", "Served as Watch Lieutenant.", "Completed 30 Strike Directives.", "Demonstrates good leadership.", "Nominated by High Command.", "Confirmed by Watch Command."] },
+  { number: 8, name: "Bladeguard", image: "8-Bladeguard.webp", requirements: ["Earn 1 Plasteel Stud.", "Served as Watch Veteran.", "Earn the Crux Terminatus.", "Earn Terminus Slayer, 4th award.", "Earn the Kadaku Campaign Medal.", "Selected by Blade Master.", "Confirmed by Watch Command."] },
+  { number: 9, name: "First Blade", image: "9-First_Blade.webp", requirements: ["Limit: 3/5.", "Earn 1 Auramite Stud.", "Served as Bladeguard.", "Earn the Master Terminus Slayer award.", "Earn the Distinguished SOK-G medal.", "Earn all current Campaign Medals (Distinguished).", "Nominated by Blade Master.", "Confirmed by Watch Command."] },
+  { number: 10, name: "High Blade", image: "10-High_Blade.webp", requirements: ["Limit: 0/1.", "Earn 1 Auramite Stud.", "Served as First Blade.", "Earn all current Awards.", "Earn all current Campaign Medals (Distinguished).", "Nominated by Blade Master.", "Confirmed by High Command."] },
+  { number: 11, name: "Watch Chaplain", image: "11-Watch_Chaplain.webp", requirements: ["Limit: 3/5.", "Earn 1 Plasteel Stud.", "Served as Watch Veteran.", "Earn Terminus Slayer, 1st award.", "Earn the SOK-G medal.", "Nominated by High Chaplain.", "Confirmed by Watch Command."] },
+  { number: 12, name: "Reclusiarch", image: "12-Reclusiarch.webp", requirements: ["Limit: 0/1.", "Earn 1 Auramite Stud.", "Served as Watch Chaplain.", "Earn Terminus Slayer, 3rd award.", "Earn the Distinguished SOK-G medal.", "Earn the Kadaku Campaign Medal.", "Nominated by High Chaplain.", "Confirmed by High Command."] },
+  { number: 13, name: "Watch Apothecary", image: "13-Watch_Apothecary.webp", requirements: ["Limit: 1/5.", "Earn 1 Plasteel Stud.", "Earn the Apothecarion Service Medal.", "Earn Terminus Slayer, 5th award.", "Served as Watch Veteran.", "Nominated by Chief Apothecary.", "Confirmed by Watch Command."] },
+  { number: 14, name: "Primus Medicae", image: "14-Primus_Medicae.webp", requirements: ["Limit: 0/1.", "Earn 2 Plasteel Studs.", "Earn the Apothecarion Service Medal.", "Earn Terminus Slayer, 5th award.", "Earn the SOK-G medal.", "Served as Watch Apothecary.", "Nominated by Chief Apothecary.", "Confirmed by High Command."] },
+  { number: 15, name: "Watch Librarian", image: "15-Watch_Librarian.webp", requirements: ["Limit: 1/5.", "Earn 1 Plasteel Stud.", "Served as Watch Veteran.", "Earn Terminus Slayer, 1st award.", "Nominated by Void Warden.", "Confirmed by Watch Command."] },
+  { number: 16, name: "Lexicanum Primus", image: "16-Lexicanum_Primus.webp", requirements: ["Limit: 0/1.", "Earn 1 Auramite Stud.", "Served as Watch Librarian.", "Earn the Terminus Slayer Master award.", "Nominated by Void Warden.", "Confirmed by High Command."] },
+  { number: 17, name: "Watch Techmarine", image: "17-Watch_Techmarine.webp", requirements: ["Limit: 1/5.", "Earn 1 Plasteel Stud.", "Served as Watch Veteran.", "Earn the Ardent Raider ribbon.", "Earn Terminus Slayer - Techmarine.", "Nominated by Forge Master.", "Confirmed by Watch Command."] },
+  { number: 18, name: "Forge Adept", image: "18-Forge_Adept.webp", requirements: ["Limit: 0/1.", "Earn 1 Auramite Stud.", "Served as Watch Techmarine.", "Earn the Crux Terminatus.", "Earn Terminus Slayer, 3rd award.", "Demonstrate coding ability.", "Nominated by Forge Master.", "Confirmed by High Command."] },
+  { number: 19, name: "Kill-Marine", image: "19-Kill_Marine.webp", requirements: ["Served as Watch Veteran.", "Earn 1 Plasteel Stud.", "Earn Terminus Slayer, 1st award.", "Demonstrate modding proficiency.", "Nominated by Hunt Master.", "Confirmed by Watch Command."] },
+  { number: 20, name: "Venator Primus", image: "20-Venator_Primus.webp", requirements: ["Served as a Kill-Marine.", "Earn 1 Plasteel Stud.", "Earn Terminus Slayer, 3rd award.", "Demonstrate modding proficiency.", "Nominated by Hunt Master.", "Confirmed by High Command."] },
+  { number: 21, name: "Blade Master", image: "21-Blade_Master.webp", requirements: ["Limit: 1/1.", "Earn 2 Auramite Studs.", "Served as High Blade.", "Earn the Terminus Slayer Master award.", "Earn the Clandestine Operations Medal.", "Earn the Order Omega medal.", "Nominated by High Command.", "Confirmed by High Command."] },
+  { number: 22, name: "High Chaplain", image: "22-High_Chaplain.webp", requirements: ["Limit: 1/1.", "Earn 1 Auramite Stud.", "Earn the Terminus Slayer Master award.", "Earn the Distinguished SOK-G medal.", "Served as Reclusiarch.", "Nominated by High Command.", "Confirmed by High Command."] },
+  { number: 23, name: "Chief Apothecary", image: "23-Chief_Apothecary.webp", requirements: ["Limit: 1/1.", "Earn 1 Auramite Stud.", "Earn the Apothecarion Service Medal.", "Earn the Terminus Slayer Master award.", "Earn the Distinguished SOK-G medal.", "Served as Primus Medicae.", "Nominated by High Command.", "Confirmed by High Command."] },
+  { number: 24, name: "Void Warden", image: "24-Void_Warden.webp", requirements: ["Limit: 1/1.", "Earn 1 Auramite Stud.", "Earn the Terminus Slayer Master award.", "Earn the Distinguished SOK-G medal.", "Served as Lexicanum Primus.", "Nominated by High Command.", "Confirmed by Watch Command."] },
+  { number: 25, name: "Forge Master", image: "25-Forge_Master.webp", requirements: ["Limit: 1/1.", "Earn 1 Auramite Stud.", "Earn the Ardent Raider ribbon.", "Earn Terminus Slayer, 3rd award.", "Earn the Distinguished SOK-G medal.", "Demonstrate coding ability.", "Served as Forge Adept.", "Nominated by High Command.", "Confirmed by High Command."] },
+  { number: 26, name: "Hunt Master", image: "26-Hunt_Master.webp", requirements: ["Limit: 1/1.", "Earn 1 Auramite Stud.", "Served as Venator Primus.", "Earn the Terminus Slayer Master award.", "Earn the Clandestine Operations Medal.", "Earn the Order Omega medal.", "Demonstrate modding proficiency.", "Nominated by High Command.", "Confirmed by High Command."] },
+  { number: 27, name: "Watch Master", image: "27-Watch_Master.webp", requirements: ["Limit: 1/1.", "Earn 2 Auramite Studs.", "Served in High Command.", "Earn all current Awards.", "Earn all current Campaign Medals (Distinguished).", "Demonstrate Photoshop proficiency.", "Demonstrate good leadership.", "Nominated by High Command.", "Confirmed by High Command."] },
+  {
+    number: 28,
+    name: "Dreadnoughts",
+    image: "28-Dreadnoughts.webp",
+    groups: [
+      { name: "General", requirements: ["Limits: Venerable Dreadnought 1/1; Honored Dreadnought 1/5; Interred Brother no limit.", "Earn 1 Auramite Stud."] },
+      { name: "Venerable Dreadnought", requirements: ["Served in High Command.", "Selected by High Command vote."] },
+      { name: "Honored Dreadnought", requirements: ["Served in Watch Command.", "Selected by Watch Command vote."] }
+    ],
+    note: "If a member of the Dreadnought Cadre is inactive for longer than 1 month, they will be deactivated and returned to Interred Brother status."
+  }
+];
+
+const RANK_GUIDE_TRACKS = [
+  { id: "common", name: "Common Path", description: "Watch Brother to Watch Veteran", ranks: [1, 2] },
+  { id: "command", name: "Battle-line / Command", description: "Oathsworn through Watch Master", ranks: [3, 4, 5, 6, 7, 27] },
+  { id: "blades", name: "Hall of Blades", description: "Bladeguard to Blade Master", ranks: [8, 9, 10, 21] },
+  { id: "reclusiam", name: "Reclusiam", description: "Watch Chaplain to High Chaplain", ranks: [11, 12, 22] },
+  { id: "apothecarion", name: "Apothecarion", description: "Watch Apothecary to Chief Apothecary", ranks: [13, 14, 23] },
+  { id: "librarius", name: "Librarius", description: "Watch Librarian to Void Warden", ranks: [15, 16, 24] },
+  { id: "armory", name: "Armory", description: "Watch Techmarine to Forge Master", ranks: [17, 18, 25] },
+  { id: "black-vault", name: "Black Vault", description: "Kill-Marine to Hunt Master", ranks: [19, 20, 26] },
+  { id: "honored", name: "Honored Ones", description: "Distinguished command service and a corresponding vote", ranks: [28] }
+];
+const RANK_GUIDE_TRACK_GROUPS = [
+  { id: "common", name: "Common Path", description: "Every Watch member passes through these ranks before the tracks divide.", trackIds: ["common"] },
+  { id: "command", name: "Battle-line / Command", description: "The battle-line and command progression.", trackIds: ["command"] },
+  { id: "specialists", name: "Specialist Tracks", description: "Choose a specialist formation and follow its rank progression.", trackIds: ["blades", "reclusiam", "apothecarion", "librarius", "armory", "black-vault"] },
+  { id: "honored", name: "Honored Ones", description: "For distinguished service in Watch Command or High Command, followed by the corresponding command vote.", trackIds: ["honored"] }
+];
+let selectedRankGuideTrackId = null;
+let selectedRankGuideIndex = 0;
+
 const RANK_TIER_INDEX = Object.fromEntries(RANK_TIERS.flatMap((ranks, tier) => ranks.map(rank => [rank, tier])));
 
 function sortByRank(members) {
@@ -1879,7 +2000,7 @@ function generateSampleRoster() {
 /* ---------------------------------------------------------------------- */
 
 const state = {
-  page: "fortress",    // 'fortress' | 'reach' | 'blood'
+  page: "fortress",    // 'fortress' | 'reach' | 'blood' | 'rank-guide'
   view: "landing",   // 'landing' | 'strategium' | 'company' | 'killteam' | 'formation'
   companyId: null,
   killTeamId: null,
@@ -2378,6 +2499,10 @@ function renderBreadcrumb() {
   }
   if (state.page === "reach") {
     el.innerHTML = `<button class="crumb" data-page="reach">Sector Operations</button>${separator}${current("Jericho Reach")}`;
+    return;
+  }
+  if (state.page === "rank-guide") {
+    el.innerHTML = current("Rank Guide");
     return;
   }
   if (state.view === "landing") {
@@ -3014,6 +3139,78 @@ function chapterPreviewHtml(chapter) {
   </span>`;
 }
 
+function renderRankGuide() {
+  const ranksByNumber = new Map(RANK_GUIDE.map(rank => [rank.number, rank]));
+  const renderRequirements = rank => {
+    const groups = rank.groups || [{ name: "Requirements", requirements: rank.requirements }];
+    return `${groups.map(group => `<section><h3>${escapeHtml(group.name)}</h3><ul>${group.requirements.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`).join("")}
+      ${rank.note ? `<p class="rank-guide-note">${escapeHtml(rank.note)}</p>` : ""}`;
+  };
+  const track = RANK_GUIDE_TRACKS.find(item => item.id === selectedRankGuideTrackId);
+  if (track) {
+    selectedRankGuideIndex = Math.max(0, Math.min(selectedRankGuideIndex, track.ranks.length - 1));
+    const rank = ranksByNumber.get(track.ranks[selectedRankGuideIndex]);
+    const previousDisabled = selectedRankGuideIndex === 0 ? "disabled" : "";
+    const nextDisabled = selectedRankGuideIndex === track.ranks.length - 1 ? "disabled" : "";
+    document.getElementById("app").innerHTML = `
+      <section class="rank-guide-room" aria-label="${escapeHtml(track.name)} rank track">
+        <header class="rank-guide-heading">
+          <div class="rank-guide-overline">&gt; COGITATOR RECORD // RANK PROGRESSION</div>
+          <h2>${escapeHtml(track.name)}</h2>
+          <p class="rank-guide-description">${escapeHtml(track.description)}</p>
+        </header>
+        <div class="rank-guide-viewer-top">
+          <button class="rank-guide-all-tracks" type="button" data-rank-guide-back><span aria-hidden="true">&larr;</span> All tracks</button>
+          <span class="rank-guide-viewer-track">${escapeHtml(track.name)}</span>
+        </div>
+        <div class="rank-guide-viewer">
+          <img class="rank-guide-card-art" src="/assets/rank-cards/${encodeURIComponent(rank.image)}" alt="${escapeHtml(rank.name)} rank card" width="1200" height="675" decoding="async" fetchpriority="high">
+          <section class="rank-guide-card-info" aria-labelledby="rank-guide-current-title">
+            <div class="rank-guide-card-index">Card ${String(rank.number).padStart(2, "0")} // ${selectedRankGuideIndex + 1} of ${track.ranks.length}</div>
+            <h3 id="rank-guide-current-title" tabindex="-1">${escapeHtml(rank.name)}</h3>
+            <div class="rank-guide-requirements">${renderRequirements(rank)}</div>
+          </section>
+        </div>
+        <nav class="rank-guide-pagination" aria-label="Cycle through ${escapeHtml(track.name)} ranks">
+          <button type="button" data-rank-step="-1" aria-label="Previous rank" title="Previous rank" ${previousDisabled}><span aria-hidden="true">&larr;</span> Previous rank</button>
+          <span class="rank-guide-page-count" role="status" aria-live="polite">${String(selectedRankGuideIndex + 1).padStart(2, "0")} / ${String(track.ranks.length).padStart(2, "0")}</span>
+          <button type="button" data-rank-step="1" aria-label="Next rank" title="Next rank" ${nextDisabled}>Next rank <span aria-hidden="true">&rarr;</span></button>
+        </nav>
+      </section>`;
+    return;
+  }
+  const renderTrackCard = track => {
+    const firstRank = ranksByNumber.get(track.ranks[0]);
+    const rankCount = track.ranks.length;
+    const previewImage = firstRank.image.replace(/\.webp$/, "-preview.webp");
+    return `<button class="rank-guide-track-card" type="button" data-rank-track="${escapeHtml(track.id)}" aria-label="Open ${escapeHtml(track.name)} track, ${rankCount} rank${rankCount === 1 ? "" : "s"}">
+      <span class="rank-guide-track-preview"><img src="/assets/rank-cards/${encodeURIComponent(previewImage)}" alt="" width="720" height="405" loading="lazy" decoding="async"></span>
+      <span class="rank-guide-track-copy">
+        <span class="rank-guide-track-name">${escapeHtml(track.name)}</span>
+        <span class="rank-guide-track-summary">${escapeHtml(track.description)}</span>
+        <span class="rank-guide-track-open"><span>${rankCount} rank${rankCount === 1 ? "" : "s"}</span><span>View track <span aria-hidden="true">&rarr;</span></span></span>
+      </span>
+    </button>`;
+  };
+  const sections = RANK_GUIDE_TRACK_GROUPS.map(group => {
+    const tracks = RANK_GUIDE_TRACKS.filter(track => group.trackIds.includes(track.id));
+    return `<section class="rank-guide-section" aria-labelledby="rank-guide-${escapeHtml(group.id)}-title">
+      <header class="rank-guide-section-heading"><h3 id="rank-guide-${escapeHtml(group.id)}-title">${escapeHtml(group.name)}</h3><p>${escapeHtml(group.description)}</p></header>
+      <div class="rank-guide-track-gallery">${tracks.map(renderTrackCard).join("")}</div>
+    </section>`;
+  }).join("");
+  document.getElementById("app").innerHTML = `
+    <section class="rank-guide-room" aria-label="Watch Fortress rank guide">
+      <header class="rank-guide-heading">
+        <div class="rank-guide-overline">&gt; COGITATOR RECORD // WATCH FORTRESS RANKS</div>
+        <h2>Rank Guide</h2>
+        <p class="rank-guide-description">Choose a progression to view its rank cards and requirements.</p>
+        <div class="rank-guide-total">${RANK_GUIDE_TRACKS.length} tracks &middot; ${RANK_GUIDE.length} rank cards</div>
+      </header>
+      ${sections}
+    </section>`;
+}
+
 function renderRecordOfBlood() {
   const chapters = chaptersOnRecord();
   const { visible, start, pages } = visibleBloodChapters(chapters);
@@ -3074,12 +3271,14 @@ function renderRecordOfBlood() {
 
 function render(originPct, direction) {
   document.body.classList.toggle("blood-page", state.page === "blood");
+  document.body.classList.toggle("rank-guide-page", state.page === "rank-guide");
   document.body.classList.toggle("atlas-page", state.page === "fortress" && state.view === "landing");
   renderBreadcrumb();
   updateSiteNav();
   updateBackButton();
   if (state.page === "reach") renderReach();
   else if (state.page === "blood") renderRecordOfBlood();
+  else if (state.page === "rank-guide") renderRankGuide();
   else if (state.view === "landing") renderLanding();
   else if (state.view === "strategium") renderStrategium();
   else if (state.view === "company") renderCompany(state.companyId);
@@ -3111,6 +3310,11 @@ function updateStatusBadge() {
     }
     if (state.page === "blood") {
       slateCount.textContent = state.dataStatus === "live" ? "CHAPTER ORIGIN FILES: " + chaptersOnRecord().length : "ROSTER RELAY OFFLINE";
+      slateCount.style.display = "";
+      return;
+    }
+    if (state.page === "rank-guide") {
+      slateCount.textContent = "RANK RECORDS: " + RANK_GUIDE.length;
       slateCount.style.display = "";
       return;
     }
@@ -3174,6 +3378,8 @@ function updateBackButton() {
     destination = "Sector Operations";
   } else if (previous?.page === "blood") {
     destination = "Chapter Origins";
+  } else if (previous?.page === "rank-guide") {
+    destination = "Rank Guide";
   } else if (previous?.page === "fortress" && previous.view === "landing") {
     destination = "Fortress Atlas";
   } else if (previous?.page === "fortress" && previous.view === "company") {
@@ -3221,7 +3427,7 @@ async function restoreNavigation(snapshot) {
   state.bloodPage = snapshot.bloodPage;
   if (state.page === "reach" && state.reachStatus === "idle") await loadReach();
   render(null, "out");
-  const path = state.page === "reach" ? "/reach" : state.page === "blood" ? "/record-of-blood" : "/";
+  const path = state.page === "reach" ? "/reach" : state.page === "blood" ? "/record-of-blood" : state.page === "rank-guide" ? "/rank-guide" : "/";
   if (window.location.protocol.startsWith("http")) history.replaceState({ page: state.page }, "", path);
   if (state.page === "blood") checkBloodAudio();
   if (snapshot.modalMemberId) openMemberModal(snapshot.modalMemberId);
@@ -3739,7 +3945,7 @@ function relativeTime(iso) {
 
 function pageFromLocation() {
   const path = window.location.pathname.replace(/\/+$/, "");
-  return path === "/reach" ? "reach" : path === "/record-of-blood" ? "blood" : "fortress";
+  return path === "/reach" ? "reach" : path === "/record-of-blood" ? "blood" : path === "/rank-guide" ? "rank-guide" : "fortress";
 }
 
 function updateSiteNav() {
@@ -3771,7 +3977,7 @@ async function setPage(page, push, originEl = null) {
   closePlanetModal();
   if (page !== "blood") pauseBloodAudio();
   if (push && window.location.protocol.startsWith("http")) {
-    history.pushState({ page }, "", page === "reach" ? "/reach" : page === "blood" ? "/record-of-blood" : "/");
+    history.pushState({ page }, "", page === "reach" ? "/reach" : page === "blood" ? "/record-of-blood" : page === "rank-guide" ? "/rank-guide" : "/");
   }
   if (page === "reach" && state.reachStatus === "idle") await loadReach();
   if (page === "blood" && state.chapterLore === null) await loadChapterLore();
@@ -5836,6 +6042,32 @@ function wireEvents() {
     const atlasOpen = e.target.closest("[data-atlas-open]");
     if (atlasOpen) {
       openAtlasLocation(atlasOpen.dataset.atlasOpen, atlasOpen);
+      return;
+    }
+    const rankTrackButton = e.target.closest("[data-rank-track]");
+    if (rankTrackButton) {
+      selectedRankGuideTrackId = rankTrackButton.dataset.rankTrack;
+      selectedRankGuideIndex = 0;
+      renderRankGuide();
+      document.querySelector("[data-rank-guide-back]")?.focus();
+      return;
+    }
+    if (e.target.closest("[data-rank-guide-back]")) {
+      const previousTrackId = selectedRankGuideTrackId;
+      selectedRankGuideTrackId = null;
+      selectedRankGuideIndex = 0;
+      renderRankGuide();
+      document.querySelector(`[data-rank-track="${previousTrackId}"]`)?.focus();
+      return;
+    }
+    const rankStepButton = e.target.closest("[data-rank-step]");
+    if (rankStepButton) {
+      const track = RANK_GUIDE_TRACKS.find(item => item.id === selectedRankGuideTrackId);
+      if (!track) return;
+      selectedRankGuideIndex = Math.max(0, Math.min(track.ranks.length - 1, selectedRankGuideIndex + Number(rankStepButton.dataset.rankStep)));
+      renderRankGuide();
+      const nextButton = document.querySelector(`[data-rank-step="${rankStepButton.dataset.rankStep}"]:not(:disabled)`);
+      (nextButton || document.getElementById("rank-guide-current-title"))?.focus();
       return;
     }
     const pageLink = e.target.closest("[data-page]");

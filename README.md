@@ -33,6 +33,10 @@ Only HTTPS `discord.gg/<code>` and `discord.com/invite/<code>` URLs are accepted
 
 The live app loads roster data from its same-origin `/api/roster` endpoint. The Discord bot publishes signed snapshots to the backend's internal `/internal/roster/snapshot` endpoint; browser clients never receive bot credentials.
 
+## Rank Guide
+
+Visit `/rank-guide` for the 28 numbered Watch Fortress rank cards and their promotion requirements. Checked-in full-size WebPs in `assets/web/rank-cards/` are sufficient to regenerate gallery previews with `.venv/bin/python scripts/build_web_assets.py`. When source PNGs are available in the sibling bot repository at `../discord-bots/op-scribe-servitor/assets/ranks/`, the builder uses them to regenerate both sizes; set `STRATEGIUM_RANK_CARDS_SOURCE` to override that path.
+
 ## Record of Blood
 
 The interface is framed as an Ordo Xenos analyst's Cogitator for investigating activity in the Jericho Reach. The main channels are **Personnel Docket**, **Sector Operations**, and **Chapter Origins**; the shared Return control restores the previous view and focus where possible.
