@@ -35,7 +35,7 @@ The live app loads roster data from its same-origin `/api/roster` endpoint. The 
 
 ## Rank Guide
 
-Visit `/rank-guide` for the 28 numbered Watch Fortress rank cards and their promotion requirements. The builder reads card PNGs from the sibling bot repository at `../discord-bots/op-scribe-servitor/assets/ranks/` by default; set `STRATEGIUM_RANK_CARDS_SOURCE` to override that path. `.venv/bin/python scripts/build_web_assets.py` generates full-size viewer images and smaller track-gallery previews in `assets/web/rank-cards/`.
+Visit `/rank-guide` for the 28 numbered Watch Fortress rank cards and their promotion requirements. Checked-in full-size WebPs in `assets/web/rank-cards/` are sufficient to regenerate gallery previews with `.venv/bin/python scripts/build_web_assets.py`. When source PNGs are available in the sibling bot repository at `../discord-bots/op-scribe-servitor/assets/ranks/`, the builder uses them to regenerate both sizes; set `STRATEGIUM_RANK_CARDS_SOURCE` to override that path.
 
 ## Record of Blood
 

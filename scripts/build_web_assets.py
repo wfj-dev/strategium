@@ -41,12 +41,16 @@ def main() -> None:
     for source in sorted((ASSETS / "Ranks").glob("*.png")):
         name = re.sub(r"^\d+-", "", source.stem)
         _save(source, WEB / "ranks" / f"{name}.webp", max_size=(360, 128))
-    if RANK_CARDS_SOURCE_DIR.is_dir():
-        for source in sorted(RANK_CARDS_SOURCE_DIR.glob("*.png")):
+    rank_card_sources = sorted(RANK_CARDS_SOURCE_DIR.glob("*.png")) if RANK_CARDS_SOURCE_DIR.is_dir() else []
+    if rank_card_sources:
+        for source in rank_card_sources:
             _save(source, WEB / "rank-cards" / f"{source.stem}-preview.webp", max_size=(720, 405), quality=80)
             _save(source, WEB / "rank-cards" / f"{source.stem}.webp", max_size=(1200, 675), quality=86)
     else:
-        print(f"Rank card source directory not found; keeping existing WebPs: {RANK_CARDS_SOURCE_DIR}")
+        for source in sorted((WEB / "rank-cards").glob("*.webp")):
+            if source.stem.endswith("-preview"):
+                continue
+            _save(source, source.with_name(f"{source.stem}-preview.webp"), max_size=(720, 405), quality=80)
     for source in ("Armory", "Apothecarion", "Librarians", "Reclusiam", "Recon", "Watch_Blades"):
         _save(ASSETS / f"{source}.png", WEB / "formation-symbols" / f"{source}.webp", max_size=(96, 96))
     _save(ASSETS / "jericho symbol.png", WEB / "jericho-symbol.webp", max_size=(96, 96))
