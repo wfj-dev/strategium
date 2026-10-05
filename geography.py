@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = 1
-MAX_SECTORS = 20
+MAX_SECTORS = 40
 MAX_SUBREGIONS = 100
 MAX_SYSTEMS = 500
 MAX_BODIES = 2500
@@ -87,18 +87,29 @@ def validate_geography(payload: Any) -> dict[str, Any]:
         raise ValueError("chartBoundary must contain at least three points")
 
     sector_ids: set[str] = set()
+    sector_numbers: set[int] = set()
     sectors = []
     for raw in _objects(payload.get("sectors"), MAX_SECTORS, "sectors"):
         sector_id = _unique_id(raw, sector_ids, "sector")
         boundary = [_point(point, f"sector {sector_id} boundary") for point in raw.get("boundary", [])]
         if len(boundary) < 3:
             raise ValueError(f"sector {sector_id} boundary must contain at least three points")
+        status = raw.get("status", "secure")
+        if status not in {"secure", "critical", "lost"}:
+            raise ValueError(f"sector {sector_id} has invalid status")
         sectors.append({
             "id": sector_id,
             "name": _text(raw.get("name"), f"sector {sector_id} name"),
             "boundary": boundary,
             "label": _point(raw.get("label"), f"sector {sector_id} label"),
+            "status": status,
         })
+        if "number" in raw:
+            number = raw["number"]
+            if isinstance(number, bool) or not isinstance(number, int) or not 1 <= number <= 29 or number in sector_numbers:
+                raise ValueError(f"sector {sector_id} has invalid or duplicate number")
+            sector_numbers.add(number)
+            sectors[-1]["number"] = number
 
     system_ids: set[str] = set()
     systems = []
@@ -150,6 +161,11 @@ def validate_geography(payload: Any) -> dict[str, Any]:
             "source": source,
         })
         body_system[body_id] = system_id
+        if "stellarClass" in raw:
+            stellar_class = raw["stellarClass"]
+            if raw.get("kind") != "star" or not isinstance(stellar_class, str) or stellar_class not in {"O", "B", "A", "F", "G", "K", "M"}:
+                raise ValueError(f"body {body_id} has invalid stellarClass")
+            bodies[-1]["stellarClass"] = stellar_class
 
     for body in bodies:
         parent_id = body["parentBodyId"]
@@ -235,7 +251,7 @@ def validate_geography(payload: Any) -> dict[str, Any]:
     if fortress_body_id == erioch_body_id:
         raise ValueError("Fortress Jericho and Erioch must be distinct landmarks")
 
-    return {
+    result = {
         "schemaVersion": SCHEMA_VERSION,
         "chartBoundary": chart_boundary,
         "sectors": sectors,
@@ -248,6 +264,18 @@ def validate_geography(payload: Any) -> dict[str, Any]:
             "eriochBodyId": erioch_body_id,
         },
     }
+    if "mapArt" in payload:
+        art = payload["mapArt"]
+        if not isinstance(art, dict):
+            raise ValueError("mapArt must be an object")
+        result["mapArt"] = {
+            "x": _number(art.get("x"), "mapArt.x"),
+            "y": _number(art.get("y"), "mapArt.y"),
+            "scale": _number(art.get("scale"), "mapArt.scale", minimum=.01, maximum=10),
+            "width": _number(art.get("width"), "mapArt.width", minimum=1, maximum=4096),
+            "height": _number(art.get("height"), "mapArt.height", minimum=1, maximum=4096),
+        }
+    return result
 
 
 def load_geography(path: Path) -> dict[str, Any]:

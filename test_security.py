@@ -176,8 +176,34 @@ def test_geography_api_serves_validated_hierarchy(local_site) -> None:
 
     assert response.status == 200
     assert payload["schemaVersion"] == 1
-    assert len(payload["sectors"]) == 10
+    assert len(payload["sectors"]) == 29
+    assert all(sector["status"] == "secure" for sector in payload["sectors"])
     assert payload["landmarks"]["fortressBodyId"] == "watch_fortress_jericho"
+
+
+@pytest.mark.parametrize("filename", ["base.webp", "sectors.png", "1-secure.webp", "29-critical.webp", "4-lost.webp"])
+def test_galactic_map_assets_are_allowlisted(local_site, filename) -> None:
+    with urllib.request.urlopen(local_site + "/assets/galactic-map/" + filename) as response:
+        assert response.status == 200
+        assert response.read()
+
+
+@pytest.mark.parametrize("filename", ["0-secure.webp", "30-secure.webp", "1-contested.webp", "geometry.json", "%2e%2e/server.py", "1-secure.png"])
+def test_galactic_map_rejects_unknown_assets(filename) -> None:
+    assert server._static_asset_path("/assets/galactic-map/" + filename) is None
+
+
+@pytest.mark.parametrize("classification", list("obafgkm"))
+def test_spectral_icons_are_served_from_explicit_allowlist(local_site, classification) -> None:
+    with urllib.request.urlopen(local_site + f"/assets/map-icons/star_{classification}.webp") as response:
+        assert response.status == 200
+        assert response.headers["Content-Type"] == "image/webp"
+        assert response.read()
+
+
+@pytest.mark.parametrize("filename", ["star_q.webp", "star_o.png", "../star_o.webp"])
+def test_spectral_icon_unknown_names_and_paths_are_rejected(filename) -> None:
+    assert server._static_asset_path("/assets/map-icons/" + filename) is None
 
 
 def test_geography_api_caches_and_reloads_validated_data(local_site, tmp_path, monkeypatch) -> None:
@@ -470,6 +496,16 @@ def test_rank_guide_route_serves_the_site_page(local_site) -> None:
         page = response.read()
     assert b'data-page="rank-guide"' in page
     assert b"Rank Guide" in page
+    for text in (
+        b"Promotion System", b"After Action Report Points", b"Crucible",
+        b"20 operation points minus KIA", b"clamps KIA to 0-4", b"16-20 points", b"two to five brothers",
+        b"KIA: 0", b"at least one other",
+        b"beyond Watch Veteran", b"does not guarantee promotion",
+        b"compliance check", b"4 weeks and 400", b"16 weeks and 1,600",
+        b"1429318686447108300", b"1432804829364748319", b"1429303902343401575",
+    ):
+        assert text in page
+    assert b"each brother who extracts" not in page
 
 
 def test_ambience_is_optional_and_served_from_fixed_path(local_site, tmp_path, monkeypatch) -> None:
