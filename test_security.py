@@ -449,6 +449,29 @@ def test_rank_ribbons_serve_only_known_images(local_site, tmp_path, monkeypatch)
         assert error.value.code == 404
 
 
+def test_rank_cards_serve_only_known_images(local_site, tmp_path, monkeypatch) -> None:
+    card = tmp_path / "1-Watch_Brother.webp"
+    card.write_bytes(b"rank card")
+    monkeypatch.setattr(server, "RANK_CARD_IMAGES", {card.name: card})
+    for method in ("GET", "HEAD"):
+        url = local_site + server.RANK_CARD_URL_PREFIX + card.name
+        with urllib.request.urlopen(urllib.request.Request(url, method=method)) as response:
+            assert response.headers["Content-Type"] == "image/webp"
+            assert response.read() == (b"rank card" if method == "GET" else b"")
+    for name in ("missing.webp", "%2e%2e%2fserver.py"):
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(local_site + server.RANK_CARD_URL_PREFIX + name)
+        assert error.value.code == 404
+
+
+def test_rank_guide_route_serves_the_site_page(local_site) -> None:
+    with urllib.request.urlopen(local_site + "/rank-guide") as response:
+        assert response.headers["Content-Type"].startswith("text/html")
+        page = response.read()
+    assert b'data-page="rank-guide"' in page
+    assert b"Rank Guide" in page
+
+
 def test_ambience_is_optional_and_served_from_fixed_path(local_site, tmp_path, monkeypatch) -> None:
     track = tmp_path / "fortress-ambience.mp3"
     monkeypatch.setattr(server, "AMBIENCE_PATH", track)
