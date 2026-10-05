@@ -4527,6 +4527,11 @@ function setupGeographyCanvas() {
   const geography = state.geography;
   const REACH_ART = geography.mapArt || { x: 0, y: 0, scale: 5, width: 1672, height: 941 };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const MAP_MOTION_START_RATIO = 1.55;
+  const MAP_MOTION_END_RATIO = 2.1;
+  let nebulaRenderer = null;
+  let nebulaRendererUnavailable = false;
+  let nebulaMotionStart = null;
   const bounds = {
     x: REACH_ART.x, y: REACH_ART.y,
     w: REACH_ART.width * REACH_ART.scale,
@@ -4692,7 +4697,120 @@ function setupGeographyCanvas() {
     context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
   }
 
-  function drawArt(camera, ratio) {
+  function nebulaRendererFor(image) {
+    if (nebulaRenderer || nebulaRendererUnavailable) return nebulaRenderer;
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const gl = canvas.getContext("webgl", { alpha: false, preserveDrawingBuffer: true });
+    if (!gl) {
+      nebulaRendererUnavailable = true;
+      return null;
+    }
+    const compileShader = (type, source) => {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+      return shader;
+    };
+    try {
+      const vertex = compileShader(gl.VERTEX_SHADER, `
+        attribute vec2 a_position;
+        attribute vec2 a_uv;
+        varying vec2 v_uv;
+        void main() {
+          gl_Position = vec4(a_position, 0.0, 1.0);
+          v_uv = a_uv;
+        }
+      `);
+      const fragment = compileShader(gl.FRAGMENT_SHADER, `
+        precision mediump float;
+        uniform sampler2D u_map;
+        uniform float u_time;
+        uniform float u_motion;
+        varying vec2 v_uv;
+        float nebulaMask(vec2 uv) {
+          vec3 color = texture2D(u_map, uv).rgb;
+          vec4 k = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+          vec4 p = mix(vec4(color.bg, k.wz), vec4(color.gb, k.xy), step(color.b, color.g));
+          vec4 q = mix(vec4(p.xyw, color.r), vec4(color.r, p.yzx), step(p.x, color.r));
+          float delta = q.x - min(q.w, q.y);
+          float hue = abs(q.z + (q.w - q.y) / (6.0 * delta + 1e-10));
+          float saturation = delta / (q.x + 1e-10);
+          float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+          float purple = smoothstep(0.68, 0.72, hue) * (1.0 - smoothstep(0.95, 0.98, hue));
+          return purple * smoothstep(0.28, 0.4, saturation)
+            * smoothstep(0.1, 0.18, q.x) * (1.0 - smoothstep(0.13, 0.17, edge));
+        }
+        void main() {
+          vec2 uv = v_uv;
+          float waveX = sin(uv.y * 9.0 + uv.x * 3.0 + u_time * 0.34)
+            + 0.45 * sin(uv.y * 21.0 - uv.x * 6.0 - u_time * 0.2);
+          float waveY = sin(uv.x * 8.0 - uv.y * 5.0 + u_time * 0.27)
+            + 0.4 * sin(uv.x * 18.0 + uv.y * 4.0 - u_time * 0.17);
+          vec2 displacement = vec2(waveX * 0.0132, waveY * 0.0099) * u_motion;
+          float mask = nebulaMask(uv) * nebulaMask(uv + displacement);
+          vec3 still = texture2D(u_map, uv).rgb;
+          vec3 flowing = texture2D(u_map, uv + displacement).rgb;
+          gl_FragColor = vec4(mix(still, flowing, mask), 1.0);
+        }
+      `);
+      const program = gl.createProgram();
+      gl.attachShader(program, vertex);
+      gl.attachShader(program, fragment);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+      gl.useProgram(program);
+
+      const buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1, 1, 1, 1
+      ]), gl.STATIC_DRAW);
+      const position = gl.getAttribLocation(program, "a_position");
+      const uv = gl.getAttribLocation(program, "a_uv");
+      gl.enableVertexAttribArray(position);
+      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+      gl.enableVertexAttribArray(uv);
+      gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 16, 8);
+
+      const texture = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.uniform1i(gl.getUniformLocation(program, "u_map"), 0);
+      nebulaRenderer = {
+        canvas, gl, program, image,
+        time: gl.getUniformLocation(program, "u_time"),
+        motion: gl.getUniformLocation(program, "u_motion")
+      };
+    } catch (error) {
+      console.warn("Galactic nebula animation is unavailable; showing the original artwork.", error);
+      nebulaRendererUnavailable = true;
+    }
+    return nebulaRenderer;
+  }
+
+  function drawNebulaMotion(image, now, ratio) {
+    if (reducedMotion.matches || ratio >= MAP_MOTION_END_RATIO) return image;
+    if (nebulaMotionStart === null) nebulaMotionStart = now;
+    const renderer = nebulaRendererFor(image);
+    if (!renderer || renderer.gl.isContextLost()) return image;
+    renderer.gl.viewport(0, 0, renderer.canvas.width, renderer.canvas.height);
+    renderer.gl.useProgram(renderer.program);
+    renderer.gl.uniform1f(renderer.time, (now - nebulaMotionStart) * .001);
+    renderer.gl.uniform1f(renderer.motion, 1 - canvasSmoothstep(MAP_MOTION_START_RATIO, MAP_MOTION_END_RATIO, ratio));
+    renderer.gl.drawArrays(renderer.gl.TRIANGLE_STRIP, 0, 4);
+    return renderer.canvas;
+  }
+
+  function drawArt(camera, ratio, now) {
     // Retire the raster nebula backdrop before a deep zoom would stretch it; the starfield carries the scene from there.
     const stormAlpha = 1 - canvasSmoothstep(1.8, 4.5, ratio);
     if (stormAlpha <= .01) return false;
@@ -4712,9 +4830,81 @@ function setupGeographyCanvas() {
       context.drawImage(image, sourceX, sourceY, sourceW, sourceH,
         topLeft.x + sourceX * pixel, topLeft.y + sourceY * pixel, sourceW * pixel, sourceH * pixel);
     };
-    if (storm && stormAlpha > .01) draw(storm, stormAlpha);
+    if (storm && stormAlpha > .01) draw(drawNebulaMotion(storm, now, ratio), stormAlpha);
     context.globalAlpha = 1;
     return stormAlpha > .01 && Boolean(storm);
+  }
+
+  const photoStarPoints = [
+    [219, 226], [206, 287], [621, 229], [512, 250], [715, 124], [796, 191],
+    [1220, 138], [1038, 261], [1341, 296], [1342, 117], [299, 550], [272, 355],
+    [407, 489], [628, 386], [959, 472], [867, 315], [1154, 626], [1014, 396],
+    [1388, 331], [1414, 547], [297, 800], [324, 644], [416, 741], [514, 741],
+    [762, 630], [888, 788], [1100, 753], [1009, 755], [1362, 649], [1401, 680]
+  ].map(([x, y], index) => ({
+    x, y, period: 5.5 + (index * 7 % 11), phase: (index * 1.73) % 17
+  }));
+
+  function drawCelestialDetails(camera, ratio, now) {
+    if (reducedMotion.matches || ratio >= MAP_MOTION_END_RATIO) return;
+    const alpha = 1 - canvasSmoothstep(MAP_MOTION_START_RATIO, MAP_MOTION_END_RATIO, ratio);
+    if (alpha <= .01) return;
+    const mapTopLeft = worldToScreen(REACH_ART.x, REACH_ART.y, camera);
+    const mapScale = REACH_ART.scale * camera.zoom;
+    context.save();
+    context.beginPath();
+    context.rect(mapTopLeft.x, mapTopLeft.y, REACH_ART.width * mapScale, REACH_ART.height * mapScale);
+    context.clip();
+    photoStarPoints.forEach((star, index) => {
+      const pulse = Math.pow(Math.max(0, Math.sin((now * .001 + star.phase) * Math.PI * 2 / star.period)), 18);
+      if (pulse < .035) return;
+      const point = worldToScreen(REACH_ART.x + star.x * REACH_ART.scale, REACH_ART.y + star.y * REACH_ART.scale, camera);
+      const radius = .65 + pulse * .85;
+      const tint = index % 3 === 0 ? "205,218,255" : "255,239,218";
+      context.globalAlpha = alpha * pulse * .8;
+      const glow = context.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius * 3.2);
+      glow.addColorStop(0, `rgba(${tint},.8)`);
+      glow.addColorStop(1, `rgba(${tint},0)`);
+      context.fillStyle = glow;
+      context.beginPath();
+      context.arc(point.x, point.y, radius * 3.2, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = `rgba(255,250,235,${.35 + pulse * .65})`;
+      context.beginPath();
+      context.arc(point.x, point.y, radius * .48, 0, Math.PI * 2);
+      context.fill();
+    });
+
+    const drawMeteor = (cycle, duration, startX, startY, travelX, travelY) => {
+      if (cycle >= duration) return;
+      const progress = cycle / duration;
+      const visibility = Math.sin(progress * Math.PI);
+      const head = worldToScreen(
+        REACH_ART.x + (startX + travelX * progress) * REACH_ART.scale,
+        REACH_ART.y + (startY + travelY * progress) * REACH_ART.scale,
+        camera
+      );
+      const tail = { x: head.x - travelX * mapScale * .16, y: head.y - travelY * mapScale * .16 };
+      const trail = context.createLinearGradient(tail.x, tail.y, head.x, head.y);
+      trail.addColorStop(0, "rgba(184,205,255,0)");
+      trail.addColorStop(.72, `rgba(194,211,255,${visibility * .32})`);
+      trail.addColorStop(1, `rgba(255,247,229,${visibility * .9})`);
+      context.globalAlpha = alpha;
+      context.strokeStyle = trail;
+      context.lineWidth = .8 + visibility * .65;
+      context.shadowColor = "rgba(171,197,255,.72)";
+      context.shadowBlur = 5;
+      context.beginPath();
+      context.moveTo(tail.x, tail.y);
+      context.lineTo(head.x, head.y);
+      context.stroke();
+      context.shadowBlur = 0;
+    };
+    const seconds = now * .001;
+    drawMeteor((seconds + 9) % 31, .72, 380, 176, 150, 74);
+    drawMeteor((seconds + 22) % 43, .58, 915, 686, 116, -72);
+    context.restore();
+    context.globalAlpha = 1;
   }
 
   function drawSectors(camera, ratio) {
@@ -4737,85 +4927,71 @@ function setupGeographyCanvas() {
   function drawEasternApproach(camera, ratio, now) {
     const alpha = .86 * (1 - canvasSmoothstep(2, 5, ratio));
     if (alpha <= .01) return;
-    const clock = reducedMotion.matches ? 0 : now * .00032;
-    const renderedBranches = [];
+    const clock = reducedMotion.matches || ratio >= MAP_MOTION_END_RATIO ? 0 : now * .00032;
     context.save();
     const topLeft = worldToScreen(REACH_ART.x, REACH_ART.y, camera);
     context.beginPath();
     context.rect(topLeft.x, topLeft.y, REACH_ART.width * REACH_ART.scale * camera.zoom, REACH_ART.height * REACH_ART.scale * camera.zoom);
     context.clip();
+    const renderedBranches = [];
     approachBranches.forEach((branch, branchIndex) => {
       const centers = branch.points.map((point, index) => {
         const progress = index / (branch.points.length - 1);
         const previous = branch.points[Math.max(0, index - 1)];
         const next = branch.points[Math.min(branch.points.length - 1, index + 1)];
         const normal = Math.atan2(next[1] - previous[1], next[0] - previous[0]) + Math.PI / 2;
-        const wave = (Math.sin(progress * Math.PI * 3 - clock * 3 + branchIndex * .65) * 20
-          + Math.sin(progress * Math.PI * 5 - clock * 2.1 + branchIndex) * 6) * Math.sin(progress * Math.PI / 2) * REACH_ART.scale;
-        const center = worldToScreen(point[0] + Math.cos(normal) * wave, point[1] + Math.sin(normal) * wave, camera);
-        if (branch.parent !== undefined) {
-          const join = renderedBranches[branch.parent][branch.joinIndex];
-          const root = worldToScreen(branch.points[0][0], branch.points[0][1], camera);
-          center.x += (join.x - root.x) * (1 - progress);
-          center.y += (join.y - root.y) * (1 - progress);
-        }
-        return center;
+        const wave = (Math.sin(progress * Math.PI * 2.4 - clock * 1.5 + branchIndex * .65) * 26
+          + Math.sin(progress * Math.PI * 4.2 - clock * 1.05 + branchIndex) * 9) * Math.sin(progress * Math.PI / 2) * REACH_ART.scale;
+        return worldToScreen(point[0] + Math.cos(normal) * wave, point[1] + Math.sin(normal) * wave, camera);
       });
-      renderedBranches.push(centers);
-      const sides = [[], []];
-      centers.forEach((center, index) => {
-        const next = centers[Math.min(index + 1, centers.length - 1)];
-        const previous = centers[Math.max(0, index - 1)];
-        const angle = Math.atan2(next.y - previous.y, next.x - previous.x) + Math.PI / 2;
-        const taper = (1 - index / (centers.length - 1)) ** .7;
-        const radius = branch.width * REACH_ART.scale * camera.zoom * taper * (.9 + Math.sin(index * .65 - clock * 12) * .1);
-        sides[0].push([center.x + Math.cos(angle) * radius, center.y + Math.sin(angle) * radius]);
-        sides[1].push([center.x - Math.cos(angle) * radius, center.y - Math.sin(angle) * radius]);
-      });
-      context.globalAlpha = alpha;
-      context.fillStyle = "#3c1c29";
-      context.strokeStyle = "#703446";
-      context.lineWidth = .8;
-      context.beginPath();
-      [...sides[0], ...[...sides[1]].reverse()].forEach((point, index) => index ? context.lineTo(...point) : context.moveTo(...point));
-      context.closePath();
-      context.fill();
-      context.stroke();
-      context.globalAlpha = alpha * .55;
-      context.strokeStyle = "#995365";
-      context.lineWidth = .65;
-      for (const side of sides) {
-        context.beginPath();
+      if (branch.parent !== undefined) {
+        const parentJoin = renderedBranches[branch.parent][branch.joinIndex];
+        const root = worldToScreen(branch.points[0][0], branch.points[0][1], camera);
         centers.forEach((center, index) => {
-          const amount = .28 + Math.sin(index * .45 - clock * 5 + branchIndex) * .07;
-          const veinX = center.x + (side[index][0] - center.x) * amount;
-          const veinY = center.y + (side[index][1] - center.y) * amount;
-          if (index) context.lineTo(veinX, veinY);
-          else context.moveTo(veinX, veinY);
+          const attachment = 1 - index / (centers.length - 1);
+          center.x += (parentJoin.x - root.x) * attachment;
+          center.y += (parentJoin.y - root.y) * attachment;
         });
-        context.stroke();
       }
-      context.globalAlpha = alpha * .4;
-      context.strokeStyle = "#ad6971";
-      for (let index = 4; index < centers.length - 4; index += 4) {
-        const center = centers[index];
-        const left = sides[0][index];
-        const right = sides[1][index];
-        const previous = centers[index - 2];
+      renderedBranches.push(centers);
+      const path = () => {
         context.beginPath();
-        context.moveTo(center.x + (left[0] - center.x) * .85, center.y + (left[1] - center.y) * .85);
-        context.quadraticCurveTo(previous.x, previous.y, center.x + (right[0] - center.x) * .85, center.y + (right[1] - center.y) * .85);
-        context.stroke();
-      }
-      context.fillStyle = "#ba7766";
-      for (let pulse = 0; pulse < 4; pulse++) {
-        const amount = (clock + pulse / 4 + branchIndex * .13) % 1;
-        const center = centers[Math.floor(amount * (centers.length - 1))];
-        context.globalAlpha = alpha * Math.sin(amount * Math.PI) * .65;
-        context.beginPath();
-        context.arc(center.x, center.y, 1.2, 0, Math.PI * 2);
-        context.fill();
-      }
+        context.moveTo(centers[0].x, centers[0].y);
+        for (let index = 1; index < centers.length - 1; index += 1) {
+          const midpoint = {
+            x: (centers[index].x + centers[index + 1].x) / 2,
+            y: (centers[index].y + centers[index + 1].y) / 2
+          };
+          context.quadraticCurveTo(centers[index].x, centers[index].y, midpoint.x, midpoint.y);
+        }
+        context.lineTo(centers[centers.length - 1].x, centers[centers.length - 1].y);
+      };
+      const coreWidth = Math.max(2, branch.width * REACH_ART.scale * camera.zoom);
+      const flow = context.createLinearGradient(centers[0].x, centers[0].y, centers[centers.length - 1].x, centers[centers.length - 1].y);
+      flow.addColorStop(0, "rgba(55,37,43,.04)");
+      flow.addColorStop(.28, "rgba(79,47,59,.4)");
+      flow.addColorStop(.62, "rgba(105,59,70,.44)");
+      flow.addColorStop(.86, "rgba(69,43,59,.36)");
+      flow.addColorStop(1, "rgba(52,36,48,.025)");
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.globalAlpha = alpha;
+      context.shadowColor = "rgba(74,41,59,.34)";
+      context.shadowBlur = coreWidth * 2.5;
+      context.strokeStyle = "rgba(68,42,51,.32)";
+      context.lineWidth = coreWidth * 3.6;
+      path();
+      context.stroke();
+      context.shadowBlur = coreWidth * 1.1;
+      context.strokeStyle = flow;
+      context.lineWidth = coreWidth * 1.8;
+      path();
+      context.stroke();
+      context.shadowBlur = coreWidth * .5;
+      context.strokeStyle = "rgba(43,30,38,.32)";
+      context.lineWidth = coreWidth * .58;
+      path();
+      context.stroke();
     });
     context.restore();
   }
@@ -5137,7 +5313,7 @@ function setupGeographyCanvas() {
       const star = bodies.find(body => body.id === system.primaryBodyId && body.kind === "star");
       if (star) {
         const seed = hashStr(star.id);
-        const clock = reducedMotion.matches ? 0 : now;
+        const clock = reducedMotion.matches || ratio >= MAP_MOTION_END_RATIO ? 0 : now;
         const pulse = 1 + Math.sin(clock * .0012 + seed % 20) * .06;
         const radius = canvasClamp(1.35 + ratio * .12, 1.5, 4.5) * pulse;
         context.globalAlpha = .5 + canvasSmoothstep(2.5, 5, ratio) * .4;
@@ -5380,7 +5556,8 @@ function setupGeographyCanvas() {
       if (tooltip && !tooltip.hidden) positionCanvasTooltip(hoveredTarget);
     }
     drawStarfield();
-    drawArt(camera, ratio);
+    drawArt(camera, ratio, timestamp);
+    drawCelestialDetails(camera, ratio, timestamp);
     drawSectors(camera, ratio);
     drawEasternApproach(camera, ratio, timestamp);
     drawRoutes(camera, ratio);
