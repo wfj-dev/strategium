@@ -162,6 +162,60 @@ def local_site():
         thread.join()
 
 
+def test_discord_login_cookie_persists_for_session_ttl(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "DISCORD_CLIENT_ID", "client-id")
+    monkeypatch.setattr(server, "DISCORD_CLIENT_SECRET", "client-secret")
+    monkeypatch.setattr(server, "DISCORD_REDIRECT_URI", "https://example.test/callback")
+
+    def fake_discord_request(path, method="GET", form=None, token=""):
+        if path == "/oauth2/token":
+            return {"access_token": "access-token"}
+        if path == "/users/@me":
+            return {"id": "42", "username": "Test"}
+        if path == "/users/@me/guilds":
+            return []
+        raise AssertionError(f"unexpected Discord API path: {path}")
+
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, request, response, code, message, headers, new_url):
+            return None
+
+    monkeypatch.setattr(server, "_discord_request", fake_discord_request)
+    opener = urllib.request.build_opener(NoRedirect)
+    request = urllib.request.Request(
+        f"{local_site}/api/auth/discord/callback?code=test-code&state=test-state",
+        headers={"Cookie": "strategium_oauth_state=test-state"},
+    )
+    with pytest.raises(urllib.error.HTTPError) as response:
+        opener.open(request)
+
+    assert response.value.code == 302
+    cookie = response.value.headers["Set-Cookie"]
+    assert f"Max-Age={server.SESSION_TTL_SECONDS}" in cookie
+    assert "HttpOnly" in cookie
+    assert "SameSite=Lax" in cookie
+
+
+def test_discord_oauth_state_cookie_remains_session_scoped(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "DISCORD_CLIENT_ID", "client-id")
+    monkeypatch.setattr(server, "DISCORD_REDIRECT_URI", "https://example.test/callback")
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, request, response, code, message, headers, new_url):
+            return None
+
+    opener = urllib.request.build_opener(NoRedirect)
+    with pytest.raises(urllib.error.HTTPError) as response:
+        opener.open(local_site + "/api/auth/discord/start")
+
+    assert response.value.code == 302
+    cookie = response.value.headers["Set-Cookie"]
+    assert cookie.startswith("strategium_oauth_state=")
+    assert "Max-Age" not in cookie
+
+
 def test_record_of_blood_direct_route(local_site) -> None:
     for method in ("GET", "HEAD"):
         with urllib.request.urlopen(urllib.request.Request(local_site + "/record-of-blood", method=method)) as response:
