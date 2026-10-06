@@ -149,6 +149,8 @@ BACKSTORY_MAX_CHARS = 2400
 SESSION_TTL_SECONDS = int(os.getenv("STRATEGIUM_SESSION_TTL_SECONDS", str(60 * 60 * 24 * 7)))
 MAX_JSON_BODY_BYTES = 1024 * 1024
 MAX_AAR_SUBMISSION_BYTES = 34 * 1024 * 1024
+MAX_AAR_CONCURRENT_SUBMISSIONS = 2
+_AAR_SUBMISSION_SLOTS = threading.BoundedSemaphore(MAX_AAR_CONCURRENT_SUBMISSIONS)
 BOT_AAR_INTAKE_URL = os.getenv(
     "STRATEGIUM_BOT_AAR_INTAKE_URL",
     "http://127.0.0.1:8080/v1/aar/submissions",
@@ -790,6 +792,22 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_idempotency_key"})
             return
 
+        if not _AAR_SUBMISSION_SLOTS.acquire(blocking=False):
+            self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "aar_upload_capacity"}, {"Retry-After": "5"})
+            return
+        try:
+            self._forward_aar_submission_body(user, idempotency_key, content_type, content_length, intake_url)
+        finally:
+            _AAR_SUBMISSION_SLOTS.release()
+
+    def _forward_aar_submission_body(
+        self,
+        user: dict[str, str],
+        idempotency_key: str,
+        content_type: str,
+        content_length: int,
+        intake_url: str,
+    ) -> None:
         body = self.rfile.read(content_length)
         if len(body) != content_length:
             self._send(HTTPStatus.BAD_REQUEST, {"error": "incomplete_submission"})
