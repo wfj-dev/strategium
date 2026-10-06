@@ -23,6 +23,7 @@
     --white: #f2ede0;
     --red: #e05c4f;
     --red-dim: #7a3129;
+    --map-hover-stage: 325ms;
   }
 
   * { box-sizing: border-box; }
@@ -175,7 +176,7 @@
   .atlas-region-label { display: none; }
   .atlas-leaders { position: fixed; z-index: 6; inset: 0; width: 100vw; height: 100vh; overflow: visible; pointer-events: none; }
   .atlas-leader-line { fill: none; stroke: #59d77b; stroke-width: 1.5; stroke-dasharray: 1; stroke-dashoffset: 0; opacity: 0; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px rgba(79,214,122,.75)); }
-  .atlas-leader-line.drawing { opacity: 1; stroke-dashoffset: 1; animation: atlas-line-draw 1s linear forwards; }
+  .atlas-leader-line.drawing { opacity: 1; stroke-dashoffset: 1; animation: atlas-line-draw var(--map-hover-stage) linear forwards; }
   @keyframes atlas-line-draw { to { stroke-dashoffset: 0; } }
   .atlas-callout.pending { opacity: 0; visibility: hidden; }
   .atlas-callout.loading { opacity: 1; }
@@ -952,8 +953,8 @@
   .reach-canvas-tooltip strong { display: block; color: var(--white); font: 11px 'Share Tech Mono', monospace; letter-spacing: 0; }
   .reach-canvas-tooltip.loading { opacity: 1; }
   .map-body-icon { width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin-right: 7px; flex: 0 0 22px; }
-  .canvas-callout-loading { display: block; animation: canvas-callout-hide .01s .65s steps(1,end) forwards; }
-  .canvas-callout-data { display: block; opacity: 0; animation: canvas-callout-show .01s .65s steps(1,end) forwards; }
+  .canvas-callout-loading { display: block; animation: canvas-callout-hide .01s var(--map-hover-stage) steps(1,end) forwards; }
+  .canvas-callout-data { display: block; opacity: 0; animation: canvas-callout-show .01s var(--map-hover-stage) steps(1,end) forwards; }
   @keyframes canvas-callout-hide { to { visibility: hidden; height: 0; overflow: hidden; } }
   @keyframes canvas-callout-show { to { opacity: 1; } }
   .reach-desktop-index { margin-top: 8px; border-top: 1px solid var(--border-dim); }
@@ -1502,6 +1503,8 @@
    This is the same shape a Discord-role-mapping export or a bot endpoint
    should produce — see the settings panel in-app for the full note.
    ========================================================================== */
+
+const MAP_HOVER_STAGE_MS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--map-hover-stage"));
 
 const RANK_LABELS = {
   watch_master: "Watch Master",
@@ -2796,9 +2799,9 @@ function setAtlasHighlight(region, pointerAnchor = null) {
         document.getElementById("atlas-callout-title").textContent = location.name;
         document.getElementById("atlas-callout-lore").textContent = ATLAS_LORE[location.id] || "Authorized facility within Watch Fortress Jericho.";
         callout.classList.remove("loading");
-      }, 1000);
+      }, MAP_HOVER_STAGE_MS);
     }
-  }, 1000);
+  }, MAP_HOVER_STAGE_MS);
 }
 
 function terminalTransmissionHtml(query, accessing, fields) {
@@ -6045,7 +6048,7 @@ function setupGeographyCanvas() {
     const points = [start, bend, { x: bend.x, y: end.y }, end];
     const lengths = points.slice(1).map((point, index) => Math.hypot(point.x - points[index].x, point.y - points[index].y));
     const total = lengths.reduce((sum, length) => sum + length, 0);
-    let remaining = total * canvasSmoothstep(0, 1, canvasClamp((now - hoveredTarget.startedAt) / 650, 0, 1));
+    let remaining = total * canvasSmoothstep(0, 1, canvasClamp((now - hoveredTarget.startedAt) / MAP_HOVER_STAGE_MS, 0, 1));
     context.strokeStyle = "rgba(79,214,122,.9)";
     context.lineWidth = 1.1;
     context.beginPath();
@@ -6102,7 +6105,7 @@ function setupGeographyCanvas() {
       || Math.abs(camera.targetZoom - camera.zoom) > camera.zoom * 1e-4
       || Math.abs(camera.targetX - camera.x) * camera.zoom > .05
       || Math.abs(camera.targetY - camera.y) * camera.zoom > .05;
-    const leaderDrawing = hoveredTarget && timestamp - hoveredTarget.startedAt < 800;
+    const leaderDrawing = hoveredTarget && timestamp - hoveredTarget.startedAt < MAP_HOVER_STAGE_MS + 75;
     if (!moving && !leaderDrawing && timestamp - lastDrawAt < 33) {
       animationFrame = requestAnimationFrame(drawFrame);
       return;
@@ -6261,8 +6264,8 @@ function setupGeographyCanvas() {
           tooltip.classList.remove("loading");
           tooltip.innerHTML = `<strong>${geographyBodyIcon(target.body)}${escapeHtml(target.name)}</strong>${escapeHtml(target.meta)}`;
           positionCanvasTooltip(target);
-        }, 650);
-      }, 650);
+        }, MAP_HOVER_STAGE_MS);
+      }, MAP_HOVER_STAGE_MS);
     }
   }
 
