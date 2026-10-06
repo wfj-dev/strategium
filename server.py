@@ -913,7 +913,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 {"ok": True},
                 {
                     "Location": "/",
-                    "Set-Cookie": f"strategium_session={session}{_cookie_flags(secure)}",
+                    "Set-Cookie": f"strategium_session={session}; Max-Age={SESSION_TTL_SECONDS}{_cookie_flags(secure)}",
                 },
             )
         except (
