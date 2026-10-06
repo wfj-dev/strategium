@@ -610,6 +610,39 @@ def test_aar_submission_requires_login(local_site) -> None:
     assert json.loads(error.value.read())["error"] == "login_required"
 
 
+def test_aar_submission_rejects_when_global_upload_slots_are_full(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "BOT_AAR_SHARED_SECRET", "test-aar-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    token = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+
+    class FullBudget:
+        def acquire(self, blocking=False):
+            return False
+
+        def release(self):
+            raise AssertionError("full budget must not be released by rejected request")
+
+    monkeypatch.setattr(server, "_AAR_SUBMISSION_SLOTS", FullBudget())
+    request = urllib.request.Request(
+        local_site + "/api/aar-submissions",
+        data=b"multipart-body",
+        headers={
+            "Content-Type": "multipart/form-data; boundary=x",
+            "Cookie": f"strategium_session={token}",
+            "Origin": local_site,
+            "X-CSRF-Token": "csrf-token",
+            "X-AAR-Idempotency-Key": "site-submit-1234567890",
+        },
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 429
+    assert json.loads(error.value.read())["error"] == "aar_upload_capacity"
+
+
 def test_aar_submission_rejects_invalid_csrf(local_site, monkeypatch) -> None:
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
     monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
