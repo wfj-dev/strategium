@@ -7,6 +7,7 @@ import email.utils
 import hashlib
 import hmac
 import http.cookies
+import ipaddress
 import json
 import logging
 import os
@@ -147,13 +148,24 @@ BACKSTORY_MAX_WORDS = 400
 BACKSTORY_MAX_CHARS = 2400
 SESSION_TTL_SECONDS = int(os.getenv("STRATEGIUM_SESSION_TTL_SECONDS", str(60 * 60 * 24 * 7)))
 MAX_JSON_BODY_BYTES = 1024 * 1024
+MAX_AAR_SUBMISSION_BYTES = 34 * 1024 * 1024
+BOT_AAR_INTAKE_URL = os.getenv(
+    "STRATEGIUM_BOT_AAR_INTAKE_URL",
+    "http://127.0.0.1:8080/v1/aar/submissions",
+)
+BOT_AAR_SHARED_SECRET = os.getenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "")
+BOT_AAR_ALLOWED_HOSTS = frozenset(
+    host.strip().lower().rstrip(".")
+    for host in os.getenv("STRATEGIUM_BOT_AAR_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+)
 REACH_MAX_NODES = 500
 REACH_MAX_EDGES = 2000
 REACH_MAX_DIRECTIVES = 500
 REACH_STATUSES = {
     "unassigned", "distributed", "recruiting", "deployed", "completed", "failed", "lapsed"
 }
-PAGE_PATHS = {"/", "/reach", "/record-of-blood", "/rank-guide"}
+PAGE_PATHS = {"/", "/submit-aar", "/reach", "/record-of-blood", "/rank-guide"}
 
 SECURITY_LOG = logging.getLogger("strategium.security")
 
@@ -185,6 +197,36 @@ def _origin_matches(request_origin: str, allowed_origin: str) -> bool:
     request_value = _normalize_origin(request_origin)
     allowed_value = _normalize_origin(allowed_origin)
     return bool(request_value and allowed_value and request_value == allowed_value)
+
+
+def _bot_aar_intake_target(value: str) -> str | None:
+    try:
+        parsed = urllib.parse.urlsplit(value)
+        port = parsed.port
+    except ValueError:
+        return None
+    if port is not None and not 0 < port < 65536:
+        return None
+    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        return None
+    if parsed.path != "/v1/aar/submissions" or not parsed.hostname:
+        return None
+    host = parsed.hostname.lower()
+    try:
+        address = ipaddress.ip_address(host)
+        is_private = address.is_loopback or address.is_private or address.is_link_local
+    except ValueError:
+        is_private = host == "localhost" or host.endswith(".localhost")
+    if parsed.scheme == "http":
+        return value if is_private else None
+    if parsed.scheme == "https":
+        return value if is_private or host in BOT_AAR_ALLOWED_HOSTS else None
+    return None
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        return None
 
 
 def _discord_invite_url(value: str) -> str:
@@ -546,7 +588,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Credentials", "true")
             self.send_header(
                 "Access-Control-Allow-Headers",
-                "Authorization, Content-Type, X-Strategium-Signature",
+                "Authorization, Content-Type, X-Strategium-Signature, X-CSRF-Token, X-AAR-Idempotency-Key",
             )
             self.send_header(
                 "Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS"
@@ -706,10 +748,82 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self) -> None:
-        if urllib.parse.urlparse(self.path).path != "/internal/roster/snapshot":
-            self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+        path = urllib.parse.urlparse(self.path).path
+        if path == "/internal/roster/snapshot":
+            self._receive_snapshot()
             return
-        self._receive_snapshot()
+        if path == "/api/aar-submissions":
+            self._forward_aar_submission()
+            return
+        else:
+            self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+
+    def _forward_aar_submission(self) -> None:
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return
+        if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
+            self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
+            return
+        if not BOT_AAR_SHARED_SECRET:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_submission_unavailable"})
+            return
+        intake_url = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
+        if not intake_url:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_submission_unavailable"})
+            return
+
+        content_type = self.headers.get("Content-Type", "")
+        if not content_type.lower().startswith("multipart/form-data;"):
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "multipart_required"})
+            return
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            content_length = 0
+        if content_length <= 0 or content_length > MAX_AAR_SUBMISSION_BYTES:
+            self._send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE if content_length > MAX_AAR_SUBMISSION_BYTES else HTTPStatus.BAD_REQUEST, {"error": "invalid_submission_size"})
+            return
+        idempotency_key = self.headers.get("X-AAR-Idempotency-Key", "")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{16,128}", idempotency_key):
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_idempotency_key"})
+            return
+
+        body = self.rfile.read(content_length)
+        if len(body) != content_length:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "incomplete_submission"})
+            return
+        timestamp = str(int(time.time()))
+        body_digest = hashlib.sha256(body).hexdigest()
+        signed = f"{timestamp}\n{idempotency_key}\n{user['id']}\n{body_digest}".encode()
+        signature = hmac.new(BOT_AAR_SHARED_SECRET.encode("utf-8"), signed, hashlib.sha256).hexdigest()
+        request = urllib.request.Request(
+            intake_url,
+            data=body,
+            headers={
+                "Content-Type": content_type,
+                "X-Strategium-AAR-Timestamp": timestamp,
+                "X-Strategium-AAR-Idempotency-Key": idempotency_key,
+                "X-Strategium-AAR-Signature": signature,
+                "X-Strategium-User-ID": str(user["id"]),
+            },
+            method="POST",
+        )
+        try:
+            opener = urllib.request.build_opener(_NoRedirectHandler)
+            with opener.open(request, timeout=60) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+                self._send(response.status, payload)
+        except urllib.error.HTTPError as error:
+            try:
+                payload = json.loads(error.read().decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                payload = {"error": "aar_submission_failed"}
+            self._send(error.code, payload)
+        except (OSError, urllib.error.URLError, json.JSONDecodeError):
+            SECURITY_LOG.warning("AAR intake bridge unavailable user=%s", user.get("id"))
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_submission_unavailable"})
 
     def do_PATCH(self) -> None:
         if urllib.parse.urlparse(self.path).path != "/api/me/backstory":

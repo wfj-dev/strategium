@@ -33,6 +33,12 @@ Only HTTPS `discord.gg/<code>` and `discord.com/invite/<code>` URLs are accepted
 
 The live app loads roster data from its same-origin `/api/roster` endpoint. The Discord bot publishes signed snapshots to the backend's internal `/internal/roster/snapshot` endpoint; browser clients never receive bot credentials.
 
+## Submit AARs
+
+The **Submit AARs** channel at `/submit-aar` provides authenticated guild members with a mode-aware AAR form. It requires 1–10 PNG, JPEG, or WebP screenshots (8 MiB each, 32 MiB total). The bot validates the structured fields, writes the canonical record and processes points/challenges/awards through its datastore, then posts a separate lore-styled Discord embed with the screenshot previews. The receipt is not parsed as an AAR; its real Discord URL is stored with the record for audit and challenge references.
+
+Run `./setup-secrets.sh` to provision the shared `STRATEGIUM_BOT_AAR_SHARED_SECRET` in both local `.env` files. The site forwards uploads to `STRATEGIUM_BOT_AAR_INTAKE_URL` (default `http://127.0.0.1:8080/v1/aar/submissions`) with a timestamped HMAC; the browser never receives the secret. Remote HTTPS targets must be explicitly listed in `STRATEGIUM_BOT_AAR_ALLOWED_HOSTS` as comma-separated hostnames. Enable the bot route explicitly with `web_submission.enabled: true` in the bot configuration. Keep the bot bridge private and do not expose `/v1/aar/submissions` through a public reverse proxy. The existing staff-only `/submit_aar` slash command and its test mode are unchanged.
+
 ## Rank Guide
 
 Visit `/rank-guide` for the 28 numbered Watch Fortress rank cards and their promotion requirements. Checked-in full-size WebPs in `assets/web/rank-cards/` are sufficient to regenerate gallery previews with `.venv/bin/python scripts/build_web_assets.py`. When source PNGs are available in the sibling bot repository at `../discord-bots/op-scribe-servitor/assets/ranks/`, the builder uses them to regenerate both sizes; set `STRATEGIUM_RANK_CARDS_SOURCE` to override that path.
