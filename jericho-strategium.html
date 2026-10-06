@@ -899,6 +899,7 @@
 
   .site-nav { display: flex; gap: 4px; }
   .site-nav a {
+    display: flex; align-items: center; justify-content: center; min-height: 38px; line-height: 1.2; text-align: center;
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none;
     color: var(--green-dim); padding: 6px 12px; border: 1px solid var(--border-dim); transition: all 0.15s;
   }
@@ -1169,6 +1170,49 @@
   .blood-brother small { color: #ada681; font-size: 10px; }
 
   .rank-guide-room { color: var(--white); }
+  .aar-room { color: var(--white); }
+  .aar-heading { padding: 12px 0 20px; }
+  .aar-heading h2 { margin: 5px 0 8px; color: var(--gold); font: 700 24px 'Share Tech Mono', monospace; text-transform: uppercase; }
+  .aar-description { max-width: 72ch; margin: 0; color: var(--green-dim); font-size: 12px; line-height: 1.65; }
+  .aar-form { display: grid; gap: 22px; }
+  .aar-section { min-width: 0; padding-top: 14px; border-top: 1px solid var(--border-dim); }
+  .aar-section h3 { margin: 0 0 12px; color: var(--gold); font: 700 12px 'Share Tech Mono', monospace; text-transform: uppercase; }
+  .aar-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
+  .aar-field { min-width: 0; margin-bottom: 12px; }
+  .aar-field-wide { grid-column: 1 / -1; }
+  .aar-field .field-input { margin-bottom: 0; }
+  .aar-field select.field-input { min-height: 39px; }
+  .aar-field select[multiple] { min-height: 116px; }
+  .aar-members { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 6px; max-height: 300px; overflow: auto; padding: 2px; }
+  .aar-member { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 9px; border: 1px solid var(--border-dim); background: rgba(79,214,122,.025); color: var(--white); font-size: 11px; cursor: pointer; }
+  .aar-member:has(input:checked) { border-color: var(--gold-dim); background: rgba(207,174,104,.06); }
+  .aar-member input { accent-color: var(--gold); flex: 0 0 auto; }
+  .aar-member span { min-width: 0; overflow-wrap: anywhere; }
+  .aar-upload { display: grid; gap: 10px; }
+  .aar-file-picker { position: relative; display: inline-flex; min-height: 42px; align-items: center; gap: 10px; overflow: hidden; padding: 8px 12px; border: 1px solid var(--green-dim); background: rgba(79,214,122,.05); color: var(--green); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+  .aar-file-picker:hover, .aar-file-picker:focus-within { border-color: var(--gold); color: var(--gold); background: rgba(207,174,104,.07); }
+  .aar-file-picker-icon { color: var(--gold); font-size: 17px; line-height: 1; }
+  .aar-file-picker-count { color: var(--green-faint); }
+  .aar-file-picker input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .aar-upload-hint, .aar-empty { color: var(--green-faint); font-size: 10px; line-height: 1.5; }
+  .aar-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .aar-image { position: relative; min-width: 0; border: 1px solid var(--border-dim); background: #050705; }
+  .aar-image img { display: block; width: 100%; height: 100px; object-fit: contain; }
+  .aar-image-name { display: block; overflow: hidden; padding: 5px 7px; color: var(--green-dim); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+  .aar-image-remove { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border: 1px solid var(--red-dim); background: rgba(2,5,3,.9); color: var(--red); cursor: pointer; font: inherit; }
+  .aar-submit-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 0 4px; border-top: 1px solid var(--border-dim); }
+  .aar-submit-row .btn-primary { min-height: 42px; }
+  .aar-status { min-height: 20px; color: var(--green-dim); font-size: 11px; }
+  .aar-status[data-tone="error"] { color: var(--red); }
+  .aar-status[data-tone="success"] { color: var(--gold); }
+  .aar-login { margin-top: 14px; }
+  @media (max-width: 600px) {
+    .aar-heading { padding: 10px 5px 18px; }
+    .aar-fields { grid-template-columns: minmax(0, 1fr); }
+    .aar-field-wide { grid-column: auto; }
+    .aar-members { grid-template-columns: minmax(0, 1fr); max-height: 240px; }
+    .aar-submit-row { align-items: stretch; flex-direction: column; }
+  }
   .rank-guide-heading { padding: 12px 0 20px; }
   .rank-guide-overline { color: var(--green-dim); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; }
   .rank-guide-heading h2 { margin: 5px 0 8px; color: var(--gold); font: 700 24px 'Share Tech Mono', monospace; text-transform: uppercase; }
@@ -1360,10 +1404,11 @@
       </div>
       <nav class="site-nav" aria-label="Ordo Xenos intelligence channels">
         <a href="/" data-atlas-home>Fortress Atlas</a>
-        <a href="/" data-page="fortress">Personnel Docket</a>
+        <a href="/submit-aar" data-page="submit-aar">Submit AARs</a>
         <a href="/reach" data-page="reach">Sector Operations</a>
+        <a href="/" data-page="fortress">Personnel Docket</a>
         <a href="/record-of-blood" data-page="blood">Chapter Origins</a>
-        <a href="/rank-guide" data-page="rank-guide">Rank Guide</a>
+        <a href="/rank-guide" data-page="rank-guide">Guides</a>
       </nav>
       <div class="header-right">
         <div id="auth-container"></div>
@@ -2014,7 +2059,7 @@ function generateSampleRoster() {
 /* ---------------------------------------------------------------------- */
 
 const state = {
-  page: "fortress",    // 'fortress' | 'reach' | 'blood' | 'rank-guide'
+  page: "fortress",    // 'fortress' | 'submit-aar' | 'reach' | 'blood' | 'rank-guide'
   view: "landing",   // 'landing' | 'strategium' | 'company' | 'killteam' | 'formation'
   companyId: null,
   killTeamId: null,
@@ -2517,6 +2562,10 @@ function renderBreadcrumb() {
   }
   if (state.page === "rank-guide") {
     el.innerHTML = current("Rank Guide");
+    return;
+  }
+  if (state.page === "submit-aar") {
+    el.innerHTML = current("Submit AAR");
     return;
   }
   if (state.view === "landing") {
@@ -3338,6 +3387,7 @@ function renderRecordOfBlood() {
 function render(originPct, direction) {
   document.body.classList.toggle("blood-page", state.page === "blood");
   document.body.classList.toggle("rank-guide-page", state.page === "rank-guide");
+  document.body.classList.toggle("submit-aar-page", state.page === "submit-aar");
   document.body.classList.toggle("atlas-page", state.page === "fortress" && state.view === "landing");
   renderBreadcrumb();
   updateSiteNav();
@@ -3345,6 +3395,7 @@ function render(originPct, direction) {
   if (state.page === "reach") renderReach();
   else if (state.page === "blood") renderRecordOfBlood();
   else if (state.page === "rank-guide") renderRankGuide();
+  else if (state.page === "submit-aar") renderSubmitAar();
   else if (state.view === "landing") renderLanding();
   else if (state.view === "strategium") renderStrategium();
   else if (state.view === "company") renderCompany(state.companyId);
@@ -3366,6 +3417,393 @@ function render(originPct, direction) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+const AAR_PVE_MISSIONS = [
+  ["pve_inferno", "Inferno"], ["pve_decapitation", "Decapitation"],
+  ["pve_vox_liberatis", "Vox Liberatis"], ["pve_reliquary", "Reliquary"],
+  ["pve_fall_of_atreus", "Fall of Atreus"], ["pve_ballistic_engine", "Ballistic Engine"],
+  ["pve_termination", "Termination"], ["pve_obelisk", "Obelisk"], ["pve_vortex", "Vortex"],
+  ["pve_reclamation", "Reclamation"], ["pve_disruption", "Disruption"],
+  ["pve_exfiltration", "Exfiltration"], ["pve_purgation", "Purgation"]
+];
+const AAR_SUBMISSION_MODES = {
+  ops_strat: { label: "Operations / Stratagems", difficulty: "@Ruthless", difficulties: ["@Ruthless", "@Lethal", "@Absolute", "@Crucible", "@Normal-Stratagem", "@Hard-Stratagem"], missions: AAR_PVE_MISSIONS, maxBrothers: 3 },
+  pvp: { label: "PvP", difficulty: "@PvP Difficulty", difficulties: ["@PvP Difficulty"], missions: [["pvp_match", "PvP Match"], ["pvp_scrim", "PvP Scrim"]], maxBrothers: 6, pvp: true },
+  omega: { label: "Omega", difficulty: "@Omega", difficulties: ["@Omega", "@Omega-Strat"], missions: AAR_PVE_MISSIONS, maxBrothers: 5, kia: true },
+  siege: { label: "Siege", difficulty: "@Hard-Siege", difficulties: ["@Normal-Siege", "@Hard-Siege"], missions: [["siege_template", "Siege Template"]], maxBrothers: 3, waves: true },
+  induction_ops_strat: { label: "Induction (Ops/Strats)", difficulty: "@Ruthless", difficulties: ["@Ruthless", "@Lethal", "@Absolute", "@Crucible", "@Normal-Stratagem", "@Hard-Stratagem"], missions: AAR_PVE_MISSIONS, maxBrothers: 3, induction: true },
+  induction_siege: { label: "Induction (Siege)", difficulty: "@Hard-Siege", difficulties: ["@Normal-Siege", "@Hard-Siege"], missions: [["siege_template", "Siege Template"]], maxBrothers: 3, waves: true, induction: true },
+  induction_omega: { label: "Induction (Omega)", difficulty: "@Omega", difficulties: ["@Omega", "@Omega-Strat"], missions: AAR_PVE_MISSIONS, maxBrothers: 5, kia: true, induction: true }
+};
+const AAR_SUBMISSION_TAGS = [
+  ["black_laurels", "Black Laurels"], ["leviathan_protocol", "Leviathan Protocol"],
+  ["black_reef_persecution", "Black Reef Persecution"], ["herisor_defense", "Defense of Herisor"],
+  ["octavian_incident", "The Octavian Incident"], ["dual_vigil", "Dual Vigil"],
+  ["pipehitter", "Pipehitter"], ["distinguished_pipehitter", "Distinguished Pipehitter"],
+  ["chapter_approved", "Chapter Approved"]
+];
+const AAR_BLACK_LAURELS_MISSIONS = new Set([
+  "inferno", "decapitation", "vox liberatis", "ballistic engine", "exfiltration",
+  "termination", "reclamation", "disruption", "purgation"
+]);
+const AAR_KADAKU_MISSIONS = new Set(["inferno", "termination", "reclamation"]);
+const AAR_OCTAVIAN_MISSIONS = new Set(["vox liberatis", "obelisk", "fall of atreus", "reliquary"]);
+const AAR_PIPEHITTER_MISSIONS = new Set([
+  "inferno", "vox liberatis", "reliquary", "fall of atreus", "termination", "obelisk",
+  "exfiltration", "vortex", "reclamation", "disruption", "purgation"
+]);
+const AAR_PVP_MAPS = ["Cathedrum", "Bastion", "Mausoleum", "Tomb", "Bridge", "Facility", "Sanctum"];
+const AAR_PVP_MODES = ["Seize Ground", "Capture and Control", "Annihilation", "Helbrute Onslaught"];
+const AAR_MAX_SCREENSHOTS = 10;
+const AAR_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const AAR_MAX_TOTAL_IMAGE_BYTES = 32 * 1024 * 1024;
+const aarDraft = {
+  mode: "ops_strat", mission: "pve_inferno", difficulty: "@Ruthless", rank: "A", armoryData: "0",
+  waves: "10", kia: "0", geneSeed: "unknown", geneCarrier: "", pvpMap: "Cathedrum",
+  pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), tags: new Set(), files: [], submitting: false, reviewing: false, idempotencyKey: ""
+};
+
+function aarSelectField(id, label, options, value, wide = false) {
+  const optionHtml = options.map(option => {
+    const optionValue = Array.isArray(option) ? option[0] : option;
+    const optionLabel = Array.isArray(option) ? option[1] : option;
+    return `<option value="${escapeHtml(optionValue)}"${String(value) === String(optionValue) ? " selected" : ""}>${escapeHtml(optionLabel)}</option>`;
+  }).join("");
+  return `<label class="aar-field${wide ? " aar-field-wide" : ""}"><span class="field-label">${escapeHtml(label)}</span><select id="${escapeHtml(id)}" class="field-input">${optionHtml}</select></label>`;
+}
+
+function setAarStatus(message, tone = "") {
+  const status = document.getElementById("aar-status");
+  if (!status) return;
+  status.textContent = message;
+  status.dataset.tone = tone;
+}
+
+function revokeAarPreview(file) {
+  if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);
+}
+
+function aarAllowedTagKeys(mode, missionValue, difficulty, brotherCount, selectedTags) {
+  if (AAR_SUBMISSION_MODES[mode]?.pvp) return [];
+  const mission = (AAR_PVE_MISSIONS.find(([value]) => value === missionValue)?.[1] || "").toLowerCase();
+  const selected = new Set(selectedTags);
+  const allowed = ["chapter_approved"];
+  const isAbsolute = difficulty === "@Absolute" || difficulty === "@Crucible";
+  if (AAR_KADAKU_MISSIONS.has(mission)) allowed.push("leviathan_protocol");
+  if (isAbsolute) {
+    if (brotherCount === 3 && AAR_BLACK_LAURELS_MISSIONS.has(mission)) allowed.push("black_laurels");
+    if (brotherCount === 2 && AAR_BLACK_LAURELS_MISSIONS.has(mission)) allowed.push("dual_vigil");
+  }
+  if (["@Omega", "@Omega-Strat"].includes(difficulty) && brotherCount === 5) allowed.push("black_laurels");
+  if (difficulty === "@Omega-Strat" && brotherCount === 5 && AAR_OCTAVIAN_MISSIONS.has(mission)) allowed.push("octavian_incident");
+  if (difficulty === "@Hard-Stratagem") {
+    allowed.push("black_reef_persecution");
+    if (AAR_PIPEHITTER_MISSIONS.has(mission)) allowed.push("pipehitter", "distinguished_pipehitter");
+    if (["termination", "reclamation"].includes(mission) && brotherCount === 3) allowed.push("herisor_defense");
+    if (AAR_KADAKU_MISSIONS.has(mission)) allowed.push("leviathan_protocol");
+    if (selected.has("black_reef_persecution") && [2, 3].includes(brotherCount)) allowed.push("black_laurels");
+    if (selected.has("herisor_defense") && ["termination", "reclamation"].includes(mission) && brotherCount === 3) allowed.push("black_laurels");
+  }
+  if (["@Hard-Siege", "@Normal-Siege"].includes(difficulty) && brotherCount === 3) {
+    allowed.push("herisor_defense");
+    if (difficulty === "@Hard-Siege" && selected.has("herisor_defense")) allowed.push("black_laurels");
+  }
+  if (selected.has("leviathan_protocol") && AAR_KADAKU_MISSIONS.has(mission) && brotherCount === 3) allowed.push("black_laurels");
+  return [...new Set(allowed)];
+}
+
+function renderSubmitAar() {
+  const app = document.getElementById("app");
+  const mode = AAR_SUBMISSION_MODES[aarDraft.mode] || AAR_SUBMISSION_MODES.ops_strat;
+  const pvp = Boolean(mode.pvp);
+  const missionOptions = mode.missions;
+  if (!missionOptions.some(([value]) => value === aarDraft.mission)) aarDraft.mission = missionOptions[0][0];
+  if (!mode.difficulties.includes(aarDraft.difficulty)) aarDraft.difficulty = mode.difficulty;
+
+  const userId = String(state.auth?.user?.id || "");
+  if (userId && !aarDraft.brothers.size) aarDraft.brothers.add(userId);
+  const members = state.dataStatus === "live" ? (state.members || []).filter(member => member && member.id && member.name) : [];
+  const selectedMembers = [...aarDraft.brothers].map(id => members.find(member => String(member.id) === id)).filter(Boolean);
+  const memberOptions = members.map(member => {
+    const id = String(member.id);
+    const rank = RANK_LABELS[member.rank] || member.rank || "Watch Brother";
+    const label = `${rank} · ${displayName(member.name)}`;
+    return `<label class="aar-member"><input type="checkbox" data-aar-brother value="${escapeHtml(id)}"${aarDraft.brothers.has(id) ? " checked" : ""}><span>${escapeHtml(label)}</span></label>`;
+  }).join("");
+  const allowedTagKeys = aarAllowedTagKeys(aarDraft.mode, aarDraft.mission, aarDraft.difficulty, aarDraft.brothers.size, [...aarDraft.tags]);
+  for (const tag of aarDraft.tags) if (!allowedTagKeys.includes(tag)) aarDraft.tags.delete(tag);
+  const tagOptions = pvp ? "" : AAR_SUBMISSION_TAGS.filter(([key]) => allowedTagKeys.includes(key)).map(([key, label]) =>
+    `<label class="aar-member"><input type="checkbox" data-aar-tag value="${escapeHtml(key)}"${aarDraft.tags.has(key) ? " checked" : ""}><span>${escapeHtml(label)}</span></label>`
+  ).join("");
+  const modeOptions = Object.entries(AAR_SUBMISSION_MODES).map(([key, item]) => [key, item.label]);
+  const rankOptions = [["A", "Rank A"], ["B", "Rank B"], ["C", "Rank C"], ["D", "Rank D"]];
+  const fields = [
+    aarSelectField("aar-mission", "Mission", missionOptions, aarDraft.mission),
+    aarSelectField("aar-difficulty", "Difficulty", mode.difficulties, aarDraft.difficulty),
+    aarSelectField("aar-rank", "Mission Rank", rankOptions, aarDraft.rank),
+    pvp ? aarSelectField("aar-pvp-map", "Map", AAR_PVP_MAPS, aarDraft.pvpMap) : aarSelectField("aar-armory", "Armory Data", Array.from({ length: 21 }, (_, i) => String(i)), aarDraft.armoryData),
+    pvp ? aarSelectField("aar-pvp-mode", "Game Mode", AAR_PVP_MODES, aarDraft.pvpMode) : "",
+    pvp ? aarSelectField("aar-pvp-result", "Result", ["W", "L"], aarDraft.pvpResult) : "",
+    mode.waves ? aarSelectField("aar-waves", "Waves", Array.from({ length: 20 }, (_, i) => String(i + 1)), aarDraft.waves) : "",
+    mode.kia ? aarSelectField("aar-kia", "Killed in Action", Array.from({ length: 5 }, (_, i) => String(i)), aarDraft.kia) : "",
+    pvp ? "" : aarSelectField("aar-gene-seed", "Gene-Seed", [["unknown", "No Gene-Seed Line"], ["lost", "Lost"], ["carried", "Carried"]], aarDraft.geneSeed)
+  ].filter(Boolean).join("");
+  const carrierField = !pvp && aarDraft.geneSeed === "carried"
+    ? aarSelectField("aar-gene-carrier", "Gene-Seed Carrier", selectedMembers.map(member => [String(member.id), displayName(member.name)]), aarDraft.geneCarrier || String(selectedMembers[0]?.id || ""), true)
+    : "";
+  const imageRows = aarDraft.files.map((file, index) => `
+    <div class="aar-image">
+      <img src="${file.previewUrl}" alt="Screenshot ${index + 1}: ${escapeHtml(file.name)}">
+      <span class="aar-image-name">${escapeHtml(file.name)}</span>
+      <button class="aar-image-remove" type="button" data-aar-remove="${index}" aria-label="Remove ${escapeHtml(file.name)}" title="Remove screenshot">×</button>
+    </div>`).join("");
+  const authMessage = state.auth?.authenticated
+    ? state.dataStatus === "live"
+      ? `<p class="aar-upload-hint">Signed in as ${escapeHtml(state.auth.user?.name || "Watch member")}.</p>`
+      : `<p class="aar-empty">The live fortress roster is unavailable. AAR submission requires verified participants.</p>`
+    : `<p class="aar-empty">Sign in with Discord to submit an After-Action Report.</p><button class="btn-primary aar-login" type="button" data-aar-login>Login with Discord</button>`;
+    const missionName = missionOptions.find(([value]) => value === aarDraft.mission)?.[1] || "Unspecified mission";
+    const selectedTagLabels = AAR_SUBMISSION_TAGS.filter(([key]) => aarDraft.tags.has(key)).map(([, label]) => label);
+    const reviewPanel = `<section class="aar-section" aria-labelledby="aar-review-heading">
+      <h3 id="aar-review-heading">Confirm Archive Entry</h3>
+      <div class="aar-fields">
+        <div class="aar-field"><span class="field-label">Report</span><div>${escapeHtml(AAR_SUBMISSION_MODES[aarDraft.mode].label)} · ${escapeHtml(missionName)} · ${escapeHtml(aarDraft.difficulty)}</div></div>
+        <div class="aar-field"><span class="field-label">Team and Evidence</span><div>${selectedMembers.length} battle-brothers · ${aarDraft.files.length} screenshots</div></div>
+        ${selectedTagLabels.length ? `<div class="aar-field aar-field-wide"><span class="field-label">Mission Tags</span><div>${escapeHtml(selectedTagLabels.join(", "))}</div></div>` : ""}
+      </div>
+      <button class="btn-dossier-action btn-dossier-cancel" type="button" data-aar-edit>Edit report</button>
+    </section>`;
+
+  app.innerHTML = `
+    <section class="aar-room" aria-label="After-action report submission">
+      <header class="aar-heading">
+        <div class="blood-overline">&gt; COGITATOR INTAKE // AFTER-ACTION REPORT</div>
+        <h2>Submit AAR</h2>
+        <p class="aar-description">Record the operation, its participants, and the evidence for the Watch archive.</p>
+      </header>
+      ${authMessage}
+      ${state.auth?.authenticated && state.dataStatus === "live" ? `<form id="aar-form" class="aar-form">
+        <section class="aar-section" aria-labelledby="aar-details-heading">
+          <h3 id="aar-details-heading">Operation Details</h3>
+          <div class="aar-fields">
+            ${aarSelectField("aar-mode", "Report Type", modeOptions, aarDraft.mode, true)}
+            ${fields}${carrierField}
+          </div>
+        </section>
+        <section class="aar-section" aria-labelledby="aar-team-heading">
+          <h3 id="aar-team-heading">Battle-Brothers <span class="aar-upload-hint">${aarDraft.brothers.size} selected · ${mode.maxBrothers} maximum</span></h3>
+          <label class="aar-field aar-field-wide"><span class="field-label">Filter roster</span><input id="aar-member-filter" class="field-input" type="search" autocomplete="off" placeholder="Search by name"></label>
+          <div id="aar-member-list" class="aar-members" role="group" aria-label="Select report participants">${memberOptions || `<p class="aar-empty">The live roster is unavailable. Refresh after connecting to the fortress archive.</p>`}</div>
+        </section>
+        ${tagOptions ? `<section class="aar-section" aria-labelledby="aar-tags-heading"><h3 id="aar-tags-heading">Mission Tags</h3><div class="aar-members" role="group" aria-label="Select mission tags">${tagOptions}</div><p class="aar-upload-hint">Only tags valid for this mission and team will be accepted by the Watch archive.</p></section>` : ""}
+        <section class="aar-section" aria-labelledby="aar-evidence-heading">
+          <h3 id="aar-evidence-heading">Mission Screenshots</h3>
+          <div class="aar-upload">
+            <label class="aar-file-picker" for="aar-screenshots">
+              <span class="aar-file-picker-icon" aria-hidden="true">+</span>
+              <span>Choose Screenshots</span>
+              <span id="aar-file-picker-count" class="aar-file-picker-count">${aarDraft.files.length} / ${AAR_MAX_SCREENSHOTS}</span>
+              <input id="aar-screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="aar-upload-hint">
+            </label>
+            <span id="aar-upload-hint" class="aar-upload-hint">1–10 images · PNG, JPEG, or WebP · 8 MiB each · 32 MiB total</span>
+            <div class="aar-images">${imageRows}</div>
+          </div>
+        </section>
+        ${aarDraft.reviewing ? reviewPanel : ""}
+        <div class="aar-submit-row">
+          <button id="aar-submit" class="btn-primary" type="submit"${aarDraft.submitting ? " disabled" : ""}>${aarDraft.submitting ? "Submitting…" : aarDraft.reviewing ? "Submit AAR" : "Review AAR"}</button>
+          <div id="aar-status" class="aar-status" role="status" aria-live="polite"></div>
+        </div>
+      </form>` : ""}
+    </section>`;
+
+  const form = document.getElementById("aar-form");
+  if (!form) {
+    document.querySelector("[data-aar-login]")?.addEventListener("click", startDiscordLogin);
+    return;
+  }
+  const invalidateIdempotencyKey = () => {
+    aarDraft.idempotencyKey = "";
+    aarDraft.reviewing = false;
+  };
+  const readDraftFields = () => {
+    aarDraft.brothers = new Set([...form.querySelectorAll("[data-aar-brother]:checked")].map(input => input.value));
+    aarDraft.tags = new Set([...form.querySelectorAll("[data-aar-tag]:checked")].map(input => input.value));
+    aarDraft.mission = document.getElementById("aar-mission")?.value || aarDraft.mission;
+    aarDraft.difficulty = document.getElementById("aar-difficulty")?.value || aarDraft.difficulty;
+    aarDraft.rank = document.getElementById("aar-rank")?.value || aarDraft.rank;
+    aarDraft.armoryData = document.getElementById("aar-armory")?.value || aarDraft.armoryData;
+    aarDraft.waves = document.getElementById("aar-waves")?.value || aarDraft.waves;
+    aarDraft.kia = document.getElementById("aar-kia")?.value || aarDraft.kia;
+    aarDraft.geneSeed = document.getElementById("aar-gene-seed")?.value || aarDraft.geneSeed;
+    aarDraft.geneCarrier = document.getElementById("aar-gene-carrier")?.value || aarDraft.geneCarrier;
+    aarDraft.pvpMap = document.getElementById("aar-pvp-map")?.value || aarDraft.pvpMap;
+    aarDraft.pvpMode = document.getElementById("aar-pvp-mode")?.value || aarDraft.pvpMode;
+    aarDraft.pvpResult = document.getElementById("aar-pvp-result")?.value || aarDraft.pvpResult;
+  };
+  form.querySelectorAll("[data-aar-brother]").forEach(input => input.addEventListener("change", () => {
+    invalidateIdempotencyKey();
+    readDraftFields();
+    renderSubmitAar();
+  }));
+  form.querySelectorAll("[data-aar-tag]").forEach(input => input.addEventListener("change", () => {
+    invalidateIdempotencyKey();
+    readDraftFields();
+    renderSubmitAar();
+  }));
+  document.getElementById("aar-member-filter")?.addEventListener("input", event => {
+    const query = event.target.value.trim().toLocaleLowerCase();
+    form.querySelectorAll(".aar-member").forEach(label => {
+      const input = label.querySelector("input[data-aar-brother]");
+      if (input) label.hidden = !label.textContent.toLocaleLowerCase().includes(query);
+    });
+  });
+  document.getElementById("aar-mode")?.addEventListener("change", event => {
+    invalidateIdempotencyKey();
+    const nextMode = AAR_SUBMISSION_MODES[event.target.value] ? event.target.value : "ops_strat";
+    const next = AAR_SUBMISSION_MODES[nextMode];
+    aarDraft.mode = nextMode;
+    aarDraft.mission = next.missions[0][0];
+    aarDraft.difficulty = next.difficulty;
+    aarDraft.tags.clear();
+    renderSubmitAar();
+  });
+  ["aar-mission", "aar-difficulty", "aar-rank", "aar-armory", "aar-waves", "aar-kia", "aar-gene-seed", "aar-gene-carrier", "aar-pvp-map", "aar-pvp-mode", "aar-pvp-result"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", event => {
+      invalidateIdempotencyKey();
+      readDraftFields();
+      if (["aar-mission", "aar-difficulty", "aar-gene-seed"].includes(id)) {
+        if (id === "aar-gene-seed" && event.target.value === "carried") {
+        aarDraft.geneCarrier = String(selectedMembers[0]?.id || "");
+        }
+        renderSubmitAar();
+      }
+    });
+  });
+  document.getElementById("aar-screenshots")?.addEventListener("change", event => {
+    invalidateIdempotencyKey();
+    const selected = [...(event.target.files || [])];
+    const validTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
+    const totalBytes = aarDraft.files.reduce((sum, file) => sum + file.size, 0);
+    if (aarDraft.files.length + selected.length > AAR_MAX_SCREENSHOTS) {
+      setAarStatus("A report can include no more than 10 screenshots.", "error");
+      event.target.value = "";
+      return;
+    }
+    const invalid = selected.find(file => !validTypes.has(file.type) || file.size > AAR_MAX_IMAGE_BYTES);
+    if (invalid) {
+      setAarStatus(`${invalid.name}: use PNG, JPEG, or WebP images no larger than 8 MiB.`, "error");
+      event.target.value = "";
+      return;
+    }
+    if (totalBytes + selected.reduce((sum, file) => sum + file.size, 0) > AAR_MAX_TOTAL_IMAGE_BYTES) {
+      setAarStatus("The combined screenshot size cannot exceed 32 MiB.", "error");
+      event.target.value = "";
+      return;
+    }
+    aarDraft.files.push(...selected.map(file => ({ file, name: file.name, size: file.size, type: file.type, previewUrl: URL.createObjectURL(file) })));
+    renderSubmitAar();
+  });
+  form.querySelectorAll("[data-aar-remove]").forEach(button => button.addEventListener("click", () => {
+    invalidateIdempotencyKey();
+    const [removed] = aarDraft.files.splice(Number(button.dataset.aarRemove), 1);
+    revokeAarPreview(removed);
+    renderSubmitAar();
+  }));
+  form.querySelector("[data-aar-edit]")?.addEventListener("click", () => {
+    aarDraft.reviewing = false;
+    renderSubmitAar();
+  });
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (aarDraft.submitting) return;
+    readDraftFields();
+    const currentMode = AAR_SUBMISSION_MODES[aarDraft.mode];
+    const maximum = currentMode.maxBrothers;
+    const team = [...aarDraft.brothers];
+    if (team.length < 2 || team.length > maximum) {
+      setAarStatus(`Select between 2 and ${maximum} battle-brothers for this report.`, "error");
+      return;
+    }
+    if (!team.includes(userId)) {
+      setAarStatus("The signed-in brother must be included in the report team.", "error");
+      return;
+    }
+    if (!aarDraft.files.length) {
+      setAarStatus("Attach at least one mission screenshot before submitting.", "error");
+      return;
+    }
+    if (aarDraft.geneSeed === "carried" && !aarDraft.geneCarrier) {
+      setAarStatus("Select the brother carrying the gene-seed.", "error");
+      return;
+    }
+    if (!aarDraft.reviewing) {
+      aarDraft.reviewing = true;
+      renderSubmitAar();
+      setAarStatus("Review the operation, team, tags, and evidence before confirming.");
+      return;
+    }
+    const payload = {
+      mode: aarDraft.mode,
+      mission: aarDraft.mission,
+      difficulty: aarDraft.difficulty,
+      rank: aarDraft.rank,
+      brother_ids: team,
+      tags: [...aarDraft.tags],
+      armory_data: Number(aarDraft.armoryData),
+      gene_seed_status: aarDraft.geneSeed,
+      gene_seed_carrier_id: aarDraft.geneSeed === "carried" ? aarDraft.geneCarrier : null,
+      waves: currentMode.waves ? Number(aarDraft.waves) : null,
+      kia: currentMode.kia ? Number(aarDraft.kia) : null,
+      pvp_map: currentMode.pvp ? aarDraft.pvpMap : null,
+      pvp_game_mode: currentMode.pvp ? aarDraft.pvpMode : null,
+      pvp_result: currentMode.pvp ? aarDraft.pvpResult : null
+    };
+    const body = new FormData();
+    body.append("submission", JSON.stringify(payload));
+    aarDraft.files.forEach(item => body.append("screenshots", item.file, item.name));
+    aarDraft.submitting = true;
+    renderSubmitAar();
+    setAarStatus("Transmitting report and evidence to the Watch archive…");
+    try {
+      const idempotencyKey = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      if (!aarDraft.idempotencyKey) aarDraft.idempotencyKey = idempotencyKey;
+      const response = await fetch(apiUrl("/api/aar-submissions"), {
+        method: "POST", credentials: "include",
+        headers: { "X-CSRF-Token": state.auth.csrf || "", "X-AAR-Idempotency-Key": aarDraft.idempotencyKey },
+        body
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || "The AAR could not be submitted.");
+      aarDraft.files.forEach(revokeAarPreview);
+      aarDraft.files = [];
+      aarDraft.idempotencyKey = "";
+      aarDraft.submitting = false;
+      aarDraft.reviewing = false;
+      renderSubmitAar();
+      setAarStatus(
+        result.processing_pending
+          ? "The Discord receipt is posted. Archive processing will retry automatically."
+          : "The report is recorded in the Watch archive.",
+        result.processing_pending ? "" : "success"
+      );
+      const receiptUrl = String(result.receipt_url || "");
+      if (receiptUrl.startsWith("https://discord.com/channels/")) {
+        const status = document.getElementById("aar-status");
+        const link = document.createElement("a");
+        link.href = receiptUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = " Open Discord receipt";
+        status?.append(link);
+      }
+    } catch (error) {
+      aarDraft.submitting = false;
+      renderSubmitAar();
+      setAarStatus(error.message || "The AAR could not be submitted.", "error");
+    }
+  });
+}
+
 function updateStatusBadge() {
   const slateCount = document.getElementById("slate-count");
   if (slateCount) {
@@ -3381,6 +3819,11 @@ function updateStatusBadge() {
     }
     if (state.page === "rank-guide") {
       slateCount.textContent = "RANK RECORDS: " + RANK_GUIDE.length;
+      slateCount.style.display = "";
+      return;
+    }
+    if (state.page === "submit-aar") {
+      slateCount.textContent = "AAR INTAKE: READY";
       slateCount.style.display = "";
       return;
     }
@@ -3493,7 +3936,7 @@ async function restoreNavigation(snapshot) {
   state.bloodPage = snapshot.bloodPage;
   if (state.page === "reach" && state.reachStatus === "idle") await loadReach();
   render(null, "out");
-  const path = state.page === "reach" ? "/reach" : state.page === "blood" ? "/record-of-blood" : state.page === "rank-guide" ? "/rank-guide" : "/";
+  const path = state.page === "submit-aar" ? "/submit-aar" : state.page === "reach" ? "/reach" : state.page === "blood" ? "/record-of-blood" : state.page === "rank-guide" ? "/rank-guide" : "/";
   if (window.location.protocol.startsWith("http")) history.replaceState({ page: state.page }, "", path);
   if (state.page === "blood") checkBloodAudio();
   if (snapshot.modalMemberId) openMemberModal(snapshot.modalMemberId);
@@ -4011,7 +4454,7 @@ function relativeTime(iso) {
 
 function pageFromLocation() {
   const path = window.location.pathname.replace(/\/+$/, "");
-  return path === "/reach" ? "reach" : path === "/record-of-blood" ? "blood" : path === "/rank-guide" ? "rank-guide" : "fortress";
+  return path === "/submit-aar" ? "submit-aar" : path === "/reach" ? "reach" : path === "/record-of-blood" ? "blood" : path === "/rank-guide" ? "rank-guide" : "fortress";
 }
 
 function updateSiteNav() {
@@ -4043,7 +4486,7 @@ async function setPage(page, push, originEl = null) {
   closePlanetModal();
   if (page !== "blood") pauseBloodAudio();
   if (push && window.location.protocol.startsWith("http")) {
-    history.pushState({ page }, "", page === "reach" ? "/reach" : page === "blood" ? "/record-of-blood" : page === "rank-guide" ? "/rank-guide" : "/");
+    history.pushState({ page }, "", page === "submit-aar" ? "/submit-aar" : page === "reach" ? "/reach" : page === "blood" ? "/record-of-blood" : page === "rank-guide" ? "/rank-guide" : "/");
   }
   if (page === "reach" && state.reachStatus === "idle") await loadReach();
   if (page === "blood" && state.chapterLore === null) await loadChapterLore();

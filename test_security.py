@@ -32,6 +32,28 @@ def test_origin_matches_exact_allowed_origin() -> None:
     assert not _origin_matches("https://evil.example", "http://127.0.0.1:8787")
 
 
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        ("http://127.0.0.1:8080/v1/aar/submissions", True),
+        ("http://localhost:9123/v1/aar/submissions", True),
+        ("http://bot.internal:8080/v1/aar/submissions", False),
+        ("https://bot.internal/v1/aar/submissions", False),
+        ("https://8.8.8.8/v1/aar/submissions", False),
+        ("https://192.168.1.22/v1/aar/submissions", True),
+        ("http://127.0.0.1:8080/other", False),
+        ("http://user@127.0.0.1:8080/v1/aar/submissions", False),
+    ],
+)
+def test_bot_aar_intake_target_requires_loopback_http_or_https(target: str, expected: bool) -> None:
+    assert bool(server._bot_aar_intake_target(target)) is expected
+
+
+def test_bot_aar_intake_target_allows_configured_private_https_host(monkeypatch) -> None:
+    monkeypatch.setattr(server, "BOT_AAR_ALLOWED_HOSTS", frozenset({"bot.internal"}))
+    assert server._bot_aar_intake_target("https://bot.internal/v1/aar/submissions")
+
+
 def test_cookie_flags_include_secure_when_required() -> None:
     flags = _cookie_flags(secure=True)
     assert "; Secure" in flags
@@ -560,6 +582,121 @@ def test_rank_guide_route_serves_the_site_page(local_site) -> None:
     ):
         assert text in page
     assert b"each brother who extracts" not in page
+
+
+def test_submit_aar_direct_route_serves_the_site_page(local_site) -> None:
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + "/submit-aar", method=method)) as response:
+            assert response.status == 200
+            assert response.headers["Content-Type"] == "text/html; charset=utf-8"
+            page = response.read()
+            if method == "GET":
+                assert b'data-page="submit-aar"' in page
+                assert b"function renderSubmitAar()" in page
+            else:
+                assert page == b""
+
+
+def test_aar_submission_requires_login(local_site) -> None:
+    request = urllib.request.Request(
+        local_site + "/api/aar-submissions",
+        data=b"multipart-body",
+        headers={"Content-Type": "multipart/form-data; boundary=x"},
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 401
+    assert json.loads(error.value.read())["error"] == "login_required"
+
+
+def test_aar_submission_rejects_invalid_csrf(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    token = _session_value({"id": "42", "name": "Test", "csrf": "expected-csrf"})
+    request = urllib.request.Request(
+        local_site + "/api/aar-submissions",
+        data=b"multipart-body",
+        headers={
+            "Content-Type": "multipart/form-data; boundary=x",
+            "Cookie": f"strategium_session={token}",
+            "Origin": local_site,
+            "X-CSRF-Token": "incorrect-csrf",
+        },
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 403
+    assert json.loads(error.value.read())["error"] == "csrf_failed"
+
+
+def test_aar_submission_forwards_signed_body_and_authenticated_user(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "BOT_AAR_SHARED_SECRET", "test-aar-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    token = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+    body = b"multipart-body"
+    idempotency_key = "site-submit-1234567890"
+    forwarded = {}
+
+    class FakeResponse:
+        status = 201
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b'{"ok":true,"receipt_url":"https://discord.com/channels/1/2/3"}'
+
+    class FakeOpener:
+        def __init__(self, capture: bool):
+            self.capture = capture
+
+        def open(self, request, data=None, timeout=None):
+            if self.capture:
+                forwarded["request"] = request
+                forwarded["timeout"] = timeout
+                return FakeResponse()
+            return original_build_opener().open(request, data, timeout)
+
+    original_build_opener = server.urllib.request.build_opener
+    monkeypatch.setattr(
+        server.urllib.request,
+        "build_opener",
+        lambda *handlers: FakeOpener(server._NoRedirectHandler in handlers),
+    )
+    request = urllib.request.Request(
+        local_site + "/api/aar-submissions",
+        data=body,
+        headers={
+            "Content-Type": "multipart/form-data; boundary=x",
+            "Cookie": f"strategium_session={token}",
+            "Origin": local_site,
+            "X-CSRF-Token": "csrf-token",
+            "X-AAR-Idempotency-Key": idempotency_key,
+        },
+        method="POST",
+    )
+
+    with urllib.request.urlopen(request) as response:
+        payload = json.loads(response.read())
+
+    sent = forwarded["request"]
+    sent_headers = {key.lower(): value for key, value in sent.header_items()}
+    timestamp = sent_headers["x-strategium-aar-timestamp"]
+    digest = server.hashlib.sha256(body).hexdigest()
+    signed = f"{timestamp}\n{idempotency_key}\n42\n{digest}".encode()
+    expected = server.hmac.new(b"test-aar-secret", signed, server.hashlib.sha256).hexdigest()
+    assert sent.data == body
+    assert sent_headers["x-strategium-user-id"] == "42"
+    assert sent_headers["x-strategium-aar-signature"] == expected
+    assert forwarded["timeout"] == 60
+    assert payload["receipt_url"] == "https://discord.com/channels/1/2/3"
 
 
 def test_ambience_is_optional_and_served_from_fixed_path(local_site, tmp_path, monkeypatch) -> None:
