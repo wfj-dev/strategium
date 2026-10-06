@@ -165,7 +165,10 @@ BOT_AAR_INTAKE_URL = os.getenv(
     "STRATEGIUM_BOT_AAR_INTAKE_URL",
     "http://127.0.0.1:8080/v1/aar/submissions",
 )
-BOT_AAR_SHARED_SECRET = os.getenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "")
+def _bot_aar_shared_secret() -> str:
+    return os.getenv("STRATEGIUM_BOT_SHARED_SECRET") or os.getenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "")
+
+
 BOT_AAR_ALLOWED_HOSTS = frozenset(
     host.strip().lower().rstrip(".")
     for host in os.getenv("STRATEGIUM_BOT_AAR_ALLOWED_HOSTS", "").split(",")
@@ -243,13 +246,14 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 def _aar_access(user_id: str) -> dict[str, Any]:
     intake = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
-    if not BOT_AAR_SHARED_SECRET or not intake:
+    secret = _bot_aar_shared_secret()
+    if not secret or not intake:
         return {"allowed": False, "display_name": ""}
     body = _json_bytes({"user_id": str(user_id)})
     timestamp = str(int(time.time()))
     key = f"access-{user_id}"
     signed = f"{timestamp}\n{key}\n{user_id}\n{hashlib.sha256(body).hexdigest()}".encode()
-    signature = hmac.new(BOT_AAR_SHARED_SECRET.encode(), signed, hashlib.sha256).hexdigest()
+    signature = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
     request = urllib.request.Request(
         intake.removesuffix("/submissions") + "/access", data=body, method="POST",
         headers={"Content-Type": "application/json", "X-Strategium-User-ID": str(user_id),
@@ -1047,7 +1051,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return
         if not self._require_aar_access(user):
             return
-        if not BOT_AAR_SHARED_SECRET:
+        secret = _bot_aar_shared_secret()
+        if not secret:
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_submission_unavailable"})
             return
         intake_url = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
@@ -1075,7 +1080,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "aar_upload_capacity"}, {"Retry-After": "5"})
             return
         try:
-            self._forward_aar_submission_body(user, idempotency_key, content_type, content_length, intake_url)
+            self._forward_aar_submission_body(user, idempotency_key, content_type, content_length, secret, intake_url)
         except TimeoutError:
             self._send(HTTPStatus.REQUEST_TIMEOUT, {"error": "upload_timed_out"})
         finally:
@@ -1087,6 +1092,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         idempotency_key: str,
         content_type: str,
         content_length: int,
+        secret: str,
         intake_url: str,
     ) -> None:
         self.connection.settimeout(20)
@@ -1097,7 +1103,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         timestamp = str(int(time.time()))
         body_digest = hashlib.sha256(body).hexdigest()
         signed = f"{timestamp}\n{idempotency_key}\n{user['id']}\n{body_digest}".encode()
-        signature = hmac.new(BOT_AAR_SHARED_SECRET.encode("utf-8"), signed, hashlib.sha256).hexdigest()
+        signature = hmac.new(secret.encode("utf-8"), signed, hashlib.sha256).hexdigest()
         request = urllib.request.Request(
             intake_url,
             data=body,
