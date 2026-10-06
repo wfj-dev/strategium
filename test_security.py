@@ -1,5 +1,7 @@
 import json
 import os
+import shutil
+import subprocess
 import threading
 import time
 import urllib.error
@@ -30,6 +32,28 @@ def test_origin_matches_exact_allowed_origin() -> None:
     assert _origin_matches("http://127.0.0.1:8787", "http://127.0.0.1:8787")
     assert _origin_matches("http://127.0.0.1:8787/", "http://127.0.0.1:8787")
     assert not _origin_matches("https://evil.example", "http://127.0.0.1:8787")
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        ("http://127.0.0.1:8080/v1/aar/submissions", True),
+        ("http://localhost:9123/v1/aar/submissions", True),
+        ("http://bot.internal:8080/v1/aar/submissions", False),
+        ("https://bot.internal/v1/aar/submissions", False),
+        ("https://8.8.8.8/v1/aar/submissions", False),
+        ("https://192.168.1.22/v1/aar/submissions", True),
+        ("http://127.0.0.1:8080/other", False),
+        ("http://user@127.0.0.1:8080/v1/aar/submissions", False),
+    ],
+)
+def test_bot_aar_intake_target_requires_loopback_http_or_https(target: str, expected: bool) -> None:
+    assert bool(server._bot_aar_intake_target(target)) is expected
+
+
+def test_bot_aar_intake_target_allows_configured_private_https_host(monkeypatch) -> None:
+    monkeypatch.setattr(server, "BOT_AAR_ALLOWED_HOSTS", frozenset({"bot.internal"}))
+    assert server._bot_aar_intake_target("https://bot.internal/v1/aar/submissions")
 
 
 def test_cookie_flags_include_secure_when_required() -> None:
@@ -562,6 +586,159 @@ def test_rank_guide_route_serves_the_site_page(local_site) -> None:
     assert b"each brother who extracts" not in page
 
 
+def test_submit_aar_direct_route_serves_the_site_page(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname"})
+    cookie = _session_value({"id": "42", "name": "AccountName", "csrf": "csrf-token"})
+    for method in ("GET", "HEAD"):
+        with urllib.request.urlopen(urllib.request.Request(local_site + "/submit-aar", method=method, headers={"Cookie": f"strategium_session={cookie}"})) as response:
+            assert response.status == 200
+            assert response.headers["Content-Type"] == "text/html; charset=utf-8"
+            page = response.read()
+            if method == "GET":
+                assert b'data-page="submit-aar"' in page
+                assert b"function renderSubmitAar()" in page
+            else:
+                assert page == b""
+
+
+def test_aar_submission_requires_login(local_site) -> None:
+    request = urllib.request.Request(
+        local_site + "/api/aar-submissions",
+        data=b"multipart-body",
+        headers={"Content-Type": "multipart/form-data; boundary=x"},
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 401
+    assert json.loads(error.value.read())["error"] == "login_required"
+
+
+def test_aar_submission_rejects_when_global_upload_slots_are_full(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname"})
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "BOT_AAR_SHARED_SECRET", "test-aar-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    token = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+
+    class FullBudget:
+        def acquire(self, blocking=False):
+            return False
+
+        def release(self):
+            raise AssertionError("full budget must not be released by rejected request")
+
+    monkeypatch.setattr(server, "_AAR_SUBMISSION_SLOTS", FullBudget())
+    request = urllib.request.Request(
+        local_site + "/api/aar-submissions",
+        data=b"multipart-body",
+        headers={
+            "Content-Type": "multipart/form-data; boundary=x",
+            "Cookie": f"strategium_session={token}",
+            "Origin": local_site,
+            "X-CSRF-Token": "csrf-token",
+            "X-AAR-Idempotency-Key": "site-submit-1234567890",
+        },
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 429
+    assert json.loads(error.value.read())["error"] == "aar_upload_capacity"
+
+
+def test_aar_submission_rejects_invalid_csrf(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    token = _session_value({"id": "42", "name": "Test", "csrf": "expected-csrf"})
+    request = urllib.request.Request(
+        local_site + "/api/aar-submissions",
+        data=b"multipart-body",
+        headers={
+            "Content-Type": "multipart/form-data; boundary=x",
+            "Cookie": f"strategium_session={token}",
+            "Origin": local_site,
+            "X-CSRF-Token": "incorrect-csrf",
+        },
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 403
+    assert json.loads(error.value.read())["error"] == "csrf_failed"
+
+
+def test_aar_submission_forwards_signed_body_and_authenticated_user(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname"})
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "BOT_AAR_SHARED_SECRET", "test-aar-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    token = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+    body = b"multipart-body"
+    idempotency_key = "site-submit-1234567890"
+    forwarded = {}
+
+    class FakeResponse:
+        status = 201
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b'{"ok":true,"receipt_url":"https://discord.com/channels/1/2/3"}'
+
+    class FakeOpener:
+        def __init__(self, capture: bool):
+            self.capture = capture
+
+        def open(self, request, data=None, timeout=None):
+            if self.capture:
+                forwarded["request"] = request
+                forwarded["timeout"] = timeout
+                return FakeResponse()
+            return original_build_opener().open(request, data, timeout)
+
+    original_build_opener = server.urllib.request.build_opener
+    monkeypatch.setattr(
+        server.urllib.request,
+        "build_opener",
+        lambda *handlers: FakeOpener(server._NoRedirectHandler in handlers),
+    )
+    request = urllib.request.Request(
+        local_site + "/api/aar-submissions",
+        data=body,
+        headers={
+            "Content-Type": "multipart/form-data; boundary=x",
+            "Cookie": f"strategium_session={token}",
+            "Origin": local_site,
+            "X-CSRF-Token": "csrf-token",
+            "X-AAR-Idempotency-Key": idempotency_key,
+        },
+        method="POST",
+    )
+
+    with urllib.request.urlopen(request) as response:
+        payload = json.loads(response.read())
+
+    sent = forwarded["request"]
+    sent_headers = {key.lower(): value for key, value in sent.header_items()}
+    timestamp = sent_headers["x-strategium-aar-timestamp"]
+    digest = server.hashlib.sha256(body).hexdigest()
+    signed = f"{timestamp}\n{idempotency_key}\n42\n{digest}".encode()
+    expected = server.hmac.new(b"test-aar-secret", signed, server.hashlib.sha256).hexdigest()
+    assert sent.data == body
+    assert sent_headers["x-strategium-user-id"] == "42"
+    assert sent_headers["x-strategium-aar-signature"] == expected
+    assert forwarded["timeout"] == 60
+    assert payload["receipt_url"] == "https://discord.com/channels/1/2/3"
+
+
 def test_ambience_is_optional_and_served_from_fixed_path(local_site, tmp_path, monkeypatch) -> None:
     track = tmp_path / "fortress-ambience.mp3"
     monkeypatch.setattr(server, "AMBIENCE_PATH", track)
@@ -590,3 +767,210 @@ def test_awards_validation_keeps_only_known_ribbons() -> None:
     )
     assert awards == [{"name": "The Order Omega", "ribbon": "1-Order Omega.png"}]
     assert _validate_awards(None) == []
+
+
+def test_validate_members_sanitizes_recent_aar_teammates() -> None:
+    members = server._validate_members({
+        "members": [{
+            "id": "42",
+            "name": "Brother FortyTwo",
+            "recentAarTeammates": ["101", "101", "not-an-id", "102", "103", "104", "105", "106"],
+        }]
+    })
+
+    assert members[0]["recentAarTeammates"] == ["101", "102", "103", "104", "105"]
+
+
+@pytest.fixture
+def evidence_session(local_site, monkeypatch):
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname"})
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    monkeypatch.setattr(server, "_EVIDENCE_SESSIONS", {})
+    monkeypatch.setattr(server, "_EVIDENCE_CREATE_TIMES", {})
+    monkeypatch.setattr(server, "_EVIDENCE_CLEANUP_STARTED", True)
+    cookie = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+    headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "X-CSRF-Token": "csrf-token"}
+    request = urllib.request.Request(local_site + "/api/aar-evidence/session", data=b"", headers=headers, method="POST")
+    with urllib.request.urlopen(request) as response:
+        handoff = json.loads(response.read())
+        assert response.headers["Cache-Control"] == "no-store"
+    fragment = urllib.parse.urlsplit(handoff["upload_url"]).fragment
+    session_id, token = fragment.split(".")
+    assert handoff["qr"].startswith("data:image/png;base64,")
+    return local_site, headers, session_id, token
+
+
+def _valid_evidence_png() -> bytes:
+    from PIL import Image
+
+    buffer = server.io.BytesIO()
+    Image.new("RGB", (2, 2), "white").save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def test_phone_evidence_upload_only_token_and_owner_retrieval(evidence_session):
+    local_site, owner_headers, session_id, token = evidence_session
+    image = _valid_evidence_png()
+    path = local_site + f"/api/aar-evidence/{session_id}"
+    upload = urllib.request.Request(path + "/upload", data=image, headers={
+        "Origin": local_site, "Authorization": f"Bearer {token}", "Content-Type": "image/png"
+    }, method="POST")
+    with urllib.request.urlopen(upload) as response:
+        assert response.status == 201
+        image_id = json.loads(response.read())["image_id"]
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(urllib.request.Request(path, headers={"Authorization": f"Bearer {token}"}))
+    assert error.value.code == 401
+    other_cookie = _session_value({"id": "99", "name": "Other", "csrf": "other"})
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(urllib.request.Request(path, headers={"Cookie": f"strategium_session={other_cookie}"}))
+    assert error.value.code == 404
+    with urllib.request.urlopen(urllib.request.Request(path, headers=owner_headers)) as response:
+        assert len(json.loads(response.read())["images"]) == 1
+    with urllib.request.urlopen(urllib.request.Request(path + "/" + image_id, headers=owner_headers)) as response:
+        assert response.read() == image
+        assert response.headers["Cache-Control"] == "no-store"
+    with urllib.request.urlopen(urllib.request.Request(path + "/close", data=b"", headers=owner_headers, method="POST")) as response:
+        assert response.status == 200
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(upload)
+    assert error.value.code == 403
+
+
+def test_phone_evidence_link_expiry(evidence_session):
+    local_site, headers, session_id, _token = evidence_session
+    server._EVIDENCE_SESSIONS[session_id]["expires_at"] = time.time() - 1
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(urllib.request.Request(local_site + f"/api/aar-evidence/{session_id}", headers=headers))
+    assert error.value.code == 404
+    assert session_id not in server._EVIDENCE_SESSIONS
+
+
+def test_phone_link_creation_cooldown_precedes_qr_encoding(evidence_session, monkeypatch):
+    import qrcode
+
+    local_site, headers, _session_id, _token = evidence_session
+
+    def unexpected_encode(_value):
+        raise AssertionError("Rate-limited requests must not generate QR codes")
+
+    monkeypatch.setattr(qrcode, "make", unexpected_encode)
+    request = urllib.request.Request(local_site + "/api/aar-evidence/session", data=b"", headers=headers, method="POST")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 429
+
+
+def test_phone_evidence_rejects_upload_when_owner_loses_pilot_access(evidence_session, monkeypatch):
+    local_site, _headers, session_id, token = evidence_session
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": False, "display_name": "Guild Nickname"})
+    request = urllib.request.Request(local_site + f"/api/aar-evidence/{session_id}/upload", data=_valid_evidence_png(), headers={
+        "Origin": local_site, "Authorization": f"Bearer {token}", "Content-Type": "image/png"
+    }, method="POST")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 403
+    assert server._EVIDENCE_SESSIONS[session_id]["images"] == {}
+
+
+def test_phone_evidence_rejects_malformed_image(evidence_session):
+    local_site, _headers, session_id, token = evidence_session
+    request = urllib.request.Request(local_site + f"/api/aar-evidence/{session_id}/upload", data=b"\x89PNG\r\n\x1a\n", headers={
+        "Origin": local_site, "Authorization": f"Bearer {token}", "Content-Type": "image/png"
+    }, method="POST")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 400
+    assert server._EVIDENCE_SESSIONS[session_id]["images"] == {}
+
+
+def test_phone_evidence_upload_enforces_global_capacity(evidence_session, monkeypatch):
+    local_site, _headers, session_id, token = evidence_session
+    monkeypatch.setattr(server, "EVIDENCE_MAX_GLOBAL_BYTES", 1)
+    request = urllib.request.Request(local_site + f"/api/aar-evidence/{session_id}/upload", data=_valid_evidence_png(), headers={
+        "Origin": local_site, "Authorization": f"Bearer {token}", "Content-Type": "image/png"
+    }, method="POST")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 429
+    assert server._EVIDENCE_SESSIONS[session_id]["images"] == {}
+
+
+def test_phone_evidence_creation_requires_login_and_csrf(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    request = urllib.request.Request(local_site + "/api/aar-evidence/session", data=b"", method="POST")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 401
+    cookie = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+    request.add_header("Cookie", f"strategium_session={cookie}")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 403
+
+
+@pytest.mark.parametrize("path,method", [
+    ("/submit-aar", "GET"), ("/submit-aar", "HEAD"),
+    ("/api/aar-submissions", "POST"), ("/api/aar-evidence/session", "POST"),
+])
+def test_aar_pilot_rejects_logged_in_nonstaff(local_site, monkeypatch, path, method):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": False, "display_name": "Guild Nickname"})
+    cookie = _session_value({"id": "42", "name": "AccountName", "csrf": "csrf-token"})
+    headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "X-CSRF-Token": "csrf-token"}
+    request = urllib.request.Request(local_site + path, data=b"" if method == "POST" else None, headers=headers, method=method)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 403
+
+
+def test_me_uses_guild_display_name_not_account_name(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Watch Techmarine Jules"})
+    cookie = _session_value({"id": "42", "name": "real-account-username", "csrf": "csrf-token"})
+    with urllib.request.urlopen(urllib.request.Request(local_site + "/api/me", headers={"Cookie": f"strategium_session={cookie}"})) as response:
+        body = response.read()
+        payload = json.loads(body)
+    assert payload["aar_allowed"] is True
+    assert payload["user"]["name"] == "Watch Techmarine Jules"
+    assert b"real-account-username" not in body
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the browser-handler regression")
+def test_screenshot_sources_share_limits_and_submission_guard():
+        source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+const snippet = html.slice(html.indexOf('function addAarScreenshots('), html.indexOf('function aarAllowedTagKeys('));
+const errors = [];
+let previews = 0;
+const context = {
+    aarDraft: { files: [], submitting: false, idempotencyKey: 'original', reviewing: true },
+    AAR_MAX_SCREENSHOTS: 10, AAR_MAX_IMAGE_BYTES: 8 * 1024 * 1024, AAR_MAX_TOTAL_IMAGE_BYTES: 32 * 1024 * 1024,
+    URL: { createObjectURL: () => { previews++; return 'blob:preview'; } },
+    setAarStatus: message => errors.push(message), renderSubmitAar: () => {}
+};
+vm.createContext(context);
+vm.runInContext(snippet, context);
+const image = { name: 'proof.png', type: 'image/png', size: 1024 };
+assert.equal(context.addAarScreenshots([image]), true);
+assert.equal(context.aarDraft.files.length, 1);
+assert.equal(context.aarDraft.idempotencyKey, '');
+assert.equal(context.addAarScreenshots([{ ...image, type: 'image/svg+xml' }]), false);
+assert.equal(context.addAarScreenshots([{ ...image, size: 8 * 1024 * 1024 + 1 }]), false);
+assert.equal(context.addAarScreenshots(Array(10).fill(image)), false);
+context.aarDraft.files = Array(4).fill({ ...image, size: 8 * 1024 * 1024 });
+assert.equal(context.addAarScreenshots([image]), false);
+context.aarDraft.files = [];
+context.aarDraft.submitting = true;
+assert.equal(context.addAarScreenshots([image]), false);
+assert.equal(context.aarDraft.files.length, 0);
+assert.equal(previews, 1);
+assert.equal(errors.length, 4);
+"""
+        subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
