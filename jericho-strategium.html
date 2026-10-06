@@ -905,6 +905,7 @@
   }
   .site-nav a:hover { color: var(--green); border-color: var(--green-dim); }
   .site-nav a.active { color: var(--gold); border-color: var(--gold-dim); background: rgba(207,174,104,0.06); }
+  .site-nav a[hidden] { display: none; }
 
   .reach-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
   .reach-stat { border: 1px solid var(--border-dim); background: var(--panel); padding: 10px 12px; }
@@ -1189,6 +1190,11 @@
   .aar-member input { accent-color: var(--gold); flex: 0 0 auto; }
   .aar-member span { min-width: 0; overflow-wrap: anywhere; }
   .aar-upload { display: grid; gap: 10px; }
+  .aar-drop-zone { padding: 12px; border: 1px dashed var(--border); background: rgba(79,214,122,.02); }
+  .aar-drop-zone.drag-active { border-color: var(--gold); background: rgba(207,174,104,.08); }
+  .aar-phone-handoff { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border-dim); }
+  .aar-phone-handoff img { display: block; width: 164px; height: 164px; background: white; }
+  .aar-phone-handoff a { color: var(--green); font-size: 11px; }
   .aar-file-picker { position: relative; display: inline-flex; min-height: 42px; align-items: center; gap: 10px; overflow: hidden; padding: 8px 12px; border: 1px solid var(--green-dim); background: rgba(79,214,122,.05); color: var(--green); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
   .aar-file-picker:hover, .aar-file-picker:focus-within { border-color: var(--gold); color: var(--gold); background: rgba(207,174,104,.07); }
   .aar-file-picker-icon { color: var(--gold); font-size: 17px; line-height: 1; }
@@ -1404,7 +1410,7 @@
       </div>
       <nav class="site-nav" aria-label="Ordo Xenos intelligence channels">
         <a href="/" data-atlas-home>Fortress Atlas</a>
-        <a href="/submit-aar" data-page="submit-aar">Submit AARs</a>
+        <a href="/submit-aar" data-page="submit-aar" hidden>Submit AARs</a>
         <a href="/reach" data-page="reach">Sector Operations</a>
         <a href="/" data-page="fortress">Personnel Docket</a>
         <a href="/record-of-blood" data-page="blood">Chapter Origins</a>
@@ -2167,6 +2173,7 @@ async function loadAuth() {
 }
 
 function renderAuthButton() {
+  document.querySelector('.site-nav [data-page="submit-aar"]')?.toggleAttribute("hidden", !state.auth.aar_allowed);
   const container = document.getElementById("auth-container");
   if (!container) return;
   if (state.auth && state.auth.authenticated && state.auth.user) {
@@ -3459,8 +3466,62 @@ const AAR_MAX_TOTAL_IMAGE_BYTES = 32 * 1024 * 1024;
 const aarDraft = {
   mode: "ops_strat", mission: "pve_inferno", difficulty: "@Ruthless", rank: "A", armoryData: "0",
   waves: "10", kia: "0", geneSeed: "unknown", geneCarrier: "", pvpMap: "Cathedrum",
-  pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), tags: new Set(), files: [], submitting: false, reviewing: false, idempotencyKey: ""
+  pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), tags: new Set(), files: [], memberFilter: "", submitting: false, reviewing: false, idempotencyKey: ""
 };
+const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
+
+async function closeAarPhoneHandoff() {
+  const sessionId = aarPhoneHandoff.sessionId;
+  if (aarPhoneHandoff.timer) clearInterval(aarPhoneHandoff.timer);
+  aarPhoneHandoff.timer = null;
+  aarPhoneHandoff.sessionId = "";
+  aarPhoneHandoff.url = "";
+  aarPhoneHandoff.qr = "";
+  aarPhoneHandoff.imported.clear();
+  if (!sessionId) return;
+  try {
+    await fetch(apiUrl(`/api/aar-evidence/${sessionId}/close`), {
+      method: "POST", credentials: "include", headers: { "X-CSRF-Token": state.auth.csrf || "" }
+    });
+  } catch {}
+}
+
+async function pollAarPhoneEvidence() {
+  if (aarPhoneHandoff.polling || !aarPhoneHandoff.sessionId || aarDraft.submitting || state.page !== "submit-aar") return;
+  const sessionId = aarPhoneHandoff.sessionId;
+  aarPhoneHandoff.polling = true;
+  try {
+    const response = await fetch(apiUrl(`/api/aar-evidence/${sessionId}`), { credentials: "include", cache: "no-store" });
+    if (!response.ok) {
+      if (response.status === 404 || response.status === 401) {
+        await closeAarPhoneHandoff();
+        renderSubmitAar();
+        setAarStatus("The phone upload link has expired or closed.");
+      }
+      return;
+    }
+    const result = await response.json();
+    const incoming = [];
+    for (const image of result.images || []) {
+      if (aarPhoneHandoff.imported.has(image.id)) continue;
+      const fileResponse = await fetch(apiUrl(`/api/aar-evidence/${sessionId}/${image.id}`), { credentials: "include", cache: "no-store" });
+      if (!fileResponse.ok) continue;
+      const blob = await fileResponse.blob();
+      const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[blob.type];
+      if (!extension) continue;
+      incoming.push({ id: image.id, file: new File([blob], `phone-${image.id}.${extension}`, { type: blob.type }) });
+    }
+    if (aarPhoneHandoff.sessionId !== sessionId || aarDraft.submitting) return;
+    if (incoming.length && addAarScreenshots(incoming.map(item => item.file))) {
+      incoming.forEach(item => aarPhoneHandoff.imported.add(item.id));
+      setAarStatus(`${incoming.length} screenshot${incoming.length === 1 ? "" : "s"} received from phone.`, "success");
+    }
+  } catch {
+    setAarStatus("Phone connection interrupted. Retrying...");
+  } finally {
+    aarPhoneHandoff.polling = false;
+  }
+}
 
 function aarSelectField(id, label, options, value, wide = false) {
   const optionHtml = options.map(option => {
@@ -3480,6 +3541,31 @@ function setAarStatus(message, tone = "") {
 
 function revokeAarPreview(file) {
   if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);
+}
+
+function addAarScreenshots(files) {
+  if (aarDraft.submitting) return false;
+  const selected = Array.from(files || []);
+  if (!selected.length) return false;
+  const validTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
+  let error = "";
+  if (aarDraft.files.length + selected.length > AAR_MAX_SCREENSHOTS) {
+    error = "A report can include no more than 10 screenshots.";
+  } else {
+    const invalid = selected.find(file => !validTypes.has(file.type) || !file.size || file.size > AAR_MAX_IMAGE_BYTES);
+    if (invalid) error = `${invalid.name}: use PNG, JPEG, or WebP images no larger than 8 MiB.`;
+    const totalBytes = [...aarDraft.files, ...selected].reduce((sum, file) => sum + file.size, 0);
+    if (!error && totalBytes > AAR_MAX_TOTAL_IMAGE_BYTES) error = "The combined screenshot size cannot exceed 32 MiB.";
+  }
+  if (error) {
+    setAarStatus(error, "error");
+    return false;
+  }
+  aarDraft.idempotencyKey = "";
+  aarDraft.reviewing = false;
+  aarDraft.files.push(...selected.map(file => ({ file, name: file.name, size: file.size, type: file.type, previewUrl: URL.createObjectURL(file) })));
+  renderSubmitAar();
+  return true;
 }
 
 function aarAllowedTagKeys(mode, missionValue, difficulty, brotherCount, selectedTags) {
@@ -3523,10 +3609,20 @@ function renderSubmitAar() {
   if (userId && !aarDraft.brothers.size) aarDraft.brothers.add(userId);
   const members = state.dataStatus === "live" ? (state.members || []).filter(member => member && member.id && member.name) : [];
   const selectedMembers = [...aarDraft.brothers].map(id => members.find(member => String(member.id) === id)).filter(Boolean);
-  const memberOptions = members.map(member => {
+  const signedInMember = members.find(member => String(member.id) === userId);
+  const recentTeammateIds = new Set((signedInMember?.recentAarTeammates || []).map(String).slice(0, 5));
+  const memberQuery = aarDraft.memberFilter.trim().toLocaleLowerCase();
+  const pickerMembers = members.filter(member => {
+    const id = String(member.id);
+    return aarDraft.brothers.has(id) || (memberQuery
+      ? displayName(member.name).toLocaleLowerCase().includes(memberQuery)
+      : recentTeammateIds.has(id));
+  });
+  const memberOptions = pickerMembers.map(member => {
     const id = String(member.id);
     const rank = RANK_LABELS[member.rank] || member.rank || "Watch Brother";
-    const label = `${rank} · ${displayName(member.name)}`;
+    const isRecent = recentTeammateIds.has(id) && !aarDraft.brothers.has(id);
+    const label = `${rank} · ${displayName(member.name)}${isRecent ? " · Recent" : ""}`;
     return `<label class="aar-member"><input type="checkbox" data-aar-brother value="${escapeHtml(id)}"${aarDraft.brothers.has(id) ? " checked" : ""}><span>${escapeHtml(label)}</span></label>`;
   }).join("");
   const allowedTagKeys = aarAllowedTagKeys(aarDraft.mode, aarDraft.mission, aarDraft.difficulty, aarDraft.brothers.size, [...aarDraft.tags]);
@@ -3557,7 +3653,9 @@ function renderSubmitAar() {
       <button class="aar-image-remove" type="button" data-aar-remove="${index}" aria-label="Remove ${escapeHtml(file.name)}" title="Remove screenshot">×</button>
     </div>`).join("");
   const authMessage = state.auth?.authenticated
-    ? state.dataStatus === "live"
+    ? !state.auth.aar_allowed
+      ? `<p class="aar-empty">AAR submission is not available for this account.</p>`
+      : state.dataStatus === "live"
       ? `<p class="aar-upload-hint">Signed in as ${escapeHtml(state.auth.user?.name || "Watch member")}.</p>`
       : `<p class="aar-empty">The live fortress roster is unavailable. AAR submission requires verified participants.</p>`
     : `<p class="aar-empty">Sign in with Discord to submit an After-Action Report.</p><button class="btn-primary aar-login" type="button" data-aar-login>Login with Discord</button>`;
@@ -3581,7 +3679,7 @@ function renderSubmitAar() {
         <p class="aar-description">Record the operation, its participants, and the evidence for the Watch archive.</p>
       </header>
       ${authMessage}
-      ${state.auth?.authenticated && state.dataStatus === "live" ? `<form id="aar-form" class="aar-form">
+      ${state.auth?.authenticated && state.auth.aar_allowed && state.dataStatus === "live" ? `<form id="aar-form" class="aar-form">
         <section class="aar-section" aria-labelledby="aar-details-heading">
           <h3 id="aar-details-heading">Operation Details</h3>
           <div class="aar-fields">
@@ -3591,13 +3689,14 @@ function renderSubmitAar() {
         </section>
         <section class="aar-section" aria-labelledby="aar-team-heading">
           <h3 id="aar-team-heading">Battle-Brothers <span class="aar-upload-hint">${aarDraft.brothers.size} selected · ${mode.maxBrothers} maximum</span></h3>
-          <label class="aar-field aar-field-wide"><span class="field-label">Filter roster</span><input id="aar-member-filter" class="field-input" type="search" autocomplete="off" placeholder="Search by name"></label>
-          <div id="aar-member-list" class="aar-members" role="group" aria-label="Select report participants">${memberOptions || `<p class="aar-empty">The live roster is unavailable. Refresh after connecting to the fortress archive.</p>`}</div>
+          <p class="aar-upload-hint">${memberQuery ? "Matching roster entries" : "Recent comrades · Search to find anyone in the roster"}</p>
+          <label class="aar-field aar-field-wide"><span class="field-label">Search roster</span><input id="aar-member-filter" class="field-input" type="search" autocomplete="off" value="${escapeHtml(aarDraft.memberFilter)}" placeholder="Search by name"></label>
+          <div id="aar-member-list" class="aar-members" role="group" aria-label="Select report participants">${memberOptions || `<p class="aar-empty">${memberQuery ? "No roster entries match this search." : "No recent teammates yet. Search the roster to add participants."}</p>`}</div>
         </section>
         ${tagOptions ? `<section class="aar-section" aria-labelledby="aar-tags-heading"><h3 id="aar-tags-heading">Mission Tags</h3><div class="aar-members" role="group" aria-label="Select mission tags">${tagOptions}</div><p class="aar-upload-hint">Only tags valid for this mission and team will be accepted by the Watch archive.</p></section>` : ""}
         <section class="aar-section" aria-labelledby="aar-evidence-heading">
           <h3 id="aar-evidence-heading">Mission Screenshots</h3>
-          <div class="aar-upload">
+          <div id="aar-drop-zone" class="aar-upload aar-drop-zone">
             <label class="aar-file-picker" for="aar-screenshots">
               <span class="aar-file-picker-icon" aria-hidden="true">+</span>
               <span>Choose Screenshots</span>
@@ -3606,6 +3705,14 @@ function renderSubmitAar() {
             </label>
             <span id="aar-upload-hint" class="aar-upload-hint">1–10 images · PNG, JPEG, or WebP · 8 MiB each · 32 MiB total</span>
             <div class="aar-images">${imageRows}</div>
+            <div class="aar-phone-handoff">
+              ${aarPhoneHandoff.sessionId ? `
+                <img src="${aarPhoneHandoff.qr}" alt="QR code for phone screenshot upload" width="164" height="164">
+                <div><a href="${escapeHtml(aarPhoneHandoff.url)}" target="_blank" rel="noopener noreferrer">Phone Upload Link</a>
+                <p class="aar-upload-hint">Expires ${escapeHtml(new Date(aarPhoneHandoff.expiresAt * 1000).toLocaleTimeString())}</p>
+                <button type="button" id="aar-phone-close" class="btn-dossier-action btn-dossier-cancel">Close Link</button></div>
+              ` : `<button type="button" id="aar-phone-start" class="btn-dossier-action"${aarPhoneHandoff.busy || aarDraft.submitting ? " disabled" : ""}>${aarPhoneHandoff.busy ? "Opening..." : "Add From Phone"}</button>`}
+            </div>
           </div>
         </section>
         ${aarDraft.reviewing ? reviewPanel : ""}
@@ -3640,6 +3747,35 @@ function renderSubmitAar() {
     aarDraft.pvpMode = document.getElementById("aar-pvp-mode")?.value || aarDraft.pvpMode;
     aarDraft.pvpResult = document.getElementById("aar-pvp-result")?.value || aarDraft.pvpResult;
   };
+  document.getElementById("aar-phone-start")?.addEventListener("click", async () => {
+    if (aarPhoneHandoff.busy || aarDraft.submitting) return;
+    readDraftFields();
+    aarPhoneHandoff.busy = true;
+    renderSubmitAar();
+    try {
+      const response = await fetch(apiUrl("/api/aar-evidence/session"), {
+        method: "POST", credentials: "include", headers: { "X-CSRF-Token": state.auth.csrf || "" }
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Phone upload unavailable.");
+      aarPhoneHandoff.sessionId = result.session_id;
+      aarPhoneHandoff.qr = result.qr;
+      aarPhoneHandoff.url = result.upload_url;
+      aarPhoneHandoff.expiresAt = result.expires_at;
+      aarPhoneHandoff.imported.clear();
+      aarPhoneHandoff.timer = setInterval(pollAarPhoneEvidence, 4000);
+      aarPhoneHandoff.busy = false;
+      renderSubmitAar();
+    } catch (error) {
+      aarPhoneHandoff.busy = false;
+      renderSubmitAar();
+      setAarStatus(error.message || "Phone upload unavailable.", "error");
+    }
+  });
+  document.getElementById("aar-phone-close")?.addEventListener("click", async () => {
+    await closeAarPhoneHandoff();
+    renderSubmitAar();
+  });
   form.querySelectorAll("[data-aar-brother]").forEach(input => input.addEventListener("change", () => {
     invalidateIdempotencyKey();
     readDraftFields();
@@ -3651,11 +3787,13 @@ function renderSubmitAar() {
     renderSubmitAar();
   }));
   document.getElementById("aar-member-filter")?.addEventListener("input", event => {
-    const query = event.target.value.trim().toLocaleLowerCase();
-    form.querySelectorAll(".aar-member").forEach(label => {
-      const input = label.querySelector("input[data-aar-brother]");
-      if (input) label.hidden = !label.textContent.toLocaleLowerCase().includes(query);
-    });
+    readDraftFields();
+    aarDraft.memberFilter = event.target.value;
+    const cursor = event.target.selectionStart;
+    renderSubmitAar();
+    const nextFilter = document.getElementById("aar-member-filter");
+    nextFilter?.focus();
+    nextFilter?.setSelectionRange(cursor, cursor);
   });
   document.getElementById("aar-mode")?.addEventListener("change", event => {
     invalidateIdempotencyKey();
@@ -3680,28 +3818,25 @@ function renderSubmitAar() {
     });
   });
   document.getElementById("aar-screenshots")?.addEventListener("change", event => {
-    invalidateIdempotencyKey();
-    const selected = [...(event.target.files || [])];
-    const validTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
-    const totalBytes = aarDraft.files.reduce((sum, file) => sum + file.size, 0);
-    if (aarDraft.files.length + selected.length > AAR_MAX_SCREENSHOTS) {
-      setAarStatus("A report can include no more than 10 screenshots.", "error");
-      event.target.value = "";
-      return;
-    }
-    const invalid = selected.find(file => !validTypes.has(file.type) || file.size > AAR_MAX_IMAGE_BYTES);
-    if (invalid) {
-      setAarStatus(`${invalid.name}: use PNG, JPEG, or WebP images no larger than 8 MiB.`, "error");
-      event.target.value = "";
-      return;
-    }
-    if (totalBytes + selected.reduce((sum, file) => sum + file.size, 0) > AAR_MAX_TOTAL_IMAGE_BYTES) {
-      setAarStatus("The combined screenshot size cannot exceed 32 MiB.", "error");
-      event.target.value = "";
-      return;
-    }
-    aarDraft.files.push(...selected.map(file => ({ file, name: file.name, size: file.size, type: file.type, previewUrl: URL.createObjectURL(file) })));
-    renderSubmitAar();
+    readDraftFields();
+    addAarScreenshots(event.target.files);
+    event.target.value = "";
+  });
+  const dropZone = document.getElementById("aar-drop-zone");
+  dropZone?.addEventListener("dragover", event => {
+    if (!Array.from(event.dataTransfer?.types || []).includes("Files")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = aarDraft.submitting ? "none" : "copy";
+    dropZone.classList.toggle("drag-active", !aarDraft.submitting);
+  });
+  dropZone?.addEventListener("dragleave", event => {
+    if (!dropZone.contains(event.relatedTarget)) dropZone.classList.remove("drag-active");
+  });
+  dropZone?.addEventListener("drop", event => {
+    event.preventDefault();
+    dropZone.classList.remove("drag-active");
+    readDraftFields();
+    addAarScreenshots(event.dataTransfer?.files);
   });
   form.querySelectorAll("[data-aar-remove]").forEach(button => button.addEventListener("click", () => {
     invalidateIdempotencyKey();
@@ -3777,6 +3912,7 @@ function renderSubmitAar() {
       aarDraft.files.forEach(revokeAarPreview);
       aarDraft.files = [];
       aarDraft.idempotencyKey = "";
+      await closeAarPhoneHandoff();
       aarDraft.submitting = false;
       aarDraft.reviewing = false;
       renderSubmitAar();
@@ -4472,6 +4608,7 @@ function updateSiteNav() {
 }
 
 async function setPage(page, push, originEl = null) {
+  if (page === "submit-aar" && !state.auth.aar_allowed) return;
   if (page === state.page) {
     if (page === "fortress" && push) navigate("strategium", {}, null, "out");
     return;
@@ -6830,6 +6967,22 @@ function closeSearch() {
 /* ---------------------------------------------------------------------- */
 
 function wireEvents() {
+  document.addEventListener("paste", event => {
+    if (state.page !== "submit-aar" || !document.getElementById("aar-form")) return;
+    const screenshots = Array.from(event.clipboardData?.items || [])
+      .filter(item => item.kind === "file" && item.type.startsWith("image/"))
+      .map(item => item.getAsFile()).filter(Boolean);
+    if (!screenshots.length) return;
+    event.preventDefault();
+    addAarScreenshots(screenshots);
+  });
+  for (const eventName of ["dragover", "drop"]) {
+    document.addEventListener(eventName, event => {
+      if (state.page === "submit-aar" && Array.from(event.dataTransfer?.types || []).includes("Files")) {
+        event.preventDefault();
+      }
+    });
+  }
   window.addEventListener("resize", () => requestAnimationFrame(() => {
     drawMapConnectors(); applyReachView();
   }));
