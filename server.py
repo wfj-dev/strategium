@@ -8,6 +8,7 @@ import hashlib
 import hmac
 import http.cookies
 import ipaddress
+import io
 import json
 import logging
 import os
@@ -151,6 +152,15 @@ MAX_JSON_BODY_BYTES = 1024 * 1024
 MAX_AAR_SUBMISSION_BYTES = 34 * 1024 * 1024
 MAX_AAR_CONCURRENT_SUBMISSIONS = 2
 _AAR_SUBMISSION_SLOTS = threading.BoundedSemaphore(MAX_AAR_CONCURRENT_SUBMISSIONS)
+EVIDENCE_TTL_SECONDS = 600
+EVIDENCE_MAX_SESSIONS = 16
+EVIDENCE_MAX_IMAGE_BYTES = 8 * 1024 * 1024
+EVIDENCE_MAX_DRAFT_BYTES = 32 * 1024 * 1024
+EVIDENCE_MAX_GLOBAL_BYTES = 64 * 1024 * 1024
+_EVIDENCE_SESSIONS: dict[str, dict[str, Any]] = {}
+_EVIDENCE_CREATE_TIMES: dict[str, float] = {}
+_EVIDENCE_LOCK = threading.RLock()
+_EVIDENCE_CLEANUP_STARTED = False
 BOT_AAR_INTAKE_URL = os.getenv(
     "STRATEGIUM_BOT_AAR_INTAKE_URL",
     "http://127.0.0.1:8080/v1/aar/submissions",
@@ -229,6 +239,70 @@ def _bot_aar_intake_target(value: str) -> str | None:
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, response, code, message, headers, new_url):
         return None
+
+
+def _aar_access(user_id: str) -> dict[str, Any]:
+    intake = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
+    if not BOT_AAR_SHARED_SECRET or not intake:
+        return {"allowed": False, "display_name": ""}
+    body = _json_bytes({"user_id": str(user_id)})
+    timestamp = str(int(time.time()))
+    key = f"access-{user_id}"
+    signed = f"{timestamp}\n{key}\n{user_id}\n{hashlib.sha256(body).hexdigest()}".encode()
+    signature = hmac.new(BOT_AAR_SHARED_SECRET.encode(), signed, hashlib.sha256).hexdigest()
+    request = urllib.request.Request(
+        intake.removesuffix("/submissions") + "/access", data=body, method="POST",
+        headers={"Content-Type": "application/json", "X-Strategium-User-ID": str(user_id),
+                 "X-Strategium-AAR-Timestamp": timestamp, "X-Strategium-AAR-Signature": signature},
+    )
+    try:
+        opener = urllib.request.build_opener(_NoRedirectHandler)
+        with opener.open(request, timeout=5) as response:
+            result = json.loads(response.read(4096))
+        if not isinstance(result, dict):
+            return {"allowed": False, "display_name": ""}
+        return {"allowed": result.get("allowed") is True and result.get("guild_member") is True,
+                "display_name": _text(result.get("display_name"), 100)}
+    except (OSError, ValueError, urllib.error.URLError):
+        return {"allowed": False, "display_name": ""}
+
+
+def _evidence_cleanup_loop() -> None:
+    interval = threading.Event()
+    while not interval.wait(30):
+        with _EVIDENCE_LOCK:
+            _prune_evidence_sessions()
+
+
+def _prune_evidence_sessions() -> None:
+    now = time.time()
+    for session_id, session in list(_EVIDENCE_SESSIONS.items()):
+        if session["expires_at"] <= now:
+            _EVIDENCE_SESSIONS.pop(session_id, None)
+    for owner_id, created_at in list(_EVIDENCE_CREATE_TIMES.items()):
+        if now - created_at >= 30:
+            _EVIDENCE_CREATE_TIMES.pop(owner_id, None)
+
+
+def _evidence_image_type(body: bytes, content_type: str) -> str:
+    from PIL import Image, UnidentifiedImageError
+
+    signatures = {
+        "image/png": body.startswith(b"\x89PNG\r\n\x1a\n"),
+        "image/jpeg": body.startswith(b"\xff\xd8\xff"),
+        "image/webp": len(body) >= 12 and body[:4] == b"RIFF" and body[8:12] == b"WEBP",
+    }
+    if not signatures.get(content_type):
+        raise ValueError("Use PNG, JPEG, or WebP screenshots.")
+    try:
+        with Image.open(io.BytesIO(body)) as image:
+            expected_format = {"image/png": "PNG", "image/jpeg": "JPEG", "image/webp": "WEBP"}[content_type]
+            if image.format != expected_format or image.width * image.height > 40_000_000 or getattr(image, "n_frames", 1) != 1:
+                raise ValueError("Use a single screenshot up to 40 megapixels.")
+            image.verify()
+    except (OSError, SyntaxError, UnidentifiedImageError, Image.DecompressionBombError) as error:
+        raise ValueError("Invalid screenshot file.") from error
+    return content_type
 
 
 def _discord_invite_url(value: str) -> str:
@@ -370,6 +444,12 @@ def _validate_members(payload: Any) -> list[dict[str, Any]]:
             continue
         member = dict(member)
         member["awards"] = _validate_awards(member.get("awards"))
+        recent_teammates = member.get("recentAarTeammates")
+        if not isinstance(recent_teammates, list):
+            recent_teammates = []
+        member["recentAarTeammates"] = list(dict.fromkeys(
+            str(user_id) for user_id in recent_teammates if str(user_id).isdigit()
+        ))[:5]
         members.append(member)
     return members
 
@@ -624,11 +704,22 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         expected = str(user.get("csrf") or "")
         return bool(supplied and expected and hmac.compare_digest(supplied, expected))
 
+    def _require_aar_access(self, user: dict[str, str] | None) -> bool:
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return False
+        if not _aar_access(str(user["id"]))["allowed"]:
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_access_denied"})
+            return False
+        return True
+
     def do_OPTIONS(self) -> None:
         self._send(HTTPStatus.NO_CONTENT, {})
 
     def do_HEAD(self) -> None:
         path = urllib.parse.urlparse(self.path).path
+        if path == "/submit-aar" and not self._require_aar_access(self._cookie_user()):
+            return
         if path in PAGE_PATHS:
             body = (ROOT / "jericho-strategium.html").read_bytes()
             self.send_response(HTTPStatus.OK)
@@ -646,7 +737,22 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path in PAGE_PATHS:
+        if parsed.path == "/submit-aar" and not self._require_aar_access(self._cookie_user()):
+            return
+        if parsed.path == "/aar-evidence":
+            body = (ROOT / "aar-evidence.html").read_bytes()
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; frame-ancestors 'none'")
+            self.end_headers()
+            self.wfile.write(body)
+        elif parsed.path.startswith("/api/aar-evidence/"):
+            self._get_evidence(parsed.path)
+        elif parsed.path in PAGE_PATHS:
             self._send_page()
         elif parsed.path == "/health":
             self._send(HTTPStatus.OK, {"ok": True})
@@ -751,6 +857,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urllib.parse.urlparse(self.path).path
+        if path == "/api/aar-evidence/session":
+            self._create_evidence_session()
+            return
+        if path.startswith("/api/aar-evidence/"):
+            self._upload_evidence(path)
+            return
         if path == "/internal/roster/snapshot":
             self._receive_snapshot()
             return
@@ -760,6 +872,171 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         else:
             self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
+    def _create_evidence_session(self) -> None:
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return
+        if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
+            self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
+            return
+        if not self._require_aar_access(user):
+            return
+        if not _AAR_SUBMISSION_SLOTS.acquire(blocking=False):
+            self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "aar_upload_capacity"})
+            return
+        try:
+            self._create_evidence_session_authorized(user)
+        finally:
+            _AAR_SUBMISSION_SLOTS.release()
+
+    def _create_evidence_session_authorized(self, user: dict[str, str]) -> None:
+        global _EVIDENCE_CLEANUP_STARTED
+        owner_id = str(user["id"])
+        with _EVIDENCE_LOCK:
+            _prune_evidence_sessions()
+            if owner_id in _EVIDENCE_CREATE_TIMES:
+                self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "Wait 30 seconds before creating another phone link."})
+                return
+            previous = [key for key, value in _EVIDENCE_SESSIONS.items() if value["owner"] == owner_id]
+            if len(_EVIDENCE_SESSIONS) - len(previous) >= EVIDENCE_MAX_SESSIONS:
+                self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "phone_upload_capacity"})
+                return
+            _EVIDENCE_CREATE_TIMES[owner_id] = time.time()
+        try:
+            import qrcode
+        except ImportError:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "phone_upload_unavailable"})
+            return
+        session_id = secrets.token_urlsafe(18)
+        token = secrets.token_urlsafe(32)
+        expires_at = time.time() + EVIDENCE_TTL_SECONDS
+        origin = _normalize_origin(ALLOWED_ORIGIN)
+        link = f"{origin}/aar-evidence#{session_id}.{token}"
+        png = io.BytesIO()
+        qrcode.make(link).save(png, format="PNG")
+        with _EVIDENCE_LOCK:
+            _prune_evidence_sessions()
+            previous = [key for key, value in _EVIDENCE_SESSIONS.items() if value["owner"] == str(user["id"])]
+            if len(_EVIDENCE_SESSIONS) - len(previous) >= EVIDENCE_MAX_SESSIONS:
+                self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "phone_upload_capacity"})
+                return
+            for key in previous:
+                _EVIDENCE_SESSIONS.pop(key, None)
+            _EVIDENCE_SESSIONS[session_id] = {
+                "owner": str(user["id"]), "token_hash": hashlib.sha256(token.encode()).hexdigest(),
+                "expires_at": expires_at, "images": {},
+            }
+            if not _EVIDENCE_CLEANUP_STARTED:
+                threading.Thread(target=_evidence_cleanup_loop, daemon=True).start()
+                _EVIDENCE_CLEANUP_STARTED = True
+        self._send(HTTPStatus.CREATED, {
+            "session_id": session_id, "upload_url": link, "expires_at": expires_at,
+            "qr": "data:image/png;base64," + base64.b64encode(png.getvalue()).decode("ascii"),
+        }, {"Cache-Control": "no-store"})
+
+    def _get_evidence(self, path: str) -> None:
+        match = re.fullmatch(r"/api/aar-evidence/([A-Za-z0-9_-]+)(?:/([A-Za-z0-9_-]+))?", path)
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return
+        if not match:
+            self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+            return
+        session_id, image_id = match.groups()
+        if not self._require_aar_access(user):
+            return
+        with _EVIDENCE_LOCK:
+            _prune_evidence_sessions()
+            session = _EVIDENCE_SESSIONS.get(session_id)
+            if not session or session["owner"] != str(user["id"]):
+                self._send(HTTPStatus.NOT_FOUND, {"error": "handoff_expired"})
+                return
+            if image_id is None:
+                self._send(HTTPStatus.OK, {"images": [
+                    {"id": key, "type": value["type"], "size": len(value["data"])}
+                    for key, value in session["images"].items()
+                ]}, {"Cache-Control": "no-store"})
+                return
+            image = session["images"].get(image_id)
+        if not image:
+            self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+            return
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", image["type"])
+        self.send_header("Content-Length", str(len(image["data"])))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(image["data"])
+
+    def _upload_evidence(self, path: str) -> None:
+        match = re.fullmatch(r"/api/aar-evidence/([A-Za-z0-9_-]+)/(upload|close)", path)
+        if not match:
+            self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+            return
+        session_id, action = match.groups()
+        if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN):
+            self._send(HTTPStatus.FORBIDDEN, {"error": "origin_failed"})
+            return
+        with _EVIDENCE_LOCK:
+            _prune_evidence_sessions()
+            session = _EVIDENCE_SESSIONS.get(session_id)
+            if action == "close":
+                user = self._cookie_user()
+                if not user or not self._csrf_valid(user) or not session or session["owner"] != str(user["id"]):
+                    self._send(HTTPStatus.FORBIDDEN, {"error": "access_denied"})
+                    return
+                _EVIDENCE_SESSIONS.pop(session_id, None)
+                self._send(HTTPStatus.OK, {"ok": True})
+                return
+            supplied = self.headers.get("Authorization", "")
+            token = supplied[7:] if supplied.startswith("Bearer ") else ""
+            if not token or not session or not hmac.compare_digest(session["token_hash"], hashlib.sha256(token.encode()).hexdigest()):
+                self._send(HTTPStatus.FORBIDDEN, {"error": "handoff_expired"})
+                return
+            owner_id = session["owner"]
+        if not _aar_access(owner_id)["allowed"]:
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_access_denied"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= EVIDENCE_MAX_IMAGE_BYTES:
+                self._send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "image_size_limit"})
+                return
+        except ValueError:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_size"})
+            return
+        if not _AAR_SUBMISSION_SLOTS.acquire(blocking=False):
+            self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "aar_upload_capacity"})
+            return
+        try:
+            self.connection.settimeout(20)
+            body = self.rfile.read(length)
+            if len(body) != length:
+                raise ValueError("Incomplete screenshot upload.")
+            image_type = _evidence_image_type(body, self.headers.get("Content-Type", ""))
+            with _EVIDENCE_LOCK:
+                _prune_evidence_sessions()
+                session = _EVIDENCE_SESSIONS.get(session_id)
+                if not session:
+                    self._send(HTTPStatus.GONE, {"error": "handoff_expired"})
+                    return
+                images = session["images"]
+                draft_bytes = sum(len(image["data"]) for image in images.values())
+                global_bytes = sum(len(image["data"]) for value in _EVIDENCE_SESSIONS.values() for image in value["images"].values())
+                if len(images) >= 10 or draft_bytes + length > EVIDENCE_MAX_DRAFT_BYTES or global_bytes + length > EVIDENCE_MAX_GLOBAL_BYTES:
+                    self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "evidence_capacity"})
+                    return
+                image_id = secrets.token_urlsafe(12)
+                images[image_id] = {"type": image_type, "data": body}
+            self._send(HTTPStatus.CREATED, {"ok": True, "image_id": image_id})
+        except (ValueError, OSError) as error:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+        finally:
+            _AAR_SUBMISSION_SLOTS.release()
+
     def _forward_aar_submission(self) -> None:
         user = self._cookie_user()
         if not user:
@@ -767,6 +1044,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return
         if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
             self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
+            return
+        if not self._require_aar_access(user):
             return
         if not BOT_AAR_SHARED_SECRET:
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_submission_unavailable"})
@@ -797,6 +1076,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return
         try:
             self._forward_aar_submission_body(user, idempotency_key, content_type, content_length, intake_url)
+        except TimeoutError:
+            self._send(HTTPStatus.REQUEST_TIMEOUT, {"error": "upload_timed_out"})
         finally:
             _AAR_SUBMISSION_SLOTS.release()
 
@@ -808,6 +1089,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         content_length: int,
         intake_url: str,
     ) -> None:
+        self.connection.settimeout(20)
         body = self.rfile.read(content_length)
         if len(body) != content_length:
             self._send(HTTPStatus.BAD_REQUEST, {"error": "incomplete_submission"})
@@ -934,7 +1216,11 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def _get_me(self) -> None:
         user = self._cookie_user()
-        self._send(HTTPStatus.OK, {"authenticated": bool(user), "user": user, "csrf": user.get("csrf") if user else None})
+        access = _aar_access(str(user["id"])) if user else {"allowed": False, "display_name": ""}
+        public_user = {"id": str(user["id"]), "name": access["display_name"] or "Watch Member"} if user else None
+        self._send(HTTPStatus.OK, {"authenticated": bool(user), "user": public_user,
+                                  "csrf": user.get("csrf") if user else None,
+                                  "aar_allowed": access["allowed"]}, {"Cache-Control": "no-store"})
 
     def _set_backstory(self) -> None:
         user = self._cookie_user()

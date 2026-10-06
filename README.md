@@ -35,9 +35,19 @@ The live app loads roster data from its same-origin `/api/roster` endpoint. The 
 
 ## Submit AARs
 
+Install the website runtime dependencies with `.venv/bin/python -m pip install -r requirements.txt` before starting the server with that interpreter. QR codes are generated locally; handoff tokens are never sent to an external QR provider.
+
+The AAR pilot is restricted to members holding the **High Command** or **Watch Techmarine** Discord role. The bot configuration defaults to `web_submission.access_mode: "staff"`; change it to `"members"` later to allow all logged-in guild members. The tab is hidden for other accounts, and direct routes, submissions, QR creation, and handoff retrieval enforce authorization server-side. The website displays the member's guild display name rather than their account username. If the private bot bridge cannot verify roles, AAR access fails closed.
+
+The screenshot picker accepts file selection, clipboard image paste, and drag-and-drop. PC/Steam players can paste a copied endgame capture or drop a saved image. Console players can save captures to their phone using the Xbox/PlayStation app, then use **Add From Phone** on the AAR draft: the QR code opens an upload-only page and incoming screenshots appear in the desktop previews. Users must review and submit from the authenticated draft; the phone link cannot submit an AAR or read roster/evidence data.
+
+Phone links expire after ten minutes, can be closed by the draft owner, and are revoked after successful submission. Evidence is staged in memory only (maximum 16 active handoffs / 64 MiB globally, 10 images / 32 MiB per handoff) and disappears on restart. Incoming phone evidence is still subject to the draft's combined screenshot limits. Use the publicly reachable HTTPS site origin for `STRATEGIUM_ALLOWED_ORIGIN`; a localhost QR URL is not reachable from another device. Keep the link private until closed. The phone page strips the token fragment from its displayed URL and sends no referrer.
+
+Phone uploads verify image structure and MIME/format agreement, reject animated images and images above 40 megapixels, and recheck the owner's pilot permission. QR creation shares the global upload slots and has a 30-second per-owner cooldown. Body reads time out after 20 seconds so a stalled upload cannot hold a slot indefinitely. Production still requires HTTPS, the private bot bridge, and upstream request-rate controls.
+
 The **Submit AARs** channel at `/submit-aar` provides authenticated guild members with a mode-aware AAR form. It requires 1–10 PNG, JPEG, or WebP screenshots (8 MiB each, 32 MiB total). The site accepts at most two concurrent uploads; the bot independently caps two in-flight requests and 48 MiB total buffered. The bot validates the structured fields, writes the canonical record and processes points/challenges/awards through its datastore, then posts a separate lore-styled Discord embed with the screenshot previews. The receipt is not parsed as an AAR; its real Discord URL is stored with the record for audit and challenge references.
 
-Run `./setup-secrets.sh` to provision the shared `STRATEGIUM_BOT_AAR_SHARED_SECRET` in both local `.env` files. The site forwards uploads to `STRATEGIUM_BOT_AAR_INTAKE_URL` (default `http://127.0.0.1:8080/v1/aar/submissions`) with a timestamped HMAC; the browser never receives the secret. Remote HTTPS targets must be explicitly listed in `STRATEGIUM_BOT_AAR_ALLOWED_HOSTS` as comma-separated hostnames. Enable the bot route explicitly with `web_submission.enabled: true` in the bot configuration. Keep the bot bridge private and do not expose `/v1/aar/submissions` through a public reverse proxy. The existing staff-only `/submit_aar` slash command and its test mode are unchanged.
+Run `./setup-secrets.sh` to provision the shared `STRATEGIUM_BOT_AAR_SHARED_SECRET` in both local `.env` files. The site forwards uploads to `STRATEGIUM_BOT_AAR_INTAKE_URL` (default `http://127.0.0.1:8080/v1/aar/submissions`) with a timestamped HMAC; the browser never receives the secret. The sibling `/v1/aar/access` route verifies roles and guild display names. Remote HTTPS targets must be explicitly listed in `STRATEGIUM_BOT_AAR_ALLOWED_HOSTS` as comma-separated hostnames. Enable the bot route explicitly with `web_submission.enabled: true` in the bot configuration. Keep the bot bridge private and do not expose `/v1/aar/*` through a public reverse proxy. The existing staff-only `/submit_aar` slash command and its test mode are unchanged.
 
 ## Rank Guide
 
@@ -156,7 +166,9 @@ Example installation:
 ```bash
 sudo useradd --system --home /opt/strategium --shell /usr/sbin/nologin strategium
 sudo install -d -o strategium -g strategium /opt/strategium/data
-sudo install -o root -g root -m 644 server.py jericho-strategium.html /opt/strategium/
+sudo install -o root -g root -m 644 server.py geography.py jericho-strategium.html aar-evidence.html requirements.txt /opt/strategium/
+sudo python3 -m venv /opt/strategium/.venv
+sudo /opt/strategium/.venv/bin/python -m pip install -r /opt/strategium/requirements.txt
 sudo cp -r assets /opt/strategium/  # ribbon images; awards are dropped (and logged) if missing
 sudo install -o root -g root -m 644 deploy/strategium.service.example /etc/systemd/system/strategium.service
 sudo install -o root -g root -m 644 deploy/Caddyfile.example /etc/caddy/Caddyfile
