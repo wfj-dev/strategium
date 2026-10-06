@@ -56,6 +56,13 @@ def test_bot_aar_intake_target_allows_configured_private_https_host(monkeypatch)
     assert server._bot_aar_intake_target("https://bot.internal/v1/aar/submissions")
 
 
+def test_bot_aar_shared_secret_prefers_existing_bot_variable(monkeypatch) -> None:
+    monkeypatch.setenv("STRATEGIUM_BOT_SHARED_SECRET", "existing-bot-secret")
+    monkeypatch.setenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "aar-specific-secret")
+
+    assert server._bot_aar_shared_secret() == "existing-bot-secret"
+
+
 def test_cookie_flags_include_secure_when_required() -> None:
     flags = _cookie_flags(secure=True)
     assert "; Secure" in flags
@@ -618,7 +625,8 @@ def test_aar_submission_requires_login(local_site) -> None:
 def test_aar_submission_rejects_when_global_upload_slots_are_full(local_site, monkeypatch) -> None:
     monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname"})
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
-    monkeypatch.setattr(server, "BOT_AAR_SHARED_SECRET", "test-aar-secret")
+    monkeypatch.delenv("STRATEGIUM_BOT_SHARED_SECRET", raising=False)
+    monkeypatch.setenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "test-aar-secret")
     monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
     monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
     token = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
@@ -673,7 +681,8 @@ def test_aar_submission_rejects_invalid_csrf(local_site, monkeypatch) -> None:
 def test_aar_submission_forwards_signed_body_and_authenticated_user(local_site, monkeypatch) -> None:
     monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname"})
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
-    monkeypatch.setattr(server, "BOT_AAR_SHARED_SECRET", "test-aar-secret")
+    monkeypatch.delenv("STRATEGIUM_BOT_SHARED_SECRET", raising=False)
+    monkeypatch.setenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "test-aar-secret")
     monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
     monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
     token = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
