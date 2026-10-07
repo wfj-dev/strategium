@@ -77,6 +77,8 @@ def build_galactic_assets() -> dict:
 
     output = WEB / "galactic-map"
     output.mkdir(parents=True, exist_ok=True)
+    with Image.open(ASSETS / "Leviathan_Tendril.png") as tendril:
+        tendril.convert("RGBA").save(output / "leviathan-tendril.webp", "WEBP", lossless=True, method=6)
     sources = {}
     for status, suffix in (("secure", "SECURE"), ("critical", "CONTESTED"), ("lost", "LOST")):
         directory = ASSETS / f"JERICHO MAP - {suffix}" / f"JERICHO MAP - {suffix}"
