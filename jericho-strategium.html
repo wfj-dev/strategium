@@ -36,6 +36,15 @@
     min-height: 100vh;
   }
 
+  @media (hover: hover) and (pointer: fine) {
+    html, body, body * { cursor: url("/assets/oxblood-cursor.png") 16 1, auto !important; }
+    p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, pre,
+    input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea, [contenteditable="true"] {
+      cursor: text !important;
+    }
+    button:disabled, input:disabled, [aria-disabled="true"] { cursor: not-allowed !important; }
+  }
+
   body::before {
     content: ""; position: fixed; z-index: 90; inset: -30% 0; pointer-events: none;
     background: linear-gradient(180deg, transparent 0 46%, rgba(96,255,139,.035) 49%, rgba(181,255,198,.055) 50%, rgba(96,255,139,.025) 52%, transparent 55% 100%);

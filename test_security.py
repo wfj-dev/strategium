@@ -119,6 +119,15 @@ def test_discord_invite_url_accepts_only_discord_https_invites(value: str, expec
     assert _discord_invite_url(value) == expected
 
 
+def test_oxblood_cursor_asset_is_allowlisted_and_served(local_site) -> None:
+    path = server._static_asset_path("/assets/oxblood-cursor.png")
+    assert path == server.OXBLOOD_CURSOR_PATH
+
+    with urllib.request.urlopen(local_site + "/assets/oxblood-cursor.png") as response:
+        assert response.headers["Content-Type"] == "image/png"
+        assert len(response.read()) < 20_000
+
+
 def test_session_contains_expiry_and_csrf_token() -> None:
     token = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
     user = _session_user(token)
