@@ -1091,8 +1091,16 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             content_length = 0
-        if content_length <= 0 or content_length > MAX_AAR_SUBMISSION_BYTES:
-            self._send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE if content_length > MAX_AAR_SUBMISSION_BYTES else HTTPStatus.BAD_REQUEST, {"error": "invalid_submission_size"})
+        if content_length > MAX_AAR_SUBMISSION_BYTES:
+            actual_mib = content_length / (1024 * 1024)
+            maximum_mib = MAX_AAR_SUBMISSION_BYTES // (1024 * 1024)
+            self._send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {
+                "error": "invalid_submission_size",
+                "message": f"Submission body is {actual_mib:.2f} MiB; maximum request size is {maximum_mib} MiB.",
+            })
+            return
+        if content_length <= 0:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_submission_size"})
             return
         idempotency_key = self.headers.get("X-AAR-Idempotency-Key", "")
         if not re.fullmatch(r"[A-Za-z0-9_-]{16,128}", idempotency_key):

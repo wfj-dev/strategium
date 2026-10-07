@@ -3661,7 +3661,7 @@ function renderSubmitAar() {
   const imageRows = aarDraft.files.map((file, index) => `
     <div class="aar-image">
       <img src="${file.previewUrl}" alt="Screenshot ${index + 1}: ${escapeHtml(file.name)}">
-      <span class="aar-image-name">${escapeHtml(file.name)}</span>
+      <span class="aar-image-name">${escapeHtml(file.name)} · ${(file.size / (1024 * 1024)).toFixed(2)} MiB</span>
       <button class="aar-image-remove" type="button" data-aar-remove="${index}" aria-label="Remove ${escapeHtml(file.name)}" title="Remove screenshot">×</button>
     </div>`).join("");
   const authMessage = state.auth?.authenticated
@@ -3673,11 +3673,12 @@ function renderSubmitAar() {
     : `<p class="aar-empty">Sign in with Discord to submit an After-Action Report.</p><button class="btn-primary aar-login" type="button" data-aar-login>Login with Discord</button>`;
     const missionName = missionOptions.find(([value]) => value === aarDraft.mission)?.[1] || "Unspecified mission";
     const selectedTagLabels = AAR_SUBMISSION_TAGS.filter(([key]) => aarDraft.tags.has(key)).map(([, label]) => label);
+    const selectedImageMiB = (aarDraft.files.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024)).toFixed(2);
     const reviewPanel = `<section class="aar-section" aria-labelledby="aar-review-heading">
       <h3 id="aar-review-heading">Confirm Archive Entry</h3>
       <div class="aar-fields">
         <div class="aar-field"><span class="field-label">Report</span><div>${escapeHtml(AAR_SUBMISSION_MODES[aarDraft.mode].label)} · ${escapeHtml(missionName)} · ${escapeHtml(aarDraft.difficulty)}</div></div>
-        <div class="aar-field"><span class="field-label">Team and Evidence</span><div>${selectedMembers.length} battle-brothers · ${aarDraft.files.length} screenshots</div></div>
+        <div class="aar-field"><span class="field-label">Team and Evidence</span><div>${selectedMembers.length} battle-brothers · ${aarDraft.files.length} screenshots · ${selectedImageMiB} MiB total</div></div>
         ${selectedTagLabels.length ? `<div class="aar-field aar-field-wide"><span class="field-label">Mission Tags</span><div>${escapeHtml(selectedTagLabels.join(", "))}</div></div>` : ""}
       </div>
       <button class="btn-dossier-action btn-dossier-cancel" type="button" data-aar-edit>Edit report</button>
@@ -3717,7 +3718,7 @@ function renderSubmitAar() {
               <input id="aar-screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="aar-upload-hint">
             </label>
             <p class="aar-mobile-guidance">Console captures: save the screenshot to this phone with the Xbox or PlayStation app, then choose it here from Photos or Gallery.</p>
-            <span id="aar-upload-hint" class="aar-upload-hint">1–10 images · PNG, JPEG, or WebP · ${maxImageMiB} MiB each · 32 MiB total</span>
+            <span id="aar-upload-hint" class="aar-upload-hint">Choose files or paste copied screenshots · PNG, JPEG, or WebP · ${maxImageMiB} MiB each · ${selectedImageMiB} / 32 MiB selected</span>
             <div class="aar-images">${imageRows}</div>
             <div class="aar-phone-handoff">
               ${aarPhoneHandoff.sessionId ? `
