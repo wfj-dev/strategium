@@ -36,25 +36,6 @@
     min-height: 100vh;
   }
 
-  @media (hover: hover) and (pointer: fine) {
-    html, body, body * { cursor: none !important; }
-    p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, pre,
-    input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea, [contenteditable="true"] {
-      cursor: text !important;
-    }
-    button:disabled, input:disabled, [aria-disabled="true"] { cursor: not-allowed !important; }
-    .oxblood-cursor {
-      position: fixed; z-index: 200; top: 0; left: 0; width: 24px; height: 24px;
-      pointer-events: none; opacity: 0; visibility: hidden;
-      transition: transform 90ms ease-out;
-    }
-    .oxblood-cursor.visible { opacity: 1; visibility: visible; }
-    .oxblood-cursor.pressing { transform: translateY(4px); }
-    @media (prefers-reduced-motion: reduce) {
-      .oxblood-cursor { transition: none; }
-    }
-  }
-
   body::before {
     content: ""; position: fixed; z-index: 90; inset: -30% 0; pointer-events: none;
     background: linear-gradient(180deg, transparent 0 46%, rgba(96,255,139,.035) 49%, rgba(181,255,198,.055) 50%, rgba(96,255,139,.025) 52%, transparent 55% 100%);
@@ -957,7 +938,8 @@
   }
   .reach-viewport.dragging { cursor: grabbing; }
   .reach-svg { width: 100%; height: 100%; display: block; }
-  .reach-canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  .reach-canvas-background { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .reach-canvas { position: relative; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
   .reach-viewport.dragging .reach-canvas { cursor: grabbing; }
   .reach-canvas-status {
     position: absolute; left: 12px; top: 56px; z-index: 2; pointer-events: none;
@@ -5137,18 +5119,24 @@ function setupGeographyCanvas() {
   const viewport = document.getElementById("reach-viewport");
   const tooltip = document.getElementById("reach-canvas-tooltip");
   if (!canvas || !viewport || !state.geography) return;
-  const context = canvas.getContext("2d", { alpha: false });
+  const context = canvas.getContext("2d", { alpha: true });
+  const backgroundCanvas = document.createElement("canvas");
+  backgroundCanvas.className = "reach-canvas-background";
+  backgroundCanvas.setAttribute("aria-hidden", "true");
+  canvas.before(backgroundCanvas);
   const geography = state.geography;
   const REACH_ART = geography.mapArt || { x: 0, y: 0, scale: 5, width: 1672, height: 941 };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const MAP_MOTION_START_RATIO = 1.55;
   const MAP_MOTION_END_RATIO = 2.1;
-  let nebulaRenderer = null;
-  let nebulaRendererUnavailable = false;
-  let nebulaMotionStart = null;
-  let approachRenderer = null;
-  let approachRendererUnavailable = false;
-  let approachMotionStart = null;
+  let backgroundRenderer = null;
+  let backgroundUnavailable = false;
+  let backgroundMotionStart = null;
+  backgroundCanvas.addEventListener("webglcontextlost", event => {
+    event.preventDefault();
+    backgroundUnavailable = true;
+    backgroundCanvas.hidden = true;
+  });
   const bounds = {
     x: REACH_ART.x, y: REACH_ART.y,
     w: REACH_ART.width * REACH_ART.scale,
@@ -5282,17 +5270,15 @@ function setupGeographyCanvas() {
     context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
   }
 
-  function nebulaRendererFor(image) {
-    if (nebulaRenderer || nebulaRendererUnavailable) return nebulaRenderer;
-    const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    const gl = canvas.getContext("webgl", { alpha: false, preserveDrawingBuffer: true });
+  function backgroundRendererFor(storm, tendril, stars) {
+    if (backgroundRenderer || backgroundUnavailable) return backgroundRenderer;
+    const gl = backgroundCanvas.getContext("webgl", { alpha: false, antialias: false });
     if (!gl) {
-      nebulaRendererUnavailable = true;
+      backgroundUnavailable = true;
+      backgroundCanvas.hidden = true;
       return null;
     }
-    const compileShader = (type, source) => {
+    const compile = (type, source) => {
       const shader = gl.createShader(type);
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
@@ -5300,45 +5286,84 @@ function setupGeographyCanvas() {
       return shader;
     };
     try {
-      const vertex = compileShader(gl.VERTEX_SHADER, `
+      const vertex = compile(gl.VERTEX_SHADER, `
         attribute vec2 a_position;
-        attribute vec2 a_uv;
         varying vec2 v_uv;
         void main() {
+          v_uv = a_position * 0.5 + 0.5;
           gl_Position = vec4(a_position, 0.0, 1.0);
-          v_uv = a_uv;
         }
       `);
-      const fragment = compileShader(gl.FRAGMENT_SHADER, `
+      const fragment = compile(gl.FRAGMENT_SHADER, `
         precision mediump float;
         uniform sampler2D u_map;
+        uniform sampler2D u_tendril;
+        uniform sampler2D u_stars;
+        uniform vec2 u_view;
+        uniform vec4 u_artRect;
+        uniform vec4 u_starRect;
+        uniform vec2 u_alpha;
         uniform float u_time;
         uniform float u_motion;
         varying vec2 v_uv;
+        bool inside(vec2 uv) {
+          return uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0;
+        }
         float nebulaMask(vec2 uv) {
           vec3 color = texture2D(u_map, uv).rgb;
-          vec4 k = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-          vec4 p = mix(vec4(color.bg, k.wz), vec4(color.gb, k.xy), step(color.b, color.g));
-          vec4 q = mix(vec4(p.xyw, color.r), vec4(color.r, p.yzx), step(p.x, color.r));
-          float delta = q.x - min(q.w, q.y);
-          float hue = abs(q.z + (q.w - q.y) / (6.0 * delta + 1e-10));
-          float saturation = delta / (q.x + 1e-10);
+          vec4 coefficients = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+          vec4 ordered = mix(vec4(color.bg, coefficients.wz), vec4(color.gb, coefficients.xy), step(color.b, color.g));
+          vec4 ranked = mix(vec4(ordered.xyw, color.r), vec4(color.r, ordered.yzx), step(ordered.x, color.r));
+          float delta = ranked.x - min(ranked.w, ranked.y);
+          float hue = abs(ranked.z + (ranked.w - ranked.y) / (6.0 * delta + 1e-10));
+          float saturation = delta / (ranked.x + 1e-10);
           float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
           float purple = smoothstep(0.68, 0.72, hue) * (1.0 - smoothstep(0.95, 0.98, hue));
           return purple * smoothstep(0.28, 0.4, saturation)
-            * smoothstep(0.1, 0.18, q.x) * (1.0 - smoothstep(0.13, 0.17, edge));
+            * smoothstep(0.1, 0.18, ranked.x) * (1.0 - smoothstep(0.13, 0.17, edge));
         }
-        void main() {
-          vec2 uv = v_uv;
+        vec3 nebulaColor(vec2 uv) {
+          vec3 still = texture2D(u_map, uv).rgb;
+          if (u_motion <= 0.0) return still;
           float waveX = sin(uv.y * 9.0 + uv.x * 3.0 + u_time * 0.34)
             + 0.45 * sin(uv.y * 21.0 - uv.x * 6.0 - u_time * 0.2);
           float waveY = sin(uv.x * 8.0 - uv.y * 5.0 + u_time * 0.27)
             + 0.4 * sin(uv.x * 18.0 + uv.y * 4.0 - u_time * 0.17);
-          vec2 displacement = vec2(waveX * 0.0132, waveY * 0.0099) * u_motion;
-          float mask = nebulaMask(uv) * nebulaMask(uv + displacement);
-          vec3 still = texture2D(u_map, uv).rgb;
-          vec3 flowing = texture2D(u_map, uv + displacement).rgb;
-          gl_FragColor = vec4(mix(still, flowing, mask), 1.0);
+          vec2 displaced = uv + vec2(waveX * 0.0132, waveY * 0.0099) * u_motion;
+          return mix(still, texture2D(u_map, displaced).rgb, nebulaMask(uv) * nebulaMask(displaced));
+        }
+        vec3 flowingColor(vec2 uv, vec3 fallback) {
+          if (!inside(uv)) return fallback;
+          vec4 sample = texture2D(u_tendril, uv);
+          return sample.a > 0.02 ? sample.rgb / sample.a : fallback;
+        }
+        vec4 tendrilColor(vec2 uv) {
+          vec4 base = texture2D(u_tendril, uv);
+          if (u_motion <= 0.0 || base.a <= 0.0) return base;
+          vec3 color = base.rgb / max(base.a, 0.001);
+          float phase = fract(u_time / 24.0);
+          float nextPhase = fract(phase + 0.5);
+          vec2 direction = vec2(0.0605, 0.0385) * u_motion;
+          vec3 first = flowingColor(uv + direction * (phase - 0.5), color);
+          vec3 second = flowingColor(uv + direction * (nextPhase - 0.5), color);
+          return vec4(mix(first, second, abs(phase * 2.0 - 1.0)) * base.a, base.a);
+        }
+        void main() {
+          vec2 screen = vec2(v_uv.x, 1.0 - v_uv.y) * u_view;
+          vec2 starUV = (screen - u_starRect.xy) / u_starRect.zw;
+          starUV.y = 1.0 - starUV.y;
+          vec3 color = texture2D(u_stars, starUV).rgb;
+          vec2 artUV = (screen - u_artRect.xy) / u_artRect.zw;
+          artUV.y = 1.0 - artUV.y;
+          if (inside(artUV)) {
+            if (u_alpha.x > 0.01) color = mix(color, nebulaColor(artUV), u_alpha.x);
+            vec2 tendrilUV = (artUV - vec2(0.35)) / 0.65;
+            if (u_alpha.y > 0.01 && inside(tendrilUV)) {
+              vec4 tendril = tendrilColor(tendrilUV) * u_alpha.y;
+              color = tendril.rgb + color * (1.0 - tendril.a);
+            }
+          }
+          gl_FragColor = vec4(color, 1.0);
         }
       `);
       const program = gl.createProgram();
@@ -5347,55 +5372,70 @@ function setupGeographyCanvas() {
       gl.linkProgram(program);
       if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
       gl.useProgram(program);
-
       const buffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        -1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1, 1, 1, 1
-      ]), gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
       const position = gl.getAttribLocation(program, "a_position");
-      const uv = gl.getAttribLocation(program, "a_uv");
       gl.enableVertexAttribArray(position);
-      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
-      gl.enableVertexAttribArray(uv);
-      gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 16, 8);
-
-      const texture = gl.createTexture();
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-      gl.uniform1i(gl.getUniformLocation(program, "u_map"), 0);
-      nebulaRenderer = {
-        canvas, gl, program, image,
-        time: gl.getUniformLocation(program, "u_time"),
-        motion: gl.getUniformLocation(program, "u_motion")
-      };
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      [storm, tendril, stars].forEach((image, index) => {
+        gl.activeTexture(gl.TEXTURE0 + index);
+        gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.uniform1i(gl.getUniformLocation(program, ["u_map", "u_tendril", "u_stars"][index]), index);
+      });
+      const uniforms = Object.fromEntries(["u_view", "u_artRect", "u_starRect", "u_alpha", "u_time", "u_motion"]
+        .map(name => [name, gl.getUniformLocation(program, name)]));
+      backgroundRenderer = { gl, program, uniforms, stars };
     } catch (error) {
-      console.warn("Galactic nebula animation is unavailable; showing the original artwork.", error);
-      nebulaRendererUnavailable = true;
+      console.warn("Animated map background is unavailable; showing the original artwork.", error);
+      backgroundUnavailable = true;
+      backgroundCanvas.hidden = true;
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
     }
-    return nebulaRenderer;
+    return backgroundRenderer;
   }
 
-  function drawNebulaMotion(image, now, ratio) {
-    if (reducedMotion.matches || ratio >= MAP_MOTION_END_RATIO) return image;
-    if (nebulaMotionStart === null) nebulaMotionStart = now;
-    const renderer = nebulaRendererFor(image);
-    if (!renderer || renderer.gl.isContextLost()) return image;
-    renderer.gl.viewport(0, 0, renderer.canvas.width, renderer.canvas.height);
-    renderer.gl.useProgram(renderer.program);
-    renderer.gl.uniform1f(renderer.time, (now - nebulaMotionStart) * .001);
-    renderer.gl.uniform1f(renderer.motion, 1 - canvasSmoothstep(MAP_MOTION_START_RATIO, MAP_MOTION_END_RATIO, ratio));
-    renderer.gl.drawArrays(renderer.gl.TRIANGLE_STRIP, 0, 4);
-    return renderer.canvas;
+  function drawBackground(camera, ratio, now) {
+    if (backgroundUnavailable) return false;
+    const storm = reachArtImage("galactic-base", "/assets/galactic-map/base.webp");
+    const tendril = reachArtImage("eastern-approach", "/assets/galactic-map/leviathan-tendril.webp");
+    const stars = reachArtImage("starfield", "/assets/reach-starfield.webp");
+    if (!storm || !tendril || !stars) return false;
+    const renderer = backgroundRendererFor(storm, tendril, stars);
+    if (!renderer || renderer.gl.isContextLost()) return false;
+    const pixelWidth = Math.round(width * deviceScale);
+    const pixelHeight = Math.round(height * deviceScale);
+    if (backgroundCanvas.width !== pixelWidth || backgroundCanvas.height !== pixelHeight) {
+      backgroundCanvas.width = pixelWidth;
+      backgroundCanvas.height = pixelHeight;
+    }
+    if (backgroundMotionStart === null) backgroundMotionStart = now;
+    const topLeft = worldToScreen(REACH_ART.x, REACH_ART.y, camera);
+    const starScale = Math.max(1, width / stars.naturalWidth, height / stars.naturalHeight);
+    const starWidth = stars.naturalWidth * starScale;
+    const starHeight = stars.naturalHeight * starScale;
+    const { gl, program, uniforms } = renderer;
+    gl.viewport(0, 0, pixelWidth, pixelHeight);
+    gl.useProgram(program);
+    gl.uniform2f(uniforms.u_view, width, height);
+    gl.uniform4f(uniforms.u_artRect, topLeft.x, topLeft.y,
+      REACH_ART.width * REACH_ART.scale * camera.zoom, REACH_ART.height * REACH_ART.scale * camera.zoom);
+    gl.uniform4f(uniforms.u_starRect, (width - starWidth) / 2, (height - starHeight) / 2, starWidth, starHeight);
+    gl.uniform2f(uniforms.u_alpha, 1 - canvasSmoothstep(1.8, 4.5, ratio), 1 - canvasSmoothstep(2, 5, ratio));
+    gl.uniform1f(uniforms.u_time, reducedMotion.matches ? 0 : (now - backgroundMotionStart) * .001);
+    gl.uniform1f(uniforms.u_motion, reducedMotion.matches ? 0 : 1 - canvasSmoothstep(MAP_MOTION_START_RATIO, MAP_MOTION_END_RATIO, ratio));
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    return true;
   }
 
-  function drawArt(camera, ratio, now) {
+  function drawArt(camera, ratio) {
     // Retire the raster nebula backdrop before a deep zoom would stretch it; the starfield carries the scene from there.
     const stormAlpha = 1 - canvasSmoothstep(1.8, 4.5, ratio);
     if (stormAlpha <= .01) return false;
@@ -5415,7 +5455,7 @@ function setupGeographyCanvas() {
       context.drawImage(image, sourceX, sourceY, sourceW, sourceH,
         topLeft.x + sourceX * pixel, topLeft.y + sourceY * pixel, sourceW * pixel, sourceH * pixel);
     };
-    if (storm && stormAlpha > .01) draw(drawNebulaMotion(storm, now, ratio), stormAlpha);
+    if (storm && stormAlpha > .01) draw(storm, stormAlpha);
     context.globalAlpha = 1;
     return stormAlpha > .01 && Boolean(storm);
   }
@@ -5509,109 +5549,12 @@ function setupGeographyCanvas() {
     context.globalAlpha = 1;
   }
 
-  function approachRendererFor(image) {
-    if (approachRenderer || approachRendererUnavailable) return approachRenderer;
-    const surface = document.createElement("canvas");
-    surface.width = image.naturalWidth;
-    surface.height = image.naturalHeight;
-    const gl = surface.getContext("webgl", { alpha: true, premultipliedAlpha: true, preserveDrawingBuffer: true });
-    if (!gl) {
-      approachRendererUnavailable = true;
-      return null;
-    }
-    const compile = (type, source) => {
-      const shader = gl.createShader(type);
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
-      return shader;
-    };
-    try {
-      const vertex = compile(gl.VERTEX_SHADER, `
-        attribute vec2 a_position;
-        varying vec2 v_uv;
-        void main() {
-          v_uv = a_position * 0.5 + 0.5;
-          gl_Position = vec4(a_position, 0.0, 1.0);
-        }
-      `);
-      const fragment = compile(gl.FRAGMENT_SHADER, `
-        precision mediump float;
-        uniform sampler2D u_art;
-        uniform float u_time;
-        uniform float u_motion;
-        varying vec2 v_uv;
-        vec3 flowingColor(vec2 uv, vec3 fallback) {
-          if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return fallback;
-          vec4 sample = texture2D(u_art, uv);
-          return sample.a > 0.02 ? sample.rgb / sample.a : fallback;
-        }
-        void main() {
-          vec2 uv = v_uv;
-          vec4 base = texture2D(u_art, uv);
-          vec3 color = base.rgb / max(base.a, 0.001);
-          float phase = fract(u_time / 24.0);
-          float nextPhase = fract(phase + 0.5);
-          float blend = abs(phase * 2.0 - 1.0);
-          vec2 direction = vec2(0.0605, 0.0385) * u_motion;
-          vec3 first = flowingColor(uv + direction * (phase - 0.5), color);
-          vec3 second = flowingColor(uv + direction * (nextPhase - 0.5), color);
-          gl_FragColor = vec4(mix(first, second, blend) * base.a, base.a);
-        }
-      `);
-      const program = gl.createProgram();
-      gl.attachShader(program, vertex);
-      gl.attachShader(program, fragment);
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
-      gl.useProgram(program);
-      const buffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-      const position = gl.getAttribLocation(program, "a_position");
-      gl.enableVertexAttribArray(position);
-      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-      const texture = gl.createTexture();
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-      gl.uniform1i(gl.getUniformLocation(program, "u_art"), 0);
-      approachRenderer = {
-        canvas: surface, gl, program,
-        time: gl.getUniformLocation(program, "u_time"),
-        motion: gl.getUniformLocation(program, "u_motion")
-      };
-    } catch (error) {
-      console.warn("Approach animation is unavailable; showing the original artwork.", error);
-      approachRendererUnavailable = true;
-    }
-    return approachRenderer;
-  }
-
-  function drawEasternApproach(camera, ratio, now) {
+  function drawEasternApproach(camera, ratio) {
     const alpha = 1 - canvasSmoothstep(2, 5, ratio);
     if (alpha <= .01) return;
     const image = reachArtImage("eastern-approach", "/assets/galactic-map/leviathan-tendril.webp");
     if (!image) return;
-    let artwork = image;
-    if (!reducedMotion.matches && ratio < MAP_MOTION_END_RATIO) {
-      const renderer = approachRendererFor(image);
-      if (renderer && !renderer.gl.isContextLost()) {
-        if (approachMotionStart === null) approachMotionStart = now;
-        renderer.gl.viewport(0, 0, renderer.canvas.width, renderer.canvas.height);
-        renderer.gl.useProgram(renderer.program);
-        renderer.gl.uniform1f(renderer.time, (now - approachMotionStart) * .001);
-        renderer.gl.uniform1f(renderer.motion, 1 - canvasSmoothstep(MAP_MOTION_START_RATIO, MAP_MOTION_END_RATIO, ratio));
-        renderer.gl.drawArrays(renderer.gl.TRIANGLE_STRIP, 0, 4);
-        artwork = renderer.canvas;
-      }
-    }
+    const artwork = image;
     const size = .65;
     const topLeft = worldToScreen(
       REACH_ART.x + REACH_ART.width * REACH_ART.scale * (1 - size),
@@ -5626,7 +5569,8 @@ function setupGeographyCanvas() {
     context.globalAlpha = alpha;
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = "high";
-    context.drawImage(artwork, sourceX, sourceY, sourceW, sourceH,
+    const sourceScale = artwork.width / REACH_ART.width;
+    context.drawImage(artwork, sourceX * sourceScale, sourceY * sourceScale, sourceW * sourceScale, sourceH * sourceScale,
       topLeft.x + sourceX * pixel, topLeft.y + sourceY * pixel, sourceW * pixel, sourceH * pixel);
     context.restore();
   }
@@ -6144,6 +6088,8 @@ function setupGeographyCanvas() {
   function drawFrame(timestamp) {
     if (!canvas.isConnected) {
       resizeObserver.disconnect();
+      backgroundRenderer?.gl.getExtension("WEBGL_lose_context")?.loseContext();
+      backgroundCanvas.remove();
       return;
     }
     if (needsResize) resizeCanvas();
@@ -6179,9 +6125,15 @@ function setupGeographyCanvas() {
     camera.targetX = aimed.x;
     camera.targetY = aimed.y;
     context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
-    context.fillStyle = "#020403";
-    context.fillRect(0, 0, width, height);
+    context.clearRect(0, 0, width, height);
     const ratio = camera.zoom / camera.baseZoom;
+    const gpuBackground = drawBackground(camera, ratio, timestamp);
+    if (!gpuBackground) {
+      context.fillStyle = "#020403";
+      context.fillRect(0, 0, width, height);
+      drawStarfield();
+      drawArt(camera, ratio);
+    }
     if (state.selectedSector && camera.targetZoom <= camera.baseZoom * 1.05) clearSectorSelection();
     if (hoveredTarget?.kind === "body") {
       const system = systemsById.get(hoveredTarget.systemId);
@@ -6190,11 +6142,9 @@ function setupGeographyCanvas() {
       hoveredTarget.worldY = position.y;
       if (tooltip && !tooltip.hidden) positionCanvasTooltip(hoveredTarget);
     }
-    drawStarfield();
-    drawArt(camera, ratio, timestamp);
     drawCelestialDetails(camera, ratio, timestamp);
     drawSectors(camera, ratio);
-    drawEasternApproach(camera, ratio, timestamp);
+    if (!gpuBackground) drawEasternApproach(camera, ratio);
     drawRoutes(camera, ratio);
     drawSystems(camera, ratio, timestamp);
     drawDirectiveMarkers(camera, ratio, timestamp);
@@ -7017,50 +6967,11 @@ function closeSearch() {
   document.getElementById("search-overlay").classList.remove("open");
 }
 
-function setupDesktopCursor() {
-  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-  const cursor = document.createElement("img");
-  cursor.className = "oxblood-cursor";
-  cursor.src = "/assets/oxblood-cursor.png";
-  cursor.alt = "";
-  cursor.setAttribute("aria-hidden", "true");
-  document.body.append(cursor);
-
-  const textSelector = "p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, pre, input:not([type='button']):not([type='submit']):not([type='reset']):not([type='checkbox']):not([type='radio']):not([type='file']), textarea, [contenteditable='true']";
-  const actionSelector = "a[href], button:not(:disabled), [role='button']:not([aria-disabled='true']), summary, label, select, input[type='button']:not(:disabled), input[type='submit']:not(:disabled), input[type='reset']:not(:disabled), input[type='checkbox']:not(:disabled), input[type='radio']:not(:disabled), input[type='file']:not(:disabled)";
-  const isMouse = event => event.pointerType === "mouse";
-
-  document.addEventListener("pointermove", event => {
-    if (!isMouse(event)) return;
-    cursor.style.left = `${event.clientX - 8}px`;
-    cursor.style.top = `${event.clientY}px`;
-    const target = event.target instanceof Element ? event.target : null;
-    const disabled = target?.closest("button:disabled, input:disabled, [aria-disabled='true']");
-    const text = target?.closest(textSelector);
-    const action = target?.closest(actionSelector);
-    cursor.classList.toggle("visible", !disabled && (!text || Boolean(action)));
-    if (disabled || (text && !action)) cursor.classList.remove("pressing");
-  }, { passive: true });
-
-  document.addEventListener("pointerdown", event => {
-    if (!isMouse(event) || event.button !== 0 || !cursor.classList.contains("visible")) return;
-    cursor.classList.add("pressing");
-  });
-  const releaseCursor = () => cursor.classList.remove("pressing");
-  document.addEventListener("pointerup", releaseCursor);
-  document.addEventListener("pointercancel", releaseCursor);
-  document.addEventListener("pointerout", event => {
-    if (!event.relatedTarget) cursor.classList.remove("visible", "pressing");
-  });
-  window.addEventListener("blur", () => cursor.classList.remove("visible", "pressing"));
-}
-
 /* ---------------------------------------------------------------------- */
 /* Event wiring                                                           */
 /* ---------------------------------------------------------------------- */
 
 function wireEvents() {
-  setupDesktopCursor();
   document.addEventListener("paste", event => {
     if (state.page !== "submit-aar" || !document.getElementById("aar-form")) return;
     const screenshots = Array.from(event.clipboardData?.items || [])
