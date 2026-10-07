@@ -301,14 +301,14 @@ def test_geography_api_serves_validated_hierarchy(local_site) -> None:
     assert payload["landmarks"]["fortressBodyId"] == "watch_fortress_jericho"
 
 
-@pytest.mark.parametrize("filename", ["base.webp", "sectors.png", "1-secure.webp", "29-critical.webp", "4-lost.webp"])
+@pytest.mark.parametrize("filename", ["base.webp", "sectors.png", "leviathan-tendril.webp", "1-secure.webp", "29-critical.webp", "4-lost.webp"])
 def test_galactic_map_assets_are_allowlisted(local_site, filename) -> None:
     with urllib.request.urlopen(local_site + "/assets/galactic-map/" + filename) as response:
         assert response.status == 200
         assert response.read()
 
 
-@pytest.mark.parametrize("filename", ["0-secure.webp", "30-secure.webp", "1-contested.webp", "geometry.json", "%2e%2e/server.py", "1-secure.png"])
+@pytest.mark.parametrize("filename", ["0-secure.webp", "30-secure.webp", "1-contested.webp", "geometry.json", "%2e%2e/server.py", "1-secure.png", "leviathan-tendril.png", "../Leviathan_Tendril.png"])
 def test_galactic_map_rejects_unknown_assets(filename) -> None:
     assert server._static_asset_path("/assets/galactic-map/" + filename) is None
 

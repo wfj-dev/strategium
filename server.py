@@ -534,7 +534,7 @@ def _static_asset_path(path: str) -> Path | None:
         return _existing(fixed[path])
     if path.startswith("/assets/galactic-map/"):
         filename = path.removeprefix("/assets/galactic-map/")
-        if filename not in {"base.webp", "sectors.png"} and not re.fullmatch(r"(?:[1-9]|1[0-9]|2[0-9])-(?:secure|critical|lost)\.webp", filename):
+        if filename not in {"base.webp", "sectors.png", "leviathan-tendril.webp"} and not re.fullmatch(r"(?:[1-9]|1[0-9]|2[0-9])-(?:secure|critical|lost)\.webp", filename):
             return None
         return _existing(WEB_ASSETS_DIR / "galactic-map" / filename)
     if path.startswith("/assets/map-icons/"):
