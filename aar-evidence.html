@@ -29,7 +29,7 @@ header strong { color: var(--gold); font-size: 14px; }
   <header><img src="/assets/jericho-symbol.webp" alt=""><strong>Watch Fortress Jericho</strong></header>
   <h1>Mission Evidence</h1>
   <label class="picker"><span>+ Choose Screenshots</span><input id="screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-label="Choose screenshots" disabled></label>
-  <p class="limits">PNG, JPEG, WebP · 8 MiB each · Up to 10 images / 32 MiB</p>
+  <p class="limits">PNG, JPEG, WebP · <span id="image-limit">Discord limit</span> each · Up to 10 images / 32 MiB</p>
   <div id="previews"></div>
   <p id="status" role="status" aria-live="polite">Opening evidence link...</p>
 </main>
@@ -37,6 +37,11 @@ header strong { color: var(--gold); font-size: 14px; }
 const parts = location.hash.slice(1).split('.');
 const sessionId = parts[0] || '';
 const token = parts[1] || '';
+const requestedImageLimit = Number(new URLSearchParams(location.search).get('max_file_bytes'));
+const maxImageBytes = Number.isInteger(requestedImageLimit) && requestedImageLimit > 0
+  ? Math.min(requestedImageLimit, 32 * 1024 * 1024)
+  : 32 * 1024 * 1024;
+document.getElementById('image-limit').textContent = `${Math.ceil(maxImageBytes / (1024 * 1024))} MiB`;
 history.replaceState(null, '', location.pathname);
 const input = document.getElementById('screenshots');
 const status = document.getElementById('status');
@@ -60,8 +65,8 @@ input.addEventListener('change', async () => {
     input.value = '';
     return;
   }
-  if (files.some(file => !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || !file.size || file.size > 8 * 1024 * 1024)) {
-    report('Use PNG, JPEG, or WebP screenshots up to 8 MiB each.', true);
+  if (files.some(file => !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || !file.size || file.size > maxImageBytes)) {
+    report(`Use PNG, JPEG, or WebP screenshots up to ${Math.ceil(maxImageBytes / (1024 * 1024))} MiB each.`, true);
     input.value = '';
     return;
   }

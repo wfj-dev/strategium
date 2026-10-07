@@ -24,8 +24,6 @@
     --red: #e05c4f;
     --red-dim: #7a3129;
     --map-hover-stage: 325ms;
-    --cursor-auspex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M4 2v25l6-6 5 9 5-2-5-10 9 1L4 2z' fill='%23cfae68' stroke='%23060706' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cpath d='M7.2 7v14l3.1-3.1 4.4 8.2 2-.9-4.4-8.4 5.1.5z' fill='%234fd67a'/%3E%3Cpath d='M8.6 6.6l9.4 9.2' stroke='%23f2ede0' stroke-width='1.2'/%3E%3Ccircle cx='11.5' cy='22.7' r='3.3' fill='%23060706' stroke='%23cfae68' stroke-width='1'/%3E%3Cpath d='M11.5 18.8v1.2m0 5.4v1.2m3.9-3.9h-1.2m-5.4 0H7.6m6.7-2.8-.9.9m-3.8 3.8-.9.9m5.6 0-.9-.9m-3.8-3.8-.9-.9' stroke='%234fd67a' stroke-width='.8'/%3E%3Ccircle cx='11.5' cy='22.7' r='1' fill='%23f2ede0'/%3E%3C/svg%3E") 3 2, auto;
-    --cursor-auspex-action: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M4 2v25l6-6 5 9 5-2-5-10 9 1L4 2z' fill='%23f2ede0' stroke='%23060706' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cpath d='M7.2 7v14l3.1-3.1 4.4 8.2 2-.9-4.4-8.4 5.1.5z' fill='%23cfae68'/%3E%3Ccircle cx='11.5' cy='22.7' r='3.3' fill='%23060706' stroke='%234fd67a' stroke-width='1'/%3E%3Cpath d='M11.5 18.8v1.2m0 5.4v1.2m3.9-3.9h-1.2m-5.4 0H7.6m6.7-2.8-.9.9m-3.8 3.8-.9.9m5.6 0-.9-.9m-3.8-3.8-.9-.9' stroke='%23cfae68' stroke-width='.8'/%3E%3Ccircle cx='11.5' cy='22.7' r='1' fill='%23f2ede0'/%3E%3C/svg%3E") 3 2, pointer;
   }
 
   * { box-sizing: border-box; }
@@ -36,19 +34,6 @@
     color: var(--green);
     font-family: 'Share Tech Mono', monospace;
     min-height: 100vh;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    html, body, body * { cursor: var(--cursor-auspex) !important; }
-    p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, pre,
-    input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea, [contenteditable="true"] {
-      cursor: text !important;
-    }
-    a[href], button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label, select, input[type="button"]:not(:disabled), input[type="submit"]:not(:disabled), input[type="reset"]:not(:disabled), input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled), input[type="file"]:not(:disabled) {
-      cursor: var(--cursor-auspex-action) !important;
-    }
-    button:disabled, input:disabled, [aria-disabled="true"] { cursor: not-allowed !important; }
-    .reach-canvas.has-hover-target { cursor: var(--cursor-auspex-action) !important; }
   }
 
   body::before {
@@ -947,12 +932,14 @@
 
   .reach-viewport {
     position: relative; aspect-ratio: 1672 / 941; overflow: hidden;
-    border: 1px solid var(--border); touch-action: none; user-select: none;
+    border: 1px solid var(--border); touch-action: none; cursor: grab; user-select: none;
     background: radial-gradient(ellipse at 50% 45%, #0b130f 0%, #050806 60%, #020302 100%);
     box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
   }
+  .reach-viewport.dragging { cursor: grabbing; }
   .reach-svg { width: 100%; height: 100%; display: block; }
-  .reach-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+  .reach-canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  .reach-viewport.dragging .reach-canvas { cursor: grabbing; }
   .reach-canvas-status {
     position: absolute; left: 12px; top: 56px; z-index: 2; pointer-events: none;
     color: var(--green-faint); font-size: 8px; text-transform: uppercase; letter-spacing: .08em;
@@ -3484,7 +3471,7 @@ const AAR_PIPEHITTER_MISSIONS = new Set([
 const AAR_PVP_MAPS = ["Cathedrum", "Bastion", "Mausoleum", "Tomb", "Bridge", "Facility", "Sanctum"];
 const AAR_PVP_MODES = ["Seize Ground", "Capture and Control", "Annihilation", "Helbrute Onslaught"];
 const AAR_MAX_SCREENSHOTS = 10;
-const AAR_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const AAR_MAX_IMAGE_BYTES = 32 * 1024 * 1024;
 const AAR_MAX_TOTAL_IMAGE_BYTES = 32 * 1024 * 1024;
 const aarDraft = {
   mode: "ops_strat", mission: "pve_inferno", difficulty: "@Ruthless", rank: "A", armoryData: "0",
@@ -3570,13 +3557,15 @@ function addAarScreenshots(files) {
   if (aarDraft.submitting) return false;
   const selected = Array.from(files || []);
   if (!selected.length) return false;
+  const maxImageBytes = Math.min(AAR_MAX_IMAGE_BYTES, Number(state.auth?.aar_max_file_bytes) || AAR_MAX_IMAGE_BYTES);
+  const maxImageMiB = Math.ceil(maxImageBytes / (1024 * 1024));
   const validTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
   let error = "";
   if (aarDraft.files.length + selected.length > AAR_MAX_SCREENSHOTS) {
     error = "A report can include no more than 10 screenshots.";
   } else {
-    const invalid = selected.find(file => !validTypes.has(file.type) || !file.size || file.size > AAR_MAX_IMAGE_BYTES);
-    if (invalid) error = `${invalid.name}: use PNG, JPEG, or WebP images no larger than 8 MiB.`;
+    const invalid = selected.find(file => !validTypes.has(file.type) || !file.size || file.size > maxImageBytes);
+    if (invalid) error = `${invalid.name}: use PNG, JPEG, or WebP images no larger than ${maxImageMiB} MiB.`;
     const totalBytes = [...aarDraft.files, ...selected].reduce((sum, file) => sum + file.size, 0);
     if (!error && totalBytes > AAR_MAX_TOTAL_IMAGE_BYTES) error = "The combined screenshot size cannot exceed 32 MiB.";
   }
@@ -3693,6 +3682,7 @@ function renderSubmitAar() {
       </div>
       <button class="btn-dossier-action btn-dossier-cancel" type="button" data-aar-edit>Edit report</button>
     </section>`;
+  const maxImageMiB = Math.ceil(Math.min(AAR_MAX_IMAGE_BYTES, Number(state.auth?.aar_max_file_bytes) || AAR_MAX_IMAGE_BYTES) / (1024 * 1024));
 
   app.innerHTML = `
     <section class="aar-room" aria-label="After-action report submission">
@@ -3727,7 +3717,7 @@ function renderSubmitAar() {
               <input id="aar-screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="aar-upload-hint">
             </label>
             <p class="aar-mobile-guidance">Console captures: save the screenshot to this phone with the Xbox or PlayStation app, then choose it here from Photos or Gallery.</p>
-            <span id="aar-upload-hint" class="aar-upload-hint">1–10 images · PNG, JPEG, or WebP · 8 MiB each · 32 MiB total</span>
+            <span id="aar-upload-hint" class="aar-upload-hint">1–10 images · PNG, JPEG, or WebP · ${maxImageMiB} MiB each · 32 MiB total</span>
             <div class="aar-images">${imageRows}</div>
             <div class="aar-phone-handoff">
               ${aarPhoneHandoff.sessionId ? `
@@ -6181,7 +6171,7 @@ function setupGeographyCanvas() {
     state.selectedSector = null;
     if (hoveredTarget?.kind !== "sector") return;
     hoveredTarget = null;
-    canvas.classList.remove("has-hover-target");
+    canvas.style.cursor = "grab";
     window.clearTimeout(tooltipResolveTimer);
     if (tooltip) {
       tooltip.classList.remove("pending", "loading");
@@ -6260,7 +6250,7 @@ function setupGeographyCanvas() {
     if (sameTarget) target = hoveredTarget;
     else if (target) target = { ...target, startedAt: performance.now() };
     hoveredTarget = target;
-    canvas.classList.toggle("has-hover-target", Boolean(target));
+    canvas.style.cursor = target ? "pointer" : "grab";
     if (!tooltip) return;
     if (!target || viewport.classList.contains("dragging")) {
       window.clearTimeout(tooltipResolveTimer);
@@ -6387,7 +6377,7 @@ function setupGeographyCanvas() {
   canvas.addEventListener("pointerleave", () => {
     if (pointerId !== null) return;
     hoveredTarget = null;
-    canvas.classList.remove("has-hover-target");
+    canvas.style.cursor = "grab";
     window.clearTimeout(tooltipResolveTimer);
     if (tooltip) {
       tooltip.classList.remove("pending", "loading");

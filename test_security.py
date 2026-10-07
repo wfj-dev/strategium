@@ -63,6 +63,32 @@ def test_bot_aar_shared_secret_prefers_existing_bot_variable(monkeypatch) -> Non
     assert server._bot_aar_shared_secret() == "existing-bot-secret"
 
 
+def test_aar_access_returns_discord_effective_upload_limit(monkeypatch) -> None:
+    monkeypatch.setenv("STRATEGIUM_BOT_SHARED_SECRET", "test-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _limit):
+            return b'{"allowed":true,"guild_member":true,"display_name":"Watch Member","max_file_bytes":26214400}'
+
+    class FakeOpener:
+        def open(self, *_args, **_kwargs):
+            return FakeResponse()
+
+    monkeypatch.setattr(server.urllib.request, "build_opener", lambda *_args: FakeOpener())
+
+    access = server._aar_access("42")
+
+    assert access["allowed"] is True
+    assert access["max_file_bytes"] == 25 * 1024 * 1024
+
+
 def test_cookie_flags_include_secure_when_required() -> None:
     flags = _cookie_flags(secure=True)
     assert "; Secure" in flags
@@ -792,7 +818,8 @@ def test_validate_members_sanitizes_recent_aar_teammates() -> None:
 
 @pytest.fixture
 def evidence_session(local_site, monkeypatch):
-    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname"})
+    phone_limit = 12 * 1024 * 1024
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname", "max_file_bytes": phone_limit})
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
     monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
     monkeypatch.setattr(server, "_EVIDENCE_SESSIONS", {})
@@ -804,8 +831,11 @@ def evidence_session(local_site, monkeypatch):
     with urllib.request.urlopen(request) as response:
         handoff = json.loads(response.read())
         assert response.headers["Cache-Control"] == "no-store"
+    assert handoff["max_file_bytes"] == phone_limit
+    assert f"max_file_bytes={phone_limit}" in handoff["upload_url"]
     fragment = urllib.parse.urlsplit(handoff["upload_url"]).fragment
     session_id, token = fragment.split(".")
+    assert server._EVIDENCE_SESSIONS[session_id]["max_image_bytes"] == phone_limit
     assert handoff["qr"].startswith("data:image/png;base64,")
     return local_site, headers, session_id, token
 
@@ -845,6 +875,21 @@ def test_phone_evidence_upload_only_token_and_owner_retrieval(evidence_session):
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(upload)
     assert error.value.code == 403
+
+
+def test_phone_evidence_upload_enforces_session_guild_limit(evidence_session):
+    local_site, _owner_headers, session_id, token = evidence_session
+    server._EVIDENCE_SESSIONS[session_id]["max_image_bytes"] = 4
+    request = urllib.request.Request(
+        local_site + f"/api/aar-evidence/{session_id}/upload",
+        data=b"12345",
+        headers={"Origin": local_site, "Authorization": f"Bearer {token}", "Content-Type": "image/png"},
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 413
+    assert json.loads(error.value.read())["max_file_bytes"] == 4
 
 
 def test_phone_evidence_link_expiry(evidence_session):
@@ -937,12 +982,13 @@ def test_aar_pilot_rejects_logged_in_nonstaff(local_site, monkeypatch, path, met
 
 def test_me_uses_guild_display_name_not_account_name(local_site, monkeypatch):
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
-    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Watch Techmarine Jules"})
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Watch Techmarine Jules", "max_file_bytes": 24 * 1024 * 1024})
     cookie = _session_value({"id": "42", "name": "real-account-username", "csrf": "csrf-token"})
     with urllib.request.urlopen(urllib.request.Request(local_site + "/api/me", headers={"Cookie": f"strategium_session={cookie}"})) as response:
         body = response.read()
         payload = json.loads(body)
     assert payload["aar_allowed"] is True
+    assert payload["aar_max_file_bytes"] == 24 * 1024 * 1024
     assert payload["user"]["name"] == "Watch Techmarine Jules"
     assert b"real-account-username" not in body
 
@@ -959,8 +1005,9 @@ const snippet = html.slice(html.indexOf('function addAarScreenshots('), html.ind
 const errors = [];
 let previews = 0;
 const context = {
+    state: { auth: { aar_max_file_bytes: 16 * 1024 * 1024 } },
     aarDraft: { files: [], submitting: false, idempotencyKey: 'original', reviewing: true },
-    AAR_MAX_SCREENSHOTS: 10, AAR_MAX_IMAGE_BYTES: 8 * 1024 * 1024, AAR_MAX_TOTAL_IMAGE_BYTES: 32 * 1024 * 1024,
+    AAR_MAX_SCREENSHOTS: 10, AAR_MAX_IMAGE_BYTES: 32 * 1024 * 1024, AAR_MAX_TOTAL_IMAGE_BYTES: 32 * 1024 * 1024,
     URL: { createObjectURL: () => { previews++; return 'blob:preview'; } },
     setAarStatus: message => errors.push(message), renderSubmitAar: () => {}
 };
@@ -971,15 +1018,16 @@ assert.equal(context.addAarScreenshots([image]), true);
 assert.equal(context.aarDraft.files.length, 1);
 assert.equal(context.aarDraft.idempotencyKey, '');
 assert.equal(context.addAarScreenshots([{ ...image, type: 'image/svg+xml' }]), false);
-assert.equal(context.addAarScreenshots([{ ...image, size: 8 * 1024 * 1024 + 1 }]), false);
+assert.equal(context.addAarScreenshots([{ ...image, size: 16 * 1024 * 1024 }]), true);
+assert.equal(context.addAarScreenshots([{ ...image, size: 16 * 1024 * 1024 + 1 }]), false);
 assert.equal(context.addAarScreenshots(Array(10).fill(image)), false);
-context.aarDraft.files = Array(4).fill({ ...image, size: 8 * 1024 * 1024 });
+context.aarDraft.files = Array(2).fill({ ...image, size: 16 * 1024 * 1024 });
 assert.equal(context.addAarScreenshots([image]), false);
 context.aarDraft.files = [];
 context.aarDraft.submitting = true;
 assert.equal(context.addAarScreenshots([image]), false);
 assert.equal(context.aarDraft.files.length, 0);
-assert.equal(previews, 1);
+assert.equal(previews, 2);
 assert.equal(errors.length, 4);
 """
         subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)

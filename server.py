@@ -150,11 +150,12 @@ BACKSTORY_MAX_CHARS = 2400
 SESSION_TTL_SECONDS = int(os.getenv("STRATEGIUM_SESSION_TTL_SECONDS", str(60 * 60 * 24 * 7)))
 MAX_JSON_BODY_BYTES = 1024 * 1024
 MAX_AAR_SUBMISSION_BYTES = 34 * 1024 * 1024
+MAX_AAR_IMAGE_BYTES = 32 * 1024 * 1024
 MAX_AAR_CONCURRENT_SUBMISSIONS = 2
 _AAR_SUBMISSION_SLOTS = threading.BoundedSemaphore(MAX_AAR_CONCURRENT_SUBMISSIONS)
 EVIDENCE_TTL_SECONDS = 600
 EVIDENCE_MAX_SESSIONS = 16
-EVIDENCE_MAX_IMAGE_BYTES = 8 * 1024 * 1024
+EVIDENCE_MAX_IMAGE_BYTES = MAX_AAR_IMAGE_BYTES
 EVIDENCE_MAX_DRAFT_BYTES = 32 * 1024 * 1024
 EVIDENCE_MAX_GLOBAL_BYTES = 64 * 1024 * 1024
 _EVIDENCE_SESSIONS: dict[str, dict[str, Any]] = {}
@@ -248,7 +249,7 @@ def _aar_access(user_id: str) -> dict[str, Any]:
     intake = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
     secret = _bot_aar_shared_secret()
     if not secret or not intake:
-        return {"allowed": False, "display_name": ""}
+        return {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
     body = _json_bytes({"user_id": str(user_id)})
     timestamp = str(int(time.time()))
     key = f"access-{user_id}"
@@ -264,11 +265,22 @@ def _aar_access(user_id: str) -> dict[str, Any]:
         with opener.open(request, timeout=5) as response:
             result = json.loads(response.read(4096))
         if not isinstance(result, dict):
-            return {"allowed": False, "display_name": ""}
+            return {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
+        max_file_bytes = result.get("max_file_bytes")
+        if isinstance(max_file_bytes, bool) or not isinstance(max_file_bytes, int) or max_file_bytes <= 0:
+            max_file_bytes = MAX_AAR_IMAGE_BYTES
         return {"allowed": result.get("allowed") is True and result.get("guild_member") is True,
-                "display_name": _text(result.get("display_name"), 100)}
+                "display_name": _text(result.get("display_name"), 100),
+                "max_file_bytes": min(max_file_bytes, MAX_AAR_IMAGE_BYTES)}
     except (OSError, ValueError, urllib.error.URLError):
-        return {"allowed": False, "display_name": ""}
+        return {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
+
+
+def _aar_image_limit(access: dict[str, Any]) -> int:
+    value = access.get("max_file_bytes")
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        return MAX_AAR_IMAGE_BYTES
+    return min(value, MAX_AAR_IMAGE_BYTES)
 
 
 def _evidence_cleanup_loop() -> None:
@@ -884,17 +896,19 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
             self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
             return
-        if not self._require_aar_access(user):
+        access = _aar_access(str(user["id"]))
+        if not access["allowed"]:
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_access_denied"})
             return
         if not _AAR_SUBMISSION_SLOTS.acquire(blocking=False):
             self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "aar_upload_capacity"})
             return
         try:
-            self._create_evidence_session_authorized(user)
+            self._create_evidence_session_authorized(user, _aar_image_limit(access))
         finally:
             _AAR_SUBMISSION_SLOTS.release()
 
-    def _create_evidence_session_authorized(self, user: dict[str, str]) -> None:
+    def _create_evidence_session_authorized(self, user: dict[str, str], max_image_bytes: int) -> None:
         global _EVIDENCE_CLEANUP_STARTED
         owner_id = str(user["id"])
         with _EVIDENCE_LOCK:
@@ -916,7 +930,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         token = secrets.token_urlsafe(32)
         expires_at = time.time() + EVIDENCE_TTL_SECONDS
         origin = _normalize_origin(ALLOWED_ORIGIN)
-        link = f"{origin}/aar-evidence#{session_id}.{token}"
+        link = f"{origin}/aar-evidence?max_file_bytes={max_image_bytes}#{session_id}.{token}"
         png = io.BytesIO()
         qrcode.make(link).save(png, format="PNG")
         with _EVIDENCE_LOCK:
@@ -929,13 +943,14 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 _EVIDENCE_SESSIONS.pop(key, None)
             _EVIDENCE_SESSIONS[session_id] = {
                 "owner": str(user["id"]), "token_hash": hashlib.sha256(token.encode()).hexdigest(),
-                "expires_at": expires_at, "images": {},
+                "expires_at": expires_at, "max_image_bytes": max_image_bytes, "images": {},
             }
             if not _EVIDENCE_CLEANUP_STARTED:
                 threading.Thread(target=_evidence_cleanup_loop, daemon=True).start()
                 _EVIDENCE_CLEANUP_STARTED = True
         self._send(HTTPStatus.CREATED, {
             "session_id": session_id, "upload_url": link, "expires_at": expires_at,
+            "max_file_bytes": max_image_bytes,
             "qr": "data:image/png;base64," + base64.b64encode(png.getvalue()).decode("ascii"),
         }, {"Cache-Control": "no-store"})
 
@@ -1001,13 +1016,21 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 self._send(HTTPStatus.FORBIDDEN, {"error": "handoff_expired"})
                 return
             owner_id = session["owner"]
-        if not _aar_access(owner_id)["allowed"]:
+        access = _aar_access(owner_id)
+        if not access["allowed"]:
             self._send(HTTPStatus.FORBIDDEN, {"error": "aar_access_denied"})
             return
+        max_image_bytes = min(
+            EVIDENCE_MAX_IMAGE_BYTES,
+            int(session.get("max_image_bytes") or EVIDENCE_MAX_IMAGE_BYTES),
+            _aar_image_limit(access),
+        )
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            if not 0 < length <= EVIDENCE_MAX_IMAGE_BYTES:
-                self._send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "image_size_limit"})
+            if not 0 < length <= max_image_bytes:
+                self._send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {
+                    "error": "image_size_limit", "max_file_bytes": max_image_bytes,
+                })
                 return
         except ValueError:
             self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_size"})
@@ -1222,11 +1245,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def _get_me(self) -> None:
         user = self._cookie_user()
-        access = _aar_access(str(user["id"])) if user else {"allowed": False, "display_name": ""}
+        access = _aar_access(str(user["id"])) if user else {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
         public_user = {"id": str(user["id"]), "name": access["display_name"] or "Watch Member"} if user else None
         self._send(HTTPStatus.OK, {"authenticated": bool(user), "user": public_user,
                                   "csrf": user.get("csrf") if user else None,
-                                  "aar_allowed": access["allowed"]}, {"Cache-Control": "no-store"})
+                                  "aar_allowed": access["allowed"],
+                                  "aar_max_file_bytes": _aar_image_limit(access)}, {"Cache-Control": "no-store"})
 
     def _set_backstory(self) -> None:
         user = self._cookie_user()
