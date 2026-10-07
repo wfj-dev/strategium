@@ -88,6 +88,8 @@ INQUISITORIAL_ROSETTE_WEBP_PATH = WEB_ASSETS_DIR / "inquisitorial-rosette.webp"
 INQUISITORIAL_ROSETTE_WEBP_URL = "/assets/inquisitorial-rosette.webp"
 DISCORD_MARK_PATH = ROOT / "assets" / "discord-mark.svg"
 DISCORD_MARK_URL = "/assets/discord-mark.svg"
+OXBLOOD_CURSOR_PATH = WEB_ASSETS_DIR / "oxblood-cursor.png"
+OXBLOOD_CURSOR_URL = "/assets/oxblood-cursor.png"
 FORTRESS_MAP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.png"
 FORTRESS_MAP_URL = "/assets/watch-fortress-jericho-map.png"
 FORTRESS_MAP_WEBP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.webp"
@@ -520,6 +522,7 @@ def _static_asset_path(path: str) -> Path | None:
         INQUISITORIAL_ROSETTE_URL: INQUISITORIAL_ROSETTE_PATH,
         INQUISITORIAL_ROSETTE_WEBP_URL: INQUISITORIAL_ROSETTE_WEBP_PATH,
         DISCORD_MARK_URL: DISCORD_MARK_PATH,
+        OXBLOOD_CURSOR_URL: OXBLOOD_CURSOR_PATH,
         FORTRESS_MAP_URL: FORTRESS_MAP_PATH,
         FORTRESS_MAP_WEBP_URL: FORTRESS_MAP_WEBP_PATH,
         REACH_BACKGROUND_WEBP_URL: REACH_BACKGROUND_WEBP_PATH,
