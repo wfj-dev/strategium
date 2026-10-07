@@ -1041,3 +1041,68 @@ assert.equal(previews, 2);
 assert.equal(errors.length, 4);
 """
         subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the map-renderer regression")
+def test_shared_map_background_tracks_camera_and_updates_every_frame():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const start = html.indexOf('  function drawBackground(');
+const end = html.indexOf('  function drawArt(', start);
+assert(start >= 0 && end > start);
+const calls = {};
+let draws = 0;
+const gl = { isContextLost: () => false, useProgram: () => {}, TRIANGLE_STRIP: 5 };
+for (const name of ['viewport', 'uniform2f', 'uniform4f', 'uniform1f']) {
+    gl[name] = (...values) => { calls[values[0]] = values.slice(1); };
+}
+gl.drawArrays = () => { draws++; };
+const names = ['u_view', 'u_artRect', 'u_starRect', 'u_alpha', 'u_time', 'u_motion'];
+const renderer = { gl, program: {}, uniforms: Object.fromEntries(names.map(name => [name, name])) };
+const context = {
+    backgroundUnavailable: false, backgroundMotionStart: null,
+    backgroundCanvas: { width: 0, height: 0 },
+    width: 1200, height: 675, deviceScale: 2,
+    REACH_ART: { x: 0, y: 0, width: 1672, height: 941, scale: 5 },
+    reducedMotion: { matches: false },
+    MAP_MOTION_START_RATIO: 1.55, MAP_MOTION_END_RATIO: 2.1,
+    reachArtImage: () => ({ naturalWidth: 1800, naturalHeight: 1000 }),
+    backgroundRendererFor: () => renderer,
+    worldToScreen: (x, y, camera) => ({
+        x: (x - camera.x) * camera.zoom + 600,
+        y: (y - camera.y) * camera.zoom + 337.5
+    }),
+    canvasSmoothstep: (start, end, value) => {
+        const progress = Math.max(0, Math.min(1, (value - start) / (end - start)));
+        return progress * progress * (3 - 2 * progress);
+    }
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+const camera = { x: 4000, y: 2000, zoom: .2 };
+assert.equal(context.drawBackground(camera, 1, 1000), true);
+assert.deepEqual(calls.u_view, [1200, 675]);
+assert.deepEqual(calls.u_artRect, [-200, -62.5, 1672, 941]);
+assert.deepEqual(calls.u_starRect, [-300, -162.5, 1800, 1000]);
+assert.equal(context.backgroundCanvas.width, 2400);
+assert.equal(context.backgroundCanvas.height, 1350);
+assert.deepEqual(calls.u_motion, [1]);
+assert.equal(context.drawBackground(camera, 1, 1016), true);
+assert.equal(draws, 2);
+assert.deepEqual(calls.u_time, [.016]);
+camera.zoom = .4;
+context.drawBackground(camera, 3, 1032);
+assert.deepEqual(calls.u_artRect, [-1000, -462.5, 3344, 1882]);
+assert.deepEqual(calls.u_motion, [0]);
+context.reducedMotion.matches = true;
+context.drawBackground(camera, 1, 1048);
+assert.deepEqual(calls.u_motion, [0]);
+assert.deepEqual(calls.u_time, [0]);
+context.backgroundUnavailable = true;
+assert.equal(context.drawBackground(camera, 1, 1064), false);
+assert.equal(draws, 4);
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
