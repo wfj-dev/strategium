@@ -1001,6 +1001,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const html = fs.readFileSync(process.argv[1], 'utf8');
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+assert.match(html, /document\.addEventListener\("paste", event =>[\s\S]*?addAarScreenshots\(screenshots\)/);
 const snippet = html.slice(html.indexOf('function addAarScreenshots('), html.indexOf('function aarAllowedTagKeys('));
 const errors = [];
 let previews = 0;
