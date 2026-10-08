@@ -1043,6 +1043,29 @@ assert.equal(errors.length, 4);
         subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the formation display regression")
+def test_honored_dreadnought_equerry_is_not_displayed_on_site():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const definitions = html.slice(html.indexOf('const RANK_LABELS = {'), html.indexOf('const ATLAS_LOCATIONS = ['));
+const selector = html.slice(html.indexOf('function formationEquerries(key) {'), html.indexOf('const EQUERRY_TITLES = {'));
+const honored = { id: 'honored', rank: 'honored_dreadnought', formation: 'armory', equerry: true };
+const techmarine = { id: 'specialist', rank: 'techmarine', formation: 'armory', equerry: true };
+const context = { state: { members: [honored, techmarine] }, sortByRank: members => members };
+vm.createContext(context);
+vm.runInContext(definitions, context);
+vm.runInContext(selector, context);
+
+assert.deepEqual(context.formationEquerries('armory').map(member => member.id), ['specialist']);
+assert.equal(vm.runInContext('FORMATIONS.armory.ranks.includes("honored_dreadnought")', context), true);
+assert.equal(vm.runInContext('RANK_LABELS.honored_dreadnought', context), 'Honored Dreadnought');
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the map-renderer regression")
 def test_shared_map_background_tracks_camera_and_updates_every_frame():
     source = r"""

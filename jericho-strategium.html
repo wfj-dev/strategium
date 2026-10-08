@@ -1764,7 +1764,7 @@ function sortByRank(members) {
 
 function formationEquerries(key) {
   const f = FORMATIONS[key];
-  return sortByRank(state.members.filter(m => m.equerry && m.rank !== f.lead && (m.formation === key || f.ranks.includes(m.rank))));
+  return sortByRank(state.members.filter(m => m.equerry && m.rank !== f.lead && m.rank !== "honored_dreadnought" && (m.formation === key || f.ranks.includes(m.rank))));
 }
 const EQUERRY_TITLES = {
   first_blade: "High Blade",
