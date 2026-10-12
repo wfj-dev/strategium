@@ -584,7 +584,7 @@
     font-size: 12px; line-height: 1.65; text-align: center;
   }
 
-  .tier-killteams { max-width: 760px; margin: 0 auto; }
+  .tier-killteams { width: 100%; max-width: none; margin: 0 auto; flex-wrap: nowrap; justify-content: stretch; gap: 8px; padding: 20px 3px 8px; }
 
   .killteam-plate {
     position: relative;
@@ -592,7 +592,7 @@
     border: 1px solid var(--border-dim);
     border-left: 3px solid var(--green);
     padding: 12px 15px;
-    min-width: 200px; flex: 1 1 200px; max-width: 240px;
+    min-width: 0; flex: 1 1 0; max-width: none;
     text-align: left; display: flex; flex-direction: column; gap: 4px;
     cursor: pointer; color: var(--green);
     transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
@@ -602,6 +602,7 @@
   .killteam-plate-label { font-family: 'Cinzel', serif; font-weight: 600; font-size: 14.5px; color: var(--white); letter-spacing: 0.01em; }
   .killteam-plate-lead { font-size: 11.5px; color: var(--green-dim); }
   .killteam-plate-count { font-size: 10.5px; color: var(--green-faint); }
+  .killteam-plate-label, .killteam-plate-lead, .killteam-plate-count, .killteam-plate-renown { overflow-wrap: break-word; }
 
   .killteam-numeral {
     position: absolute; top: 8px; right: 10px;
@@ -812,6 +813,11 @@
   .modal-studs { min-width: 84px; display: flex; flex-direction: column; align-items: center; text-align: center; }
   .modal-studs-label { color: var(--gold); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
   .modal-studs .stud-display { justify-content: center; min-height: 38px; align-items: center; }
+  .modal-oath-seal { display: flex; align-items: center; gap: 9px; margin: 4px 0 14px; padding: 8px 10px; border: 1px dashed var(--border); color: var(--green-dim); }
+  .modal-oath-seal-mark { display: flex; width: 28px; height: 28px; flex: 0 0 28px; align-items: center; justify-content: center; border: 1px solid var(--gold-dim); color: var(--gold-dim); font: 15px 'Cinzel', serif; }
+  .modal-oath-seal-copy { display: grid; gap: 2px; min-width: 0; }
+  .modal-oath-seal-label { color: var(--gold); font-size: 9px; text-transform: uppercase; }
+  .modal-oath-seal-status { color: var(--green-faint); font-size: 10px; }
   .modal-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 23px; color: var(--white); margin: 0 0 14px; overflow-wrap: anywhere; }
   .modal-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); color: var(--green-dim); }
   .modal-row span:last-child { color: var(--white); }
@@ -881,7 +887,11 @@
     .header-title { font-size: 17px; }
     .header-sub { font-size: 9px; }
     .plate { min-width: 130px; }
-    .company-plate, .killteam-plate, .formation-plate { min-width: 100%; max-width: 100%; }
+    .company-plate, .formation-plate { min-width: 100%; max-width: 100%; }
+    .tier-killteams { gap: 4px; padding: 12px 0 6px; }
+    .tier-killteams .killteam-plate { min-width: 0; padding: 8px 5px; }
+    .tier-killteams .killteam-plate-label { font-size: 11px; }
+    .tier-killteams .killteam-plate-lead, .tier-killteams .killteam-plate-count, .tier-killteams .killteam-plate-renown { display: none; }
     .roster-table { font-size: 12px; }
     .roster-chapter { display: none; }
     .roster-table th:nth-child(3) { display: none; }
@@ -936,6 +946,29 @@
     background: radial-gradient(ellipse at 50% 45%, #0b130f 0%, #050806 60%, #020302 100%);
     box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
   }
+  .reach-map-shell { position: relative; min-width: 0; }
+  .reach-sector-panel {
+    position: absolute; z-index: 5; inset: 0 0 0 auto; width: min(340px, 40%); min-width: 260px;
+    display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(79,214,122,.38);
+    background: rgba(3,9,6,.97); box-shadow: -12px 0 34px rgba(0,0,0,.52), inset 0 0 28px rgba(79,214,122,.035);
+    opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(calc(100% + 10px));
+    transition: transform .28s cubic-bezier(.2,.72,.24,1), opacity .2s ease, visibility .28s;
+  }
+  .reach-map-shell.has-sector-panel .reach-sector-panel { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0); }
+  .reach-sector-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 14px 12px; border-bottom: 1px solid var(--border-dim); }
+  .reach-sector-panel-kicker { color: var(--green-faint); font-size: 8px; text-transform: uppercase; }
+  .reach-sector-panel-title { margin: 3px 0 0; color: var(--white); font: 700 17px 'Cinzel', serif; overflow-wrap: anywhere; }
+  .reach-sector-panel-meta { margin-top: 5px; color: var(--green-dim); font-size: 9px; line-height: 1.4; }
+  .reach-sector-panel-close { flex: 0 0 32px; width: 32px; height: 32px; padding: 0; border: 1px solid var(--border-dim); background: transparent; color: var(--green); cursor: pointer; font: inherit; }
+  .reach-sector-panel-close:hover { border-color: var(--gold); color: var(--gold); }
+  .reach-sector-panel-list { min-height: 0; padding: 8px; overflow: auto; overscroll-behavior: contain; }
+  .reach-sector-system { display: block; width: 100%; margin: 0 0 6px; padding: 10px; border: 1px solid var(--border-dim); border-left: 2px solid var(--green-faint); background: rgba(79,214,122,.025); color: var(--green-dim); text-align: left; cursor: pointer; }
+  .reach-sector-system:hover, .reach-sector-system[aria-pressed="true"] { border-color: var(--gold-dim); border-left-color: var(--gold); background: rgba(207,174,104,.055); }
+  .reach-sector-system-name { display: block; color: var(--white); font: 600 12px 'Cinzel', serif; overflow-wrap: anywhere; }
+  .reach-sector-system-meta { display: block; margin-top: 4px; color: var(--green-faint); font-size: 9px; line-height: 1.4; }
+  .reach-sector-system-worlds { display: grid; gap: 4px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--border-dim); color: var(--green-dim); font-size: 9px; }
+  .reach-sector-system-worlds span { overflow-wrap: anywhere; }
+  .reach-sector-empty { padding: 14px 10px; color: var(--green-faint); font-size: 10px; }
   .reach-viewport.dragging { cursor: grabbing; }
   .reach-svg { width: 100%; height: 100%; display: block; }
   .reach-canvas-background { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -1319,6 +1352,7 @@
     .slate-corner.tr { top: 25px; left: 18px; right: auto; }
     .reach-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .reach-viewport { display: none; }
+    .reach-sector-panel { display: none; }
     .reach-desktop-index { display: none; }
     .reach-mobile-nav { display: block; margin-top: 8px; }
     .reach-legend, .reach-hint { display: none; }
@@ -1357,6 +1391,7 @@
     body::before { display: none; }
     body::after { animation: none; opacity: .018; transform: none; }
     .slate-corner, #breadcrumb, .term-line, .reach-map-level { animation: none; }
+    .reach-sector-panel { transition: none; }
     .reach-overview-star { animation: none; }
     .reach-pulse { animation: none; opacity: 0.5; }
     .reach-nebulae, .reach-system-art { animation: none; transform: none; }
@@ -1513,6 +1548,7 @@
    ========================================================================== */
 
 const MAP_HOVER_STAGE_MS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--map-hover-stage"));
+const SECTOR_FOCUS_MAX_ZOOM_RATIO = 3.5;
 
 const RANK_LABELS = {
   watch_master: "Watch Master",
@@ -1553,39 +1589,39 @@ const FORMATIONS = {
 };
 
 const ATLAS_LOCATIONS = [
-  { id: "01", name: "Strategium", layer: "strategium", path: "M 690 0 L 900 0 L 900 180 L 690 180 Z", labelX: 795, labelY: 150, view: "strategium" },
-  { id: "02", name: "Watch Armory", layer: "armory", path: "M 955 82 L 1021 82 L 1100 82 L 1228 176 L 1260 218 L 1260 318 L 1145 318 L 1085 307 L 1021 272 L 968 253 Z", labelX: 1106, labelY: 190, view: "formation", formationId: "armory" },
-  { id: "03", name: "Apothecarion", layer: "apothecarion", path: "M 500 325 L 675 325 L 675 462 L 500 462 Z", labelX: 587, labelY: 402, view: "formation", formationId: "apothecarion" },
-  { id: "04", name: "Reclusiam", layer: "reclusiam", path: "M 910 15 L 1040 15 L 1040 232 L 910 232 Z", labelX: 975, labelY: 125, view: "formation", formationId: "reclusiam" },
-  { id: "05", name: "Black Vault", layer: "black-vault", path: "M 195 400 L 570 400 L 570 725 L 195 725 Z", labelX: 382, labelY: 560, view: "formation", formationId: "black_vault" },
-  { id: "06", name: "Librarius", layer: "librarius", path: "M 1240 48 L 1430 48 L 1430 252 L 1240 252 Z", labelX: 1335, labelY: 146, view: "formation", formationId: "librarius" },
-  { id: "07", name: "Dueling Grounds", layer: "dueling-grounds", path: "M 185 245 L 390 245 L 390 400 L 185 400 Z", labelX: 287, labelY: 325, view: "formation", formationId: "hall_of_blades" },
-  { id: "08", name: "Primus Company Hall", layer: "company-primus", path: "M 645 392 L 830 392 L 830 520 L 645 520 Z", labelX: 737, labelY: 456, view: "company", companyId: 1 },
-  { id: "09", name: "Secundus Company Hall", layer: "company-secundus", path: "M 790 360 L 950 360 L 950 550 L 790 550 Z", labelX: 870, labelY: 455, view: "company", companyId: 2 },
-  { id: "10", name: "Tertius Company Hall", layer: "company-tertius", path: "M 905 350 L 1100 350 L 1100 560 L 905 560 Z", labelX: 1002, labelY: 455, view: "company", companyId: 3 },
-  { id: "11", name: "Quartus Company Hall", layer: "company-quartus", path: "M 1035 315 L 1200 315 L 1200 535 L 1035 535 Z", labelX: 1117, labelY: 425, view: "company", companyId: 4 },
-  { id: "12", name: "Quintus Company Hall", layer: "company-quintus", path: "M 1160 360 L 1360 360 L 1360 525 L 1160 525 Z", labelX: 1260, labelY: 442, view: "company", companyId: 5 },
-  { id: "13", name: "Flight Deck", layer: "flight-deck", path: "M 1315 430 L 1670 430 L 1670 785 L 1315 785 Z", labelX: 1492, labelY: 605, page: "reach" },
-  { id: "14", name: "Vehicle Bays", layer: "vehicle-bays", path: "M 790 565 L 1320 565 L 1320 795 L 790 795 Z", labelX: 1055, labelY: 670, view: "formation", formationId: "armory" },
-  { id: "15", name: "Astropathic Choir", layer: "astropathic-choir", path: "M 430 82 L 600 82 L 600 285 L 430 285 Z", labelX: 515, labelY: 180, view: "formation", formationId: "librarius" }
+  { id: "01", name: "Strategium", layer: "strategium", view: "strategium" },
+  { id: "02", name: "Reclusiam", layer: "reclusiam", view: "formation", formationId: "reclusiam" },
+  { id: "03", name: "Librarius", layer: "librarius", view: "formation", formationId: "librarius" },
+  { id: "04", name: "Apothecarion", layer: "apothecarion", view: "formation", formationId: "apothecarion" },
+  { id: "05", name: "Armory", layer: "armory", view: "formation", formationId: "armory" },
+  { id: "06", name: "Dueling Grounds", layer: "dueling-grounds", view: "formation", formationId: "hall_of_blades" },
+  { id: "07", name: "Astropathic Choir", layer: "astropathic-choir", view: "formation", formationId: "librarius" },
+  { id: "08", name: "Black Vault", layer: "black-vault", view: "formation", formationId: "black_vault" },
+  { id: "09", name: "Flight Deck", layer: "flight-deck", page: "reach" },
+  { id: "10", name: "Strike Cruiser", layer: "strike-cruiser", page: "reach" },
+  { id: "11", name: "Primus Company Hall", layer: "company-primus", view: "company", companyId: 1 },
+  { id: "12", name: "Secundus Company Hall", layer: "company-secundus", view: "company", companyId: 2 },
+  { id: "13", name: "Tertius Company Hall", layer: "company-tertius", view: "company", companyId: 3 },
+  { id: "14", name: "Quartus Company Hall", layer: "company-quartus", view: "company", companyId: 4 },
+  { id: "15", name: "Quintus Company Hall", layer: "company-quintus", view: "company", companyId: 5 }
 ];
 
 const ATLAS_LORE = {
   "01": "Command, intelligence collation, and strategic deployment authority for Watch Fortress Jericho.",
-  "02": "The Armory maintains the weapons, wargear, and technical resources required by the fortress.",
-  "03": "The Apothecarion safeguards the wounded, the gene-seed, and the lives entrusted to the Watch.",
-  "04": "The Reclusiam preserves the Watch's oaths and sustains the spiritual discipline of the Long Vigil.",
-  "05": "The Black Vault holds dangerous assets and intelligence released only when the threat warrants the risk.",
-  "06": "The Librarius studies forbidden knowledge and interprets threats before they become campaigns.",
-  "07": "The Hall of Blades prepares close-combat specialists for boarding actions and confined engagements.",
-  "08": "Company Primus muster and command station.",
-  "09": "Company Secundus muster and command station.",
-  "10": "Company Tertius muster and command station.",
-  "11": "Company Quartus muster and command station.",
-  "12": "Company Quintus muster and command station.",
-  "13": "The flight deck launches and receives craft carrying Watch personnel and materiel across the sector.",
-  "14": "Vehicle bays maintain the ground transports and armour committed to operations across the Reach.",
-  "15": "The Astropathic Choir receives and relays sanctioned communications across the Jericho Reach."
+  "02": "The Reclusiam preserves the Watch's oaths and sustains the spiritual discipline of the Long Vigil.",
+  "03": "The Librarius studies forbidden knowledge and interprets threats before they become campaigns.",
+  "04": "The Apothecarion safeguards the wounded, the gene-seed, and the lives entrusted to the Watch.",
+  "05": "The Armory maintains the weapons, wargear, and technical resources required by the fortress.",
+  "06": "The Dueling Grounds prepare close-combat specialists for boarding actions and confined engagements.",
+  "07": "The Astropathic Choir receives and relays sanctioned communications across the Jericho Reach.",
+  "08": "The Black Vault holds dangerous assets and intelligence released only when the threat warrants the risk.",
+  "09": "The flight deck launches and receives craft carrying Watch personnel and materiel across the sector.",
+  "10": "The Strike Cruiser carries Watch personnel and materiel between the fortress and its theaters of operation.",
+  "11": "Company Primus muster and command station.",
+  "12": "Company Secundus muster and command station.",
+  "13": "Company Tertius muster and command station.",
+  "14": "Company Quartus muster and command station.",
+  "15": "Company Quintus muster and command station."
 };
 
 let atlasHitMask = null;
@@ -1641,7 +1677,7 @@ function loadAtlasHitMask() {
       resolve(atlasHitMask);
     };
     image.onerror = reject;
-    image.src = "/assets/atlas-hover-mask.png?v=3";
+    image.src = "/assets/atlas-hover-mask.png?v=4";
   });
   return atlasHitMaskPromise;
 }
@@ -1734,8 +1770,8 @@ const RANK_GUIDE = [
 ];
 
 const RANK_GUIDE_TRACKS = [
-  { id: "common", name: "Common Path", description: "Watch Brother to Watch Veteran", ranks: [1, 2] },
-  { id: "command", name: "Battle-line / Command", description: "Oathsworn through Watch Master", ranks: [3, 4, 5, 6, 7, 27] },
+  { id: "common", name: "Common Path", description: "Watch Brother through Oathsworn", ranks: [1, 2, 3] },
+  { id: "command", name: "Battle-line / Command", description: "Watch Sergeant through Watch Master", ranks: [4, 5, 6, 7, 27] },
   { id: "blades", name: "Hall of Blades", description: "Bladeguard to Blade Master", ranks: [8, 9, 10, 21] },
   { id: "reclusiam", name: "Reclusiam", description: "Watch Chaplain to High Chaplain", ranks: [11, 12, 22] },
   { id: "apothecarion", name: "Apothecarion", description: "Watch Apothecary to Chief Apothecary", ranks: [13, 14, 23] },
@@ -2402,6 +2438,15 @@ function memberAwardsHtml(member) {
     </span>`).join("")}</div>`;
 }
 
+function oathSealHtml(member) {
+  const assigned = typeof member.oathSeal === "string" && member.oathSeal.trim();
+  const status = assigned ? "Artwork pending" : "Awaiting assignment";
+  return `<div class="modal-oath-seal" aria-label="Oath Seal: ${status}">
+    <span class="modal-oath-seal-mark" aria-hidden="true">&#10013;</span>
+    <span class="modal-oath-seal-copy"><span class="modal-oath-seal-label">Oath Seal</span><span class="modal-oath-seal-status">${status}</span></span>
+  </div>`;
+}
+
 const RENOWN_TIERS = ["Unproven", "Initiated", "Vigilant", "Sworn", "Hallowed", "Eternal"];
 const KILL_TEAM_RENOWN_UNLOCKS = {
   Unproven: [],
@@ -2621,20 +2666,12 @@ function renderBreadcrumb() {
 function renderLanding() {
   activeAtlasLocationId = null;
   atlasHighlightSequence += 1;
-  const hotspots = ATLAS_LOCATIONS.map(location => `
-    <g class="atlas-region" role="button" tabindex="0" data-atlas-location="${escapeHtml(location.id)}"
-      ${location.layer ? `data-atlas-layer="${escapeHtml(location.layer)}"` : ""}
-      aria-label="Open ${escapeHtml(location.name)}">
-      <path class="atlas-region-hit" d="${location.path}"></path>
-      <path class="atlas-region-shape" d="${location.path}"></path>
-    </g>`).join("");
   document.getElementById("app").innerHTML = `
     <section class="atlas-frame" aria-label="Interactive Watch Fortress Jericho atlas">
       <div class="atlas-image-wrap">
         <img class="atlas-image" src="/assets/watch-fortress-jericho-map.webp" alt="Isometric strategic atlas of Watch Fortress Jericho" width="1672" height="941" fetchpriority="high">
         <img id="atlas-highlight-layer" class="atlas-highlight-layer" alt="" aria-hidden="true">
         <svg id="atlas-leaders" class="atlas-leaders" aria-hidden="true"><path id="atlas-leader-line" class="atlas-leader-line" pathLength="1"></path><circle id="atlas-leader-point" class="atlas-leader-point" r="3"></circle></svg>
-        <svg class="atlas-regions" viewBox="0 0 1672 941" preserveAspectRatio="none" aria-label="Fortress locations">${hotspots}</svg>
       </div>
       <div class="atlas-status">Fortress datalink stable // ${state.dataStatus === "live" ? "roster verified" : "archive relay"}</div>
       <nav class="atlas-directory" aria-label="Fortress sections">
@@ -2726,7 +2763,15 @@ async function atlasRegionAtPoint(clientX, clientY) {
     }
     if (!id) return null;
     const locationId = String(id).padStart(2, "0");
-    return document.querySelector(`[data-atlas-location="${locationId}"]`);
+    const location = ATLAS_LOCATIONS.find(item => item.id === locationId);
+    if (!location) return null;
+    const anchor = mask.anchors[id] || { x: x + .5, y: y + .5 };
+    const anchorX = rect.left + anchor.x / mask.width * rect.width;
+    const anchorY = rect.top + anchor.y / mask.height * rect.height;
+    return {
+      dataset: { atlasLocation: location.id, atlasLayer: location.layer || "" },
+      getBoundingClientRect: () => ({ left: anchorX, top: anchorY, width: 0, height: 0 })
+    };
   } catch {
     return null;
   }
@@ -2744,7 +2789,7 @@ function setAtlasHighlight(region, pointerAnchor = null) {
   const source = layer ? `/assets/fortress-layers/${encodeURIComponent(layer)}.webp` : "";
   const visualsMatch = locationId === activeAtlasLocationId && Boolean(locationId && layer) &&
     image.getAttribute("src") === source && image.classList.contains("visible") &&
-    !callout.hidden && Boolean(leaderLine.getAttribute("d"));
+    Boolean(leaderLine.getAttribute("d"));
   if (visualsMatch) return;
   activeAtlasLocationId = locationId;
   const sequence = ++atlasHighlightSequence;
@@ -2762,10 +2807,10 @@ function setAtlasHighlight(region, pointerAnchor = null) {
   const location = ATLAS_LOCATIONS.find(item => item.id === region.dataset.atlasLocation);
   if (!location) return;
   document.getElementById("atlas-callout-kicker").textContent = `FORTRESS SECTION // ${location.id}`;
-  document.getElementById("atlas-callout-title").textContent = "LOADING";
-  document.getElementById("atlas-callout-lore").textContent = "ESTABLISHING NOOSPHERIC LINK...";
-  callout.hidden = false;
-  callout.classList.add("pending", "loading");
+  document.getElementById("atlas-callout-title").textContent = location.name;
+  document.getElementById("atlas-callout-lore").textContent = ATLAS_LORE[location.id] || "Authorized facility within Watch Fortress Jericho.";
+  callout.hidden = true;
+  callout.classList.remove("pending", "loading");
 
   const mask = atlasHitMask;
   const anchor = mask?.anchors[Number(location.id)];
@@ -2801,13 +2846,7 @@ function setAtlasHighlight(region, pointerAnchor = null) {
   leaderLine.classList.add("drawing");
   setTimeout(() => {
     if (sequence === atlasHighlightSequence && activeAtlasLocationId === locationId) {
-      callout.classList.remove("pending");
-      setTimeout(() => {
-        if (sequence !== atlasHighlightSequence || activeAtlasLocationId !== locationId) return;
-        document.getElementById("atlas-callout-title").textContent = location.name;
-        document.getElementById("atlas-callout-lore").textContent = ATLAS_LORE[location.id] || "Authorized facility within Watch Fortress Jericho.";
-        callout.classList.remove("loading");
-      }, MAP_HOVER_STAGE_MS);
+      callout.hidden = false;
     }
   }, MAP_HOVER_STAGE_MS);
 }
@@ -4146,6 +4185,8 @@ function openAtlas(originEl = null) {
 function openAtlasLocation(id, originEl) {
   const location = ATLAS_LOCATIONS.find(item => item.id === id);
   if (!location) return;
+  atlasHighlightSequence += 1;
+  activeAtlasLocationId = null;
   if (location.page) {
     setPage(location.page, true, originEl);
     return;
@@ -4297,6 +4338,7 @@ function renderMemberModalContent(m, isEditing = false) {
       </div>
       <div class="modal-studs"><div class="modal-studs-label">Service Studs</div>${serviceStudsHtml(m)}</div>
     </div>
+    ${oathSealHtml(m)}
     <div class="modal-row"><span>Chapter of Origin</span><span>${chapter ? `<button class="modal-link" type="button" data-chapter-link="${escapeHtml(chapter.name)}">${escapeHtml(chapter.name)} &rsaquo;</button>` : escapeHtml(m.chapter || "Unrecorded")}</span></div>
     ${locationRows(m)}
     <div class="modal-row"><span>AAR Points</span><span>${escapeHtml(Number.isFinite(Number(m.aarPoints ?? m.stats?.aar_points)) ? Number(m.aarPoints ?? m.stats.aar_points) : "Unrecorded")}</span></div>
@@ -5652,7 +5694,7 @@ function setupGeographyCanvas() {
     return STELLAR_TYPES[star?.stellarClass || "G"].name;
   }
 
-  function drawPlanetBody(body, bodyScreen, radius, ratio, hovered) {
+  function drawPlanetBody(body, bodyScreen, radius, ratio, hovered, now) {
     const seed = hashStr(body.id);
     const base = planetColor(body.kind);
     if (body.kind === "special") {
@@ -5776,6 +5818,11 @@ function setupGeographyCanvas() {
     context.fill();
 
     context.save();
+    if (ratio >= SYSTEM_HOVER_RATIO && !reducedMotion.matches) {
+      context.translate(bodyScreen.x, bodyScreen.y);
+      context.rotate(now * .000045 + (seed % 360) * Math.PI / 180);
+      context.translate(-bodyScreen.x, -bodyScreen.y);
+    }
     context.beginPath();
     context.arc(bodyScreen.x, bodyScreen.y, radius * .94, 0, Math.PI * 2);
     context.clip();
@@ -5888,25 +5935,34 @@ function setupGeographyCanvas() {
       const center = worldToScreen(system.x, system.y, camera);
       if (center.x < -100 || center.y < -100 || center.x > width + 100 || center.y > height + 100) return;
       const bodies = bodiesBySystem.get(system.id) || [];
-      const systemHovered = hoveredTarget?.kind === "system" && hoveredTarget.id === system.id;
+      const systemHovered = state.selectedSystem === system.id || (hoveredTarget?.kind === "system" && hoveredTarget.id === system.id);
+      const sectorSelected = !state.selectedSystem && state.selectedSector === system.sectorId;
+      const starEmphasis = systemHovered ? 2.35 : sectorSelected ? 2 : 1;
       const star = bodies.find(body => body.id === system.primaryBodyId && body.kind === "star");
       if (star) {
         const seed = hashStr(star.id);
         const clock = reducedMotion.matches || ratio >= MAP_MOTION_END_RATIO ? 0 : now;
         const pulse = 1 + Math.sin(clock * .0012 + seed % 20) * .06;
-        const radius = canvasClamp(1.35 + ratio * .12, 1.5, 4.5) * pulse;
-        context.globalAlpha = .5 + canvasSmoothstep(2.5, 5, ratio) * .4;
-        const glow = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius * 3);
-        glow.addColorStop(0, starColor(star, 3, .55));
+        const radius = canvasClamp(1.35 + ratio * .12, 1.5, 4.5) * pulse * starEmphasis;
+        context.globalAlpha = sectorSelected || systemHovered ? 1 : .5 + canvasSmoothstep(2.5, 5, ratio) * .4;
+        const glow = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius * 3.6);
+        glow.addColorStop(0, starColor(star, sectorSelected || systemHovered ? 8 : 3, .72));
         glow.addColorStop(1, starColor(star, 0, 0));
         context.fillStyle = glow;
         context.beginPath();
-        context.arc(center.x, center.y, radius * 3, 0, Math.PI * 2);
+        context.arc(center.x, center.y, radius * 3.6, 0, Math.PI * 2);
         context.fill();
-        context.fillStyle = starColor(star, 3);
+        context.fillStyle = starColor(star, sectorSelected || systemHovered ? 8 : 3);
         context.beginPath();
         context.arc(center.x, center.y, radius, 0, Math.PI * 2);
         context.fill();
+        if (sectorSelected || systemHovered) {
+          context.strokeStyle = starColor(star, 7, .9);
+          context.lineWidth = 1;
+          context.beginPath();
+          context.arc(center.x, center.y, radius * 1.75, 0, Math.PI * 2);
+          context.stroke();
+        }
       }
       if (systemHovered) {
         context.globalAlpha = 1;
@@ -5923,7 +5979,7 @@ function setupGeographyCanvas() {
           const position = bodyPosition(system, body, now);
           const bodyScreen = worldToScreen(position.x, position.y, camera);
           const orbitCenter = worldToScreen(position.centerX, position.centerY, camera);
-          const revealOrbits = position.orbitX > 0 && (hoveredTarget?.systemId === system.id || (hoveredTarget?.kind === "system" && hoveredTarget.id === system.id));
+          const revealOrbits = position.orbitX > 0 && (state.selectedSystem === system.id || hoveredTarget?.systemId === system.id || (hoveredTarget?.kind === "system" && hoveredTarget.id === system.id));
           if (revealOrbits) {
             context.strokeStyle = "rgba(79,214,122,.42)";
             context.lineWidth = .7;
@@ -5933,7 +5989,7 @@ function setupGeographyCanvas() {
           }
           const radius = canvasClamp(body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12);
           const bodyHovered = hoveredTarget?.kind === "body" && hoveredTarget.id === body.id;
-          drawPlanetBody(body, bodyScreen, radius, ratio, bodyHovered);
+          drawPlanetBody(body, bodyScreen, radius, ratio, bodyHovered, now);
           if (body.id !== system.primaryBodyId && (bodyHovered || systemHovered)) {
             context.font = "9px 'Share Tech Mono', monospace";
             context.textAlign = "center";
@@ -6160,6 +6216,9 @@ function setupGeographyCanvas() {
 
   function clearSectorSelection() {
     state.selectedSector = null;
+    state.selectedSystem = null;
+    state.reachMapLevel = "reach";
+    updateGeographySectorPanel();
     if (hoveredTarget?.kind !== "sector") return;
     hoveredTarget = null;
     canvas.style.cursor = "grab";
@@ -6255,18 +6314,13 @@ function setupGeographyCanvas() {
       window.clearTimeout(tooltipResolveTimer);
       const targetKey = `${target.kind}:${target.id}`;
       tooltip.dataset.targetKey = targetKey;
-      tooltip.classList.add("pending", "loading");
-      tooltip.innerHTML = `<strong>LOADING TARGET DATA</strong>ASTROGRAPHIC LOCK IN PROGRESS`;
+      tooltip.classList.remove("loading");
+      tooltip.classList.add("pending");
+      tooltip.innerHTML = `<strong>${geographyBodyIcon(target.body)}${escapeHtml(target.name)}</strong>${escapeHtml(target.meta)}`;
       positionCanvasTooltip(target);
       tooltipResolveTimer = window.setTimeout(() => {
         if (tooltip.dataset.targetKey !== targetKey || !hoveredTarget || viewport.classList.contains("dragging")) return;
         tooltip.classList.remove("pending");
-        tooltipResolveTimer = window.setTimeout(() => {
-          if (tooltip.dataset.targetKey !== targetKey || !hoveredTarget || viewport.classList.contains("dragging")) return;
-          tooltip.classList.remove("loading");
-          tooltip.innerHTML = `<strong>${geographyBodyIcon(target.body)}${escapeHtml(target.name)}</strong>${escapeHtml(target.meta)}`;
-          positionCanvasTooltip(target);
-        }, MAP_HOVER_STAGE_MS);
       }, MAP_HOVER_STAGE_MS);
     }
   }
@@ -6353,13 +6407,7 @@ function setupGeographyCanvas() {
     const sector = geographySectorAt(world);
     if (sector && ratio < 10) {
       zoomAnchor = null;
-      state.selectedSector = sector.id;
-      state.selectedSystem = null;
-      camera.targetX = sector.label[0];
-      camera.targetY = sector.label[1];
-      const sectorWidth = Math.max(...sector.boundary.map(point => point[0])) - Math.min(...sector.boundary.map(point => point[0]));
-      const sectorHeight = Math.max(...sector.boundary.map(point => point[1])) - Math.min(...sector.boundary.map(point => point[1]));
-      camera.targetZoom = canvasClamp(Math.min(width / (sectorWidth * 1.35), height / (sectorHeight * 1.35)), camera.baseZoom, camera.baseZoom * 120);
+      showSectorLevel(sector.id);
     }
   }
 
@@ -6422,6 +6470,49 @@ function mobileGeographyHtml() {
       </details>`;
     }).join("")}
   </section>`;
+}
+
+function geographySectorPanelHtml(sectorId, selectedSystemId) {
+  const sector = state.geography?.sectors.find(item => item.id === sectorId);
+  if (!sector) return "";
+  const systems = state.geography.systems.filter(system => system.sectorId === sector.id).sort((a, b) => a.name.localeCompare(b.name));
+  const selectedSystem = systems.find(system => system.id === selectedSystemId);
+  const systemCards = systems.map(system => {
+    const bodies = state.geography.bodies.filter(body => body.systemId === system.id);
+    const star = bodies.find(body => body.kind === "star");
+    const worlds = bodies.filter(body => body.kind !== "star").sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name));
+    const selected = system.id === selectedSystem?.id;
+    return `<button class="reach-sector-system" type="button" data-sector-system="${escapeHtml(system.id)}" aria-pressed="${selected}">
+      <span class="reach-sector-system-name">${escapeHtml(system.name)}</span>
+      <span class="reach-sector-system-meta">${worlds.length} worlds${star?.stellarClass ? ` · Class ${escapeHtml(star.stellarClass)} star` : ""} · Select to focus</span>
+      ${selected ? `<span class="reach-sector-system-worlds">${worlds.map(world => `<span>${escapeHtml(world.name)} · ${escapeHtml(titleCase(world.kind))}</span>`).join("")}</span>` : ""}
+    </button>`;
+  }).join("");
+  return `<div class="reach-sector-panel-head">
+      <div>
+        <div class="reach-sector-panel-kicker">${selectedSystem ? "Selected system" : `Sector ${String(sector.number).padStart(2, "0")} // ${systems.length} systems`}</div>
+        <h2 class="reach-sector-panel-title">${escapeHtml(selectedSystem?.name || sector.name)}</h2>
+        <div class="reach-sector-panel-meta">${escapeHtml(titleCase(sector.status))} · ${selectedSystem ? "Planetary system" : "Charted systems and worlds"}</div>
+      </div>
+      <div class="reach-sector-panel-actions">
+        ${selectedSystem ? `<button class="reach-sector-panel-back" type="button" data-sector-panel-back>Sector systems</button>` : ""}
+        <button class="reach-sector-panel-close" type="button" data-sector-panel-close aria-label="Close sector panel" title="Close sector panel">&times;</button>
+      </div>
+    </div>
+    <div class="reach-sector-panel-list" aria-label="Systems in ${escapeHtml(sector.name)}">
+      ${systemCards || `<div class="reach-sector-empty">No charted systems in this sector.</div>`}
+    </div>`;
+}
+
+function updateGeographySectorPanel() {
+  const shell = document.querySelector(".reach-map-shell");
+  const panel = document.getElementById("reach-sector-panel");
+  if (!shell || !panel) return;
+  const sectorId = state.selectedSector;
+  const open = Boolean(sectorId && state.geography?.sectors.some(sector => sector.id === sectorId));
+  shell.classList.toggle("has-sector-panel", open);
+  panel.setAttribute("aria-hidden", String(!open));
+  panel.innerHTML = open ? geographySectorPanelHtml(sectorId, state.selectedSystem) : "";
 }
 
 function renderReach() {
@@ -6494,23 +6585,28 @@ function renderReach() {
       ${chips}
       <select class="reach-select" data-reach-company aria-label="Filter by company">${companyOptions}</select>
     </div>
-    <div class="reach-viewport" id="reach-viewport">
-      ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Galactic sector chart with the Jericho Reach at its center"></canvas>` : reachSvg(reach, directives)}
-      ${geographyLive ? `<div class="reach-map-level"><strong>Galactic Map</strong>Sector chart</div><div id="reach-canvas-status" class="reach-canvas-status">29 sectors / Secure</div><div id="reach-canvas-tooltip" class="reach-canvas-tooltip" hidden></div>` : ""}
-      <div class="reach-controls">
-        <button class="icon-btn" type="button" data-reach-zoom="in" aria-label="Zoom in">+</button>
-        <button class="icon-btn" type="button" data-reach-zoom="out" aria-label="Zoom out">&minus;</button>
-        <button class="icon-btn" type="button" data-reach-zoom="reset" aria-label="Reset view">&#8634;</button>
+    <div class="reach-map-shell">
+      <div class="reach-viewport" id="reach-viewport">
+        ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Galactic sector chart with the Jericho Reach at its center"></canvas>` : reachSvg(reach, directives)}
+        ${geographyLive ? `<div class="reach-map-level"><strong>Galactic Map</strong>Sector chart</div><div id="reach-canvas-status" class="reach-canvas-status">29 sectors / Secure</div><div id="reach-canvas-tooltip" class="reach-canvas-tooltip" hidden></div>` : ""}
+        <div class="reach-controls">
+          <button class="icon-btn" type="button" data-reach-zoom="in" aria-label="Zoom in">+</button>
+          <button class="icon-btn" type="button" data-reach-zoom="out" aria-label="Zoom out">&minus;</button>
+          <button class="icon-btn" type="button" data-reach-zoom="reset" aria-label="Reset view">&#8634;</button>
+        </div>
+        <div class="reach-legend" aria-hidden="true">
+          ${legend}
+          <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#4fd67a"></span>Secure</div>
+          <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#cf934b"></span>Critical</div>
+          <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#bd4d3f"></span>Lost</div>
+          <div class="reach-legend-item"><span style="color:var(--gold)">&#9876;</span>Brothers deployed</div>
+        </div>
+        <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))}` : ""}</div>
+        <div class="reach-tooltip" id="reach-tooltip" hidden></div>
       </div>
-      <div class="reach-legend" aria-hidden="true">
-        ${legend}
-        <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#4fd67a"></span>Secure</div>
-        <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#cf934b"></span>Critical</div>
-        <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#bd4d3f"></span>Lost</div>
-        <div class="reach-legend-item"><span style="color:var(--gold)">&#9876;</span>Brothers deployed</div>
-      </div>
-      <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))}` : ""}</div>
-      <div class="reach-tooltip" id="reach-tooltip" hidden></div>
+      <aside id="reach-sector-panel" class="reach-sector-panel" aria-hidden="${String(!selectedSector)}">
+        ${geographyLive && selectedSector ? geographySectorPanelHtml(selectedSector.id, state.selectedSystem) : ""}
+      </aside>
     </div>
     ${geographyLive ? `<details class="reach-desktop-index"><summary>Sector navigator</summary>${mobileGeographyHtml()}</details>` : ""}
     ${geographyLive ? mobileGeographyHtml() : ""}
@@ -6665,13 +6761,91 @@ function nearestGeographySystem(point, sectorId) {
   }, null).system;
 }
 
+function geographyPanelFocusWidth() {
+  const canvas = document.getElementById("reach-canvas");
+  const mapWidth = canvas?.getBoundingClientRect().width || 0;
+  return state.selectedSector && mapWidth ? Math.max(260, Math.min(340, mapWidth * .4)) : 0;
+}
+
+function focusGeographySectorCamera(sectorId) {
+  const sector = state.geography?.sectors.find(item => item.id === sectorId);
+  const canvas = document.getElementById("reach-canvas");
+  const camera = state.reachCanvasCamera;
+  const rect = canvas?.getBoundingClientRect();
+  if (!sector || !camera || !rect?.width || !rect.height) return false;
+  const bounds = sector.boundary.reduce((result, point) => ({
+    left: Math.min(result.left, point[0]), right: Math.max(result.right, point[0]),
+    top: Math.min(result.top, point[1]), bottom: Math.max(result.bottom, point[1])
+  }), { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity });
+  const reference = state.geography.sectors.find(item => item.number === 28 || item.id === "sector_28") || sector;
+  const referenceBounds = reference.boundary.reduce((result, point) => ({
+    left: Math.min(result.left, point[0]), right: Math.max(result.right, point[0]),
+    top: Math.min(result.top, point[1]), bottom: Math.max(result.bottom, point[1])
+  }), { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity });
+  const referenceWidth = referenceBounds.right - referenceBounds.left;
+  const referenceHeight = referenceBounds.bottom - referenceBounds.top;
+  const panelWidth = geographyPanelFocusWidth();
+  const availableWidth = Math.max(1, rect.width - panelWidth);
+  camera.targetZoom = Math.max(camera.baseZoom, Math.min(
+    Math.min(availableWidth / (referenceWidth * 1.35), rect.height / (referenceHeight * 1.35)),
+    camera.baseZoom * SECTOR_FOCUS_MAX_ZOOM_RATIO
+  ));
+  camera.targetX = (bounds.left + bounds.right) / 2 + panelWidth / (2 * camera.targetZoom);
+  camera.targetY = (bounds.top + bounds.bottom) / 2;
+  return true;
+}
+
+function geographySystemOrbitExtent(systemId) {
+  const bodies = state.geography?.bodies.filter(body => body.systemId === systemId) || [];
+  const byId = new Map(bodies.map(body => [body.id, body]));
+  const memo = new Map();
+  const extent = body => {
+    if (memo.has(body.id)) return memo.get(body.id);
+    const result = body.kind === "star" ? 0 : body.parentBodyId
+      ? extent(byId.get(body.parentBodyId)) + 2 + body.orbitIndex * 1.1
+      : 5 + body.orbitIndex * 4;
+    memo.set(body.id, result);
+    return result;
+  };
+  return Math.max(24, ...bodies.map(extent));
+}
+
+function focusGeographySystemCamera(systemId) {
+  const system = state.geography?.systems.find(item => item.id === systemId);
+  const canvas = document.getElementById("reach-canvas");
+  const camera = state.reachCanvasCamera;
+  const rect = canvas?.getBoundingClientRect();
+  if (!system || !camera || !rect?.width || !rect.height) return false;
+  const extent = geographySystemOrbitExtent(system.id);
+  const panelWidth = geographyPanelFocusWidth();
+  const availableWidth = Math.max(1, rect.width - panelWidth);
+  camera.targetZoom = Math.max(camera.baseZoom, Math.min(
+    Math.min(availableWidth / (extent * 2.2), rect.height / (extent * .46 * 2.2)),
+    camera.baseZoom * 120
+  ));
+  camera.targetX = system.x + panelWidth / (2 * camera.targetZoom);
+  camera.targetY = system.y;
+  return true;
+}
+
+function resetGeographyCamera() {
+  const camera = state.reachCanvasCamera;
+  if (!camera) return;
+  const art = state.geography?.mapArt || { x: 0, y: 0, scale: 5, width: 1672, height: 941 };
+  camera.targetX = art.x + art.width * art.scale / 2;
+  camera.targetY = art.y + art.height * art.scale / 2;
+  camera.targetZoom = camera.baseZoom;
+}
+
 function showReachLevel() {
   state.reachMapLevel = "reach";
   state.selectedSector = null;
   state.selectedSystem = null;
   state.reachView = null;
   state.reachSemanticZoomAt = performance.now();
-  renderReach();
+  resetGeographyCamera();
+  updateGeographySectorPanel();
+  if (!document.getElementById("reach-canvas")) renderReach();
 }
 
 function showSectorLevel(sectorId) {
@@ -6681,7 +6855,8 @@ function showSectorLevel(sectorId) {
   state.selectedSystem = null;
   state.reachView = null;
   state.reachSemanticZoomAt = performance.now();
-  renderReach();
+  if (!focusGeographySectorCamera(sectorId)) renderReach();
+  updateGeographySectorPanel();
 }
 
 function showSystemLevel(systemId) {
@@ -6692,7 +6867,8 @@ function showSystemLevel(systemId) {
   state.selectedSystem = system.id;
   state.reachView = null;
   state.reachSemanticZoomAt = performance.now();
-  renderReach();
+  if (!focusGeographySystemCamera(systemId)) renderReach();
+  updateGeographySectorPanel();
 }
 
 function showParentReachLevel() {
@@ -7133,6 +7309,21 @@ function wireEvents() {
       state.selectedChapter = null;
       renderRecordOfBlood();
       [...document.querySelectorAll("[data-chapter]")].find(button => button.dataset.chapter === selected)?.focus();
+      return;
+    }
+    const sectorPanelClose = e.target.closest("[data-sector-panel-close]");
+    if (sectorPanelClose) {
+      showReachLevel();
+      return;
+    }
+    const sectorPanelBack = e.target.closest("[data-sector-panel-back]");
+    if (sectorPanelBack) {
+      showSectorLevel(state.selectedSector);
+      return;
+    }
+    const sectorSystem = e.target.closest("[data-sector-system]");
+    if (sectorSystem) {
+      showSystemLevel(sectorSystem.dataset.sectorSystem);
       return;
     }
     const filterBtn = e.target.closest("[data-reach-filter]");
