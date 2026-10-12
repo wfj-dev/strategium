@@ -17,6 +17,7 @@ from scripts.build_reach_geography import (
     DISPLAY_NAMES,
     ORIGINAL_LOCATIONS,
     FORTRESS_SYSTEM_ID,
+    RETAINED_REACH_SYSTEM_IDS,
     ORBIT_CLEARANCE,
     _orbit_extents,
     STAR_NAMES,
@@ -187,21 +188,18 @@ def test_generated_geography_preserves_legacy_anchors_and_separates_fortresses()
     geography = load_geography(GEOGRAPHY_PATH)
 
     assert len(geography["sectors"]) == 29
-    assert len(geography["systems"]) == 22
-    assert len(geography["bodies"]) == 109
+    assert len(geography["systems"]) == 118
+    assert len(geography["bodies"]) == 594
     assert {sector["number"] for sector in geography["sectors"]} == set(range(1, 30))
     assert all(sector["status"] == "secure" for sector in geography["sectors"])
-    assert {system["name"] for system in geography["systems"]} == {f"{name} System" for name in STAR_NAMES[:22]}
+    assert {system["id"] for system in geography["systems"] if system["sectorId"] == "jericho_reach"} == RETAINED_REACH_SYSTEM_IDS
     assert {"Avarax", "Kadaku", "Demerium", "Exul", "Recidious"}.isdisjoint(
         body["name"] for body in geography["bodies"]
     )
-    assert {body["name"] for body in geography["bodies"] if body["source"] == "canon"} == {
-        "Watch Fortress Erioch" if name == "Erioch" else DISPLAY_NAMES.get(name, name)
-        for name in ORIGINAL_LOCATIONS
-    }
-    nonstars = [body for body in geography["bodies"] if body["kind"] != "star"]
-    assert len(nonstars) == 87
-    assert [body["name"] for body in nonstars if body["source"] == "homebrew"] == ["Watch Fortress Jericho"]
+    assert {body["name"] for body in geography["bodies"] if body["source"] == "canon"}.issubset(
+        {"Watch Fortress Erioch" if name == "Erioch" else DISPLAY_NAMES.get(name, name) for name in ORIGINAL_LOCATIONS}
+    )
+    assert any(body["name"] == "Watch Fortress Jericho" for body in geography["bodies"])
     assert not any("_companion_" in body["id"] for body in geography["bodies"])
     assert all(
         3 <= len([
@@ -211,15 +209,25 @@ def test_generated_geography_preserves_legacy_anchors_and_separates_fortresses()
         for system in geography["systems"]
     )
     stars = [body for body in geography["bodies"] if body["kind"] == "star"]
-    assert len(stars) == 22
+    assert len(stars) == 118
     assert {body["stellarClass"] for body in stars} == set(STELLAR_CLASSES)
-    assert len({body["name"] for body in stars}) == 22
+    assert len({body["name"] for body in stars}) == 118
     assert all("Primary" not in body["name"] for body in stars)
     for system in geography["systems"]:
         primary = next(body for body in geography["bodies"] if body["id"] == system["primaryBodyId"])
         assert primary["kind"] == "star"
         assert primary["source"] == "homebrew"
         assert "provisional_names" in system["tags"]
+        world_count = sum(body["systemId"] == system["id"] and body["kind"] != "star" for body in geography["bodies"])
+        if system["sectorId"] == "jericho_reach":
+            assert world_count == 5
+    for sector in geography["sectors"]:
+        sector_systems = [system for system in geography["systems"] if system["sectorId"] == sector["id"]]
+        if sector["id"] == "jericho_reach":
+            assert len(sector_systems) == 5
+        else:
+            assert 3 <= len(sector_systems) <= 5
+            assert all("generated_sector" in system["tags"] for system in sector_systems)
     assert geography["landmarks"]["fortressBodyId"] == "watch_fortress_jericho"
     assert geography["landmarks"]["eriochBodyId"] == "erioch"
 
@@ -236,20 +244,19 @@ def test_fortress_and_erioch_positions_match_the_chart() -> None:
         assert fortress["sectorId"] == erioch["sectorId"] == "jericho_reach"
         assert math.dist((fortress["x"], fortress["y"]), (erioch["x"], erioch["y"])) >= 400
         assert fortress["x"] < erioch["x"] and fortress["y"] > erioch["y"]
-        assert all(system["sectorId"] == "jericho_reach" for system in geography["systems"])
         for system in geography["systems"]:
             assert _point_in_polygon((system["x"], system["y"]), sectors[system["sectorId"]]["boundary"])
 
 
-def test_complete_orbital_envelopes_stay_inside_jericho_reach() -> None:
+def test_complete_orbital_envelopes_stay_inside_their_sectors() -> None:
     geography = load_geography(GEOGRAPHY_PATH)
-    boundary = next(sector["boundary"] for sector in geography["sectors"] if sector["id"] == "jericho_reach")
+    boundaries = {sector["id"]: sector["boundary"] for sector in geography["sectors"]}
     extents = _orbit_extents(geography["bodies"])
     for system in geography["systems"]:
         for step in range(64):
             angle = step * math.pi * 2 / 64
             point = (system["x"] + math.cos(angle) * extents[system["id"]], system["y"] + math.sin(angle) * extents[system["id"]] * ORBIT_ASPECT)
-            assert _point_in_polygon(point, boundary), system["name"]
+            assert _point_in_polygon(point, boundaries[system["sectorId"]]), system["name"]
 
 
 def _distance_to_boundary(point: tuple[float, float], polygon: list[list[float]]) -> float:
@@ -321,14 +328,13 @@ def test_geography_build_is_deterministic() -> None:
     assert build_geography(json.loads(DEFAULT_SOURCE.read_text())) == load_geography(GEOGRAPHY_PATH)
 
 
-def test_grouped_routes_use_minimum_authored_transit_cost_without_self_links() -> None:
+def test_pruned_worlds_have_no_orphaned_routes() -> None:
     geography = load_geography(GEOGRAPHY_PATH)
-    body_systems = {body["id"]: body["systemId"] for body in geography["bodies"]}
-    routes = {frozenset((route["sourceSystemId"], route["targetSystemId"])): route for route in geography["routes"]}
-    pair = frozenset((body_systems["bolgra"], body_systems["erioch"]))
-    assert routes[pair]["baseTransitHours"] == 14.8
+    system_ids = {system["id"] for system in geography["systems"]}
+    assert "bolgra" not in {body["id"] for body in geography["bodies"]}
     assert all(route["sourceSystemId"] != route["targetSystemId"] for route in geography["routes"])
-    assert len(routes) == len(geography["routes"])
+    assert all(route["sourceSystemId"] in system_ids and route["targetSystemId"] in system_ids for route in geography["routes"])
+    assert len({frozenset((route["sourceSystemId"], route["targetSystemId"])) for route in geography["routes"]}) == len(geography["routes"])
 
 
 @pytest.mark.parametrize("classification", ["Q", "", None, []])

@@ -513,7 +513,7 @@ def test_optimized_map_assets_are_served_and_allowlisted(local_site, tmp_path, m
                 assert response.headers["Content-Type"] == "image/webp"
                 assert response.read() == (b"webp" if method == "GET" else b"")
     monkeypatch.setattr(server, "FORTRESS_LAYERS_DIR", tmp_path)
-    (tmp_path / "1-Strategium.webp").write_bytes(b"layer")
+    (tmp_path / server.FORTRESS_LAYERS["strategium"].replace(".png", ".webp")).write_bytes(b"layer")
     for method in ("GET", "HEAD"):
         url = local_site + server.FORTRESS_LAYER_WEBP_URL_PREFIX + "strategium.webp"
         with urllib.request.urlopen(urllib.request.Request(url, method=method)) as response:
@@ -1063,7 +1063,86 @@ assert.deepEqual(context.formationEquerries('armory').map(member => member.id), 
 assert.equal(vm.runInContext('FORMATIONS.armory.ranks.includes("honored_dreadnought")', context), true);
 assert.equal(vm.runInContext('RANK_LABELS.honored_dreadnought', context), 'Honored Dreadnought');
 """
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the personnel display regression")
+def test_oathsworn_common_path_and_oath_seal_placeholder():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const tracks = html.slice(html.indexOf('const RANK_GUIDE_TRACKS = ['), html.indexOf('const RANK_GUIDE_TRACK_GROUPS = ['));
+const seal = html.slice(html.indexOf('function oathSealHtml(member) {'), html.indexOf('const RENOWN_TIERS = ['));
+const context = {};
+vm.createContext(context);
+vm.runInContext(tracks + '\nglobalThis.tracks = RANK_GUIDE_TRACKS;', context);
+vm.runInContext(seal + '\nglobalThis.seal = oathSealHtml({ oathSeal: null });', context);
+const common = context.tracks.find(track => track.id === 'common');
+const command = context.tracks.find(track => track.id === 'command');
+assert.deepEqual(Array.from(common.ranks), [1, 2, 3]);
+assert.deepEqual(Array.from(command.ranks), [4, 5, 6, 7, 27]);
+assert.match(context.seal, /Oath Seal/);
+assert.match(context.seal, /Awaiting assignment/);
+assert.match(html, /\$\{oathSealHtml\(m\)\}/);
+"""
     subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the map-focus regression")
+def test_sector_and_system_focus_center_in_uncovered_map_area():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const start = html.indexOf('function geographyPanelFocusWidth()');
+const end = html.indexOf('function showReachLevel()', start);
+assert(start >= 0 && end > start);
+const state = {
+    selectedSector: 'sector_02', selectedSystem: null,
+    geography: {
+        sectors: [
+            { id: 'sector_02', number: 2, boundary: [[0,0],[1000,0],[1000,400],[0,400]] },
+            { id: 'sector_28', number: 28, boundary: [[0,0],[585,0],[585,1555],[0,1555]] }
+        ],
+        systems: [{ id: 'system_01', sectorId: 'sector_02', x: 100, y: 150 }],
+        bodies: [
+            { id: 'star', systemId: 'system_01', kind: 'star', orbitIndex: 0, parentBodyId: null },
+            { id: 'world_05', systemId: 'system_01', kind: 'planet', orbitIndex: 5, parentBodyId: null }
+        ]
+    },
+    reachCanvasCamera: { baseZoom: .05, zoom: .05, targetZoom: .05, x: 500, y: 200, targetX: 500, targetY: 200 }
+};
+const context = {
+    state,
+    SECTOR_FOCUS_MAX_ZOOM_RATIO: 3.5,
+    document: { getElementById: () => ({ getBoundingClientRect: () => ({ width: 1000, height: 500 }) }) }
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+assert.equal(context.focusGeographySectorCamera('sector_02'), true);
+let camera = state.reachCanvasCamera;
+let centerScreen = (500 - camera.targetX) * camera.targetZoom + 500;
+assert.ok(Math.abs(centerScreen - 330) < 1e-9);
+assert.ok(camera.targetZoom >= camera.baseZoom);
+assert.ok(camera.targetZoom <= camera.baseZoom * 120);
+const sector02Zoom = camera.targetZoom;
+assert.equal(context.focusGeographySectorCamera('sector_28'), true);
+camera = state.reachCanvasCamera;
+assert.ok(Math.abs(camera.targetZoom - sector02Zoom) < 1e-12);
+centerScreen = (292.5 - camera.targetX) * camera.targetZoom + 500;
+assert.ok(Math.abs(centerScreen - 330) < 1e-9);
+assert.equal(context.focusGeographySystemCamera('system_01'), true);
+camera = state.reachCanvasCamera;
+centerScreen = (100 - camera.targetX) * camera.targetZoom + 500;
+assert.ok(Math.abs(centerScreen - 330) < 1e-9);
+assert.ok(camera.targetZoom <= camera.baseZoom * 120);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the map-renderer regression")
