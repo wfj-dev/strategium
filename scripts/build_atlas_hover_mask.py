@@ -14,25 +14,25 @@ sys.path.insert(0, str(ROOT))
 
 from server import FORTRESS_LAYERS, FORTRESS_LAYERS_DIR  # noqa: E402
 
-BASE_MAP = ROOT / "assets" / "Watch_Fortress_Jericho_Map.png"
+BASE_MAP = ROOT / "assets" / "Jericho 2.0 Map" / "0 - Base Map.png"
 OUTPUT = ROOT / "assets" / "atlas-hover-mask.png"
 
 ATLAS_LAYER_ORDER = [
     "strategium",
-    "armory",
-    "apothecarion",
     "reclusiam",
-    "black-vault",
     "librarius",
+    "apothecarion",
+    "armory",
     "dueling-grounds",
+    "astropathic-choir",
+    "black-vault",
+    "flight-deck",
+    "strike-cruiser",
     "company-primus",
     "company-secundus",
     "company-tertius",
     "company-quartus",
     "company-quintus",
-    "flight-deck",
-    "vehicle-bays",
-    "astropathic-choir",
 ]
 
 
@@ -266,7 +266,7 @@ def main() -> None:
                 abs(base[index + 2] - blue),
             )
             is_green_outline = (
-                green > red * 1.3
+                green > red * 1.2
                 and green > blue * 1.08
                 and green > 55
                 and changed > 24

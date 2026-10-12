@@ -166,11 +166,15 @@ def main() -> None:
         _save(ASSETS / f"{source}.png", WEB / "formation-symbols" / f"{source}.webp", max_size=(96, 96))
     _save(ASSETS / "jericho symbol.png", WEB / "jericho-symbol.webp", max_size=(96, 96))
     _save(ASSETS / "Inquisitorial_Rosette.png", WEB / "inquisitorial-rosette.webp", max_size=(96, 96))
-    _save(ASSETS / "Watch_Fortress_Jericho_Map.png", ASSETS / "Watch_Fortress_Jericho_Map.webp", quality=80)
+    fortress_assets = ASSETS / "Jericho 2.0 Map"
+    fortress_base = fortress_assets / "0 - Base Map.png"
+    _save(fortress_base, ASSETS / "Watch_Fortress_Jericho_Map.webp", quality=80)
     _save(ASSETS / "Jericho_Warp_Storm.png", ASSETS / "Jericho_Warp_Storm.webp", quality=78)
     _save(ASSETS / "Quiet_Stars.png", ASSETS / "Quiet_Stars.webp", quality=82)
-    base = np.asarray(Image.open(ASSETS / "Watch_Fortress_Jericho_Map.png").convert("RGBA"), dtype=np.int16)
-    for source in sorted((ASSETS / "Jericho Fortress Layers").glob("*.png")):
+    base = np.asarray(Image.open(fortress_base).convert("RGBA"), dtype=np.int16)
+    for source in sorted(fortress_assets.glob("*.png")):
+        if source == fortress_base:
+            continue
         # Layers repaint the whole atlas; keep only pixels that differ from the base map.
         layer = np.asarray(Image.open(source).convert("RGBA"), dtype=np.int16)
         changed = np.abs(layer - base).sum(axis=2) > 12

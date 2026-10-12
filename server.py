@@ -90,7 +90,7 @@ DISCORD_MARK_PATH = ROOT / "assets" / "discord-mark.svg"
 DISCORD_MARK_URL = "/assets/discord-mark.svg"
 OXBLOOD_CURSOR_PATH = WEB_ASSETS_DIR / "oxblood-cursor.png"
 OXBLOOD_CURSOR_URL = "/assets/oxblood-cursor.png"
-FORTRESS_MAP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.png"
+FORTRESS_MAP_PATH = ROOT / "assets" / "Jericho 2.0 Map" / "0 - Base Map.png"
 FORTRESS_MAP_URL = "/assets/watch-fortress-jericho-map.png"
 FORTRESS_MAP_WEBP_PATH = ROOT / "assets" / "Watch_Fortress_Jericho_Map.webp"
 FORTRESS_MAP_WEBP_URL = "/assets/watch-fortress-jericho-map.webp"
@@ -102,25 +102,25 @@ REACH_SECTOR_EDGES_PATH = ROOT / "assets" / "Jericho_Warp_Storm_-_Sector_Edges.w
 REACH_SECTOR_EDGES_URL = "/assets/reach-sector-edges.webp"
 FORTRESS_HOVER_MASK_PATH = ROOT / "assets" / "atlas-hover-mask.png"
 FORTRESS_HOVER_MASK_URL = "/assets/atlas-hover-mask.png"
-FORTRESS_LAYERS_DIR = ROOT / "assets" / "Jericho Fortress Layers"
+FORTRESS_LAYERS_DIR = ROOT / "assets" / "Jericho 2.0 Map"
 FORTRESS_LAYER_URL_PREFIX = "/assets/fortress-layers/"
 FORTRESS_LAYER_WEBP_URL_PREFIX = FORTRESS_LAYER_URL_PREFIX
 FORTRESS_LAYERS = {
-    "strategium": "1-Strategium.png",
-    "armory": "2-Armory.png",
-    "apothecarion": "3-Apothecarion.png",
-    "reclusiam": "4-Reclusiam.png",
-    "black-vault": "5-Black Vault.png",
-    "librarius": "6-Librarius.png",
-    "dueling-grounds": "7-Dueling Grounds.png",
-    "company-primus": "8-Primus Company Hall.png",
-    "company-secundus": "9-Secundus Company Hall.png",
-    "company-tertius": "10-Tertius Company Hall.png",
-    "company-quartus": "11-Quartus Company Hall.png",
-    "company-quintus": "12-Quintus Company Hall.png",
-    "flight-deck": "13-Flight Deck.png",
-    "vehicle-bays": "14-Vehicle Bays.png",
-    "astropathic-choir": "15-Astropathic Choir.png",
+    "strategium": "1- Strategium.png",
+    "reclusiam": "2 - Reclusiam.png",
+    "librarius": "3 - Librarius.png",
+    "apothecarion": "4 - Apothecarion.png",
+    "armory": "5 - Armory.png",
+    "dueling-grounds": "6 - Dueling Grounds.png",
+    "astropathic-choir": "7 - Astropathic Choir.png",
+    "black-vault": "8 - Black Vault.png",
+    "flight-deck": "9 - Flight Deck.png",
+    "strike-cruiser": "10 - Strike Cruiser.png",
+    "company-primus": "11 - Primus.png",
+    "company-secundus": "12 - Secundus.png",
+    "company-tertius": "13 - Tertius.png",
+    "company-quartus": "14 - Quartus.png",
+    "company-quintus": "15 - Quintus.png",
 }
 FORMATION_SYMBOLS = {
     "armory": "Armory.png",
