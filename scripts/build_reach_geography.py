@@ -32,6 +32,9 @@ ORBIT_ASPECT = .46
 ORBIT_CLEARANCE = 6.0
 FORTRESS_BODY_ID = "watch_fortress_jericho"
 FORTRESS_SYSTEM_ID = "watch_fortress_jericho_system"
+RETAINED_REACH_SYSTEM_IDS = frozenset({
+    "erioch", FORTRESS_SYSTEM_ID, "the_warp_gate", "castolel", "skapula",
+})
 STAR_NAMES = (
     "Vigil Lux", "Vespera", "Cineris", "Asterion", "Solenne", "Nacreus", "Velorian",
     "Caelus", "Orison", "Aurelis", "Sidera", "Tenebris", "Valestrum", "Luminara",
@@ -142,6 +145,61 @@ def _place_orbital_systems(systems: list[dict[str, Any]], bodies: list[dict[str,
         settled.append(system)
 
 
+def _generate_outer_sector_systems(sectors: list[dict[str, Any]], sector_mask: np.ndarray) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    systems, bodies = [], []
+    max_orbit_extent = ORBIT_BASE + 5 * ORBIT_STEP
+    clearance_pixels = (2 * max_orbit_extent + ORBIT_CLEARANCE) / ART_SCALE
+    for sector in sectors:
+        number = sector["number"]
+        if number == 1:
+            continue
+        interior = (sector_mask == number).astype(np.uint8)
+        depth = cv2.distanceTransform(interior, cv2.DIST_L2, 5)
+        rows, columns = np.nonzero(depth >= max_orbit_extent / ART_SCALE + 2)
+        if not len(columns):
+            raise ValueError(f"Sector {number} has no room for generated orbital systems")
+        target_x, target_y = sector["label"][0] / ART_SCALE, sector["label"][1] / ART_SCALE
+        first = int(np.argmin((columns - target_x) ** 2 + (rows - target_y) ** 2))
+        chosen = [(int(columns[first]), int(rows[first]))]
+        system_count = 3 + number % 3
+        for _ in range(1, system_count):
+            nearest_squared = np.minimum.reduce([
+                (columns - chosen_x) ** 2 + (rows - chosen_y) ** 2
+                for chosen_x, chosen_y in chosen
+            ])
+            next_index = int(np.argmax(nearest_squared))
+            if nearest_squared[next_index] < clearance_pixels ** 2:
+                raise ValueError(f"Sector {number} cannot fit {system_count} separated systems")
+            chosen.append((int(columns[next_index]), int(rows[next_index])))
+
+        for index, (pixel_x, pixel_y) in enumerate(chosen, start=1):
+            system_id = f"sector_{number:02d}_system_{index:02d}"
+            star_id = f"{system_id}_star"
+            world_count = 3 + (number + index) % 3
+            systems.append({
+                "id": system_id, "name": f"Sector {number:02d} System {index:02d}",
+                "sectorId": sector["id"], "x": pixel_x * ART_SCALE, "y": pixel_y * ART_SCALE,
+                "classification": "charted_system", "primaryBodyId": star_id,
+                "source": "homebrew", "tags": ["generated_sector", "provisional_names"],
+            })
+            bodies.append({
+                "id": star_id, "systemId": system_id, "parentBodyId": None,
+                "name": f"Sector {number:02d} Star {index:02d}", "kind": "star",
+                "stellarClass": STELLAR_CLASSES[(number + index) % len(STELLAR_CLASSES)],
+                "orbitIndex": 0, "orbitAngle": 0, "displayRadius": 6,
+                "battleEligible": False, "source": "homebrew",
+            })
+            for world_index in range(1, world_count + 1):
+                seed = number * 100 + index * 10 + world_index
+                bodies.append({
+                    "id": f"{system_id}_world_{world_index:02d}", "systemId": system_id,
+                    "parentBodyId": None, "name": f"Sector {number:02d} World {index:02d}-{world_index:02d}",
+                    "kind": "planet", "orbitIndex": world_index, "orbitAngle": seed % 360,
+                    "displayRadius": 5, "battleEligible": True, "source": "homebrew",
+                })
+    return systems, bodies
+
+
 def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
     geometry = json.loads((MAP_ASSETS / "geometry.json").read_text(encoding="utf-8"))
     mask = np.asarray(Image.open(MAP_ASSETS / "sectors.png"))
@@ -207,9 +265,12 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
     bodies_by_location = {body["systemId"]: body for body in bodies}
     grouped_systems = []
     location_to_system = {}
+    retained_world_ids = set()
     for index, group in enumerate(groups):
         anchor = group[0]
         system_id = anchor["id"]
+        if system_id not in RETAINED_REACH_SYSTEM_IDS:
+            continue
         star_name = STAR_NAMES[index]
         center_x = sum(location["x"] for location in group) / len(group)
         center_y = sum(location["y"] for location in group) / len(group)
@@ -231,9 +292,30 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
             body["orbitIndex"] = orbit_index
             body["orbitAngle"] = math.degrees(math.atan2((location["y"] - center_y) / ORBIT_ASPECT, location["x"] - center_x)) % 360
             location_to_system[location["id"]] = system_id
+            retained_world_ids.add(body["id"])
     systems = grouped_systems
+    retained_system_ids = {system["id"] for system in systems}
+    bodies = [
+        body for body in bodies
+        if body["id"] in retained_world_ids
+        or (body["kind"] == "star" and body["systemId"] in retained_system_ids)
+    ]
+    for system in systems:
+        worlds = [body for body in bodies if body["systemId"] == system["id"] and body["kind"] != "star"]
+        for orbit_index in range(len(worlds) + 1, 6):
+            seed = sum((position + 1) * ord(character) for position, character in enumerate(system["id"]))
+            bodies.append({
+                "id": f"{system['id']}_world_{orbit_index:02d}", "systemId": system["id"],
+                "parentBodyId": None, "name": f"{system['name'].removesuffix(' System')} World {orbit_index:02d}",
+                "kind": "planet", "orbitIndex": orbit_index, "orbitAngle": (seed + orbit_index * 73) % 360,
+                "displayRadius": 5, "battleEligible": True, "source": "homebrew",
+            })
     _place_orbital_systems(systems, bodies, depth)
-    node_ids = {name: location_to_system[location_id] for name, location_id in node_ids.items()}
+    node_ids = {
+        name: location_to_system[location_id]
+        for name, location_id in node_ids.items()
+        if location_id in location_to_system
+    }
     old_regions = {node["id"]: WORLD_REGIONS.get(node["id"], LEGACY_REGIONS.get(node["region"], node["region"])) for node in nodes}
     routes_by_pair = {}
     for edge in graph["edges"]:
@@ -254,7 +336,9 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
         if pair not in routes_by_pair or hours < routes_by_pair[pair]["baseTransitHours"]:
             routes_by_pair[pair] = route
     for target_name, hours, risk in (("Tsua'Malor", 30, "moderate"), ("Skapula", 42, "high"), ("Sagacity", 54, "high")):
-        target_id = node_ids[target_name]
+        target_id = node_ids.get(target_name)
+        if target_id is None:
+            continue
         if target_id == FORTRESS_SYSTEM_ID:
             continue
         pair = tuple(sorted((FORTRESS_SYSTEM_ID, target_id)))
@@ -262,6 +346,38 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
             routes_by_pair[pair] = {"id": "__".join(pair), "sourceSystemId": FORTRESS_SYSTEM_ID,
                                    "targetSystemId": target_id, "routeType": "fortress_corridor",
                                    "baseTransitHours": hours, "risk": risk, "status": "open"}
+    for system in systems:
+        if system["id"] == "erioch":
+            continue
+        pair = tuple(sorted((system["id"], "erioch")))
+        if pair not in routes_by_pair:
+            routes_by_pair[pair] = {
+                "id": "__".join(pair), "sourceSystemId": pair[0], "targetSystemId": pair[1],
+                "routeType": "provisional_charted_warp", "baseTransitHours": 48,
+                "risk": "high", "status": "open",
+            }
+    outer_systems, outer_bodies = _generate_outer_sector_systems(sectors, mask)
+    systems.extend(outer_systems)
+    bodies.extend(outer_bodies)
+    outer_by_sector: dict[str, list[dict[str, Any]]] = {}
+    for system in outer_systems:
+        outer_by_sector.setdefault(system["sectorId"], []).append(system)
+    for sector_id, sector_systems in outer_by_sector.items():
+        sector_systems.sort(key=lambda system: system["id"])
+        for source, target in zip(sector_systems, sector_systems[1:]):
+            pair = tuple(sorted((source["id"], target["id"])))
+            routes_by_pair[pair] = {
+                "id": "__".join(pair), "sourceSystemId": pair[0], "targetSystemId": pair[1],
+                "routeType": "provisional_charted_warp", "baseTransitHours": 12,
+                "risk": "moderate", "status": "open",
+            }
+        gateway = sector_systems[0]
+        pair = tuple(sorted((gateway["id"], "erioch")))
+        routes_by_pair[pair] = {
+            "id": "__".join(pair), "sourceSystemId": pair[0], "targetSystemId": pair[1],
+            "routeType": "provisional_intersector_warp", "baseTransitHours": 72,
+            "risk": "high", "status": "open",
+        }
     chart = cv2.dilate((mask != 0).astype(np.uint8), np.ones((9, 9), np.uint8))
     contours, _ = cv2.findContours(chart, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     boundary = cv2.approxPolyDP(max(contours, key=cv2.contourArea), .75, True)[:, 0, :].tolist()
