@@ -1549,6 +1549,7 @@
 
 const MAP_HOVER_STAGE_MS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--map-hover-stage"));
 const SECTOR_FOCUS_MAX_ZOOM_RATIO = 3.5;
+const FORTRESS_MAP_ASSET_VERSION = 2;
 
 const RANK_LABELS = {
   watch_master: "Watch Master",
@@ -2669,7 +2670,7 @@ function renderLanding() {
   document.getElementById("app").innerHTML = `
     <section class="atlas-frame" aria-label="Interactive Watch Fortress Jericho atlas">
       <div class="atlas-image-wrap">
-        <img class="atlas-image" src="/assets/watch-fortress-jericho-map.webp" alt="Isometric strategic atlas of Watch Fortress Jericho" width="1672" height="941" fetchpriority="high">
+        <img class="atlas-image" src="/assets/watch-fortress-jericho-map.webp?v=${FORTRESS_MAP_ASSET_VERSION}" alt="Isometric strategic atlas of Watch Fortress Jericho" width="1672" height="941" fetchpriority="high">
         <img id="atlas-highlight-layer" class="atlas-highlight-layer" alt="" aria-hidden="true">
         <svg id="atlas-leaders" class="atlas-leaders" aria-hidden="true"><path id="atlas-leader-line" class="atlas-leader-line" pathLength="1"></path><circle id="atlas-leader-point" class="atlas-leader-point" r="3"></circle></svg>
       </div>
@@ -2734,7 +2735,7 @@ function selectAtlasEntry(id) {
   const image = document.getElementById("atlas-highlight-layer");
   if (!image) return;
   if (selectedLocation?.layer) {
-    image.src = `/assets/fortress-layers/${encodeURIComponent(selectedLocation.layer)}.webp`;
+    image.src = `/assets/fortress-layers/${encodeURIComponent(selectedLocation.layer)}.webp?v=${FORTRESS_MAP_ASSET_VERSION}`;
     image.classList.add("visible");
   } else {
     image.classList.remove("visible");
@@ -2786,7 +2787,7 @@ function setAtlasHighlight(region, pointerAnchor = null) {
   const leaderPoint = document.getElementById("atlas-leader-point");
   if (!image || !callout || !leaders || !leaderLine || !leaderPoint) return;
   const layer = region?.dataset.atlasLayer;
-  const source = layer ? `/assets/fortress-layers/${encodeURIComponent(layer)}.webp` : "";
+  const source = layer ? `/assets/fortress-layers/${encodeURIComponent(layer)}.webp?v=${FORTRESS_MAP_ASSET_VERSION}` : "";
   const visualsMatch = locationId === activeAtlasLocationId && Boolean(locationId && layer) &&
     image.getAttribute("src") === source && image.classList.contains("visible") &&
     Boolean(leaderLine.getAttribute("d"));
