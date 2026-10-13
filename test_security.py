@@ -1043,6 +1043,53 @@ assert.equal(errors.length, 4);
         subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the clipboard image import regression")
+def test_clipboard_image_button_imports_supported_images():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const start = html.indexOf('async function pasteAarImagesFromClipboard()');
+const end = html.indexOf('function aarAllowedTagKeys(', start);
+assert(start >= 0 && end > start);
+assert.match(html, /id="aar-paste-clipboard"[^>]*>Paste from Clipboard/);
+assert.match(html, /\.aar-clipboard-button \{ display: none; \}/);
+const imported = [];
+const statuses = [];
+class MockFile {
+    constructor(parts, name, options) {
+        this.name = name;
+        this.type = options.type;
+        this.size = parts[0].size;
+    }
+}
+const context = {
+    navigator: { clipboard: { read: async () => [
+        { types: ['text/plain', 'image/png', 'image/gif'], getType: async type => ({ type, size: 512 }) },
+        { types: ['image/webp'], getType: async type => ({ type, size: 256 }) }
+    ] } },
+    File: MockFile,
+    aarDraft: { submitting: false },
+    setAarStatus: (message, tone) => statuses.push([message, tone]),
+    addAarScreenshots: files => { imported.push(...files); return true; }
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+(async () => {
+    await context.pasteAarImagesFromClipboard();
+    assert.deepEqual(imported.map(file => [file.name, file.type]), [
+        ['clipboard-1.png', 'image/png'], ['clipboard-2.webp', 'image/webp']
+    ]);
+    assert.deepEqual(statuses.at(-1), ['2 images added from clipboard.', 'success']);
+    context.navigator.clipboard.read = async () => [{ types: ['text/plain'], getType: async () => ({ size: 5 }) }];
+    await context.pasteAarImagesFromClipboard();
+    assert.match(statuses.at(-1)[0], /No PNG, JPEG, or WebP image/);
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR tag eligibility regression")
 def test_herisor_tag_matches_challenge_eligibility():
     source = r"""
@@ -1070,6 +1117,42 @@ const enabledTags = context.aarTagOptionsHtml(false, allowed('pve_termination', 
 assert.match(enabledTags, /value="herisor_defense"/);
 assert.doesNotMatch(enabledTags, /value="herisor_defense" disabled/);
 assert.equal(context.aarTagOptionsHtml(true, [], []), '');
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR roster interaction regression")
+def test_aar_member_selection_clears_name_search():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const start = html.indexOf('form.querySelectorAll("[data-aar-brother]")');
+const end = html.indexOf('form.querySelectorAll("[data-aar-tag]")', start);
+assert(start >= 0 && end > start);
+let changeHandler;
+let renders = 0;
+let focused = false;
+const form = { querySelectorAll: () => [{ addEventListener: (name, handler) => {
+    assert.equal(name, 'change');
+    changeHandler = handler;
+} }] };
+const context = {
+    form,
+    aarDraft: { memberFilter: 'watch brother' },
+    invalidateIdempotencyKey: () => {},
+    readDraftFields: () => {},
+    renderSubmitAar: () => { renders++; },
+    document: { getElementById: () => ({ focus: () => { focused = true; } }) }
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+assert.equal(typeof changeHandler, 'function');
+changeHandler();
+assert.equal(context.aarDraft.memberFilter, '');
+assert.equal(renders, 1);
+assert.equal(focused, true);
 """
     subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
 

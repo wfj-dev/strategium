@@ -56,7 +56,7 @@
   .header-home:focus-visible { outline: 1px solid var(--gold); outline-offset: 5px; }
   .header-icon {
     width: 44px; height: 44px; flex-shrink: 0;
-    border: 1px solid var(--gold-dim); background: #0a0a09;
+    border: 0; background: transparent;
     display: flex; align-items: center; justify-content: center; color: var(--gold);
   }
   .header-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -1235,6 +1235,9 @@
   .aar-mobile-guidance { display: none; color: var(--green-dim); font-size: 11px; line-height: 1.55; }
   .aar-file-picker { position: relative; display: inline-flex; min-height: 42px; align-items: center; gap: 10px; overflow: hidden; padding: 8px 12px; border: 1px solid var(--green-dim); background: rgba(79,214,122,.05); color: var(--green); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
   .aar-file-picker:hover, .aar-file-picker:focus-within { border-color: var(--gold); color: var(--gold); background: rgba(207,174,104,.07); }
+  .aar-evidence-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .aar-clipboard-button { min-height: 42px; }
+  .aar-clipboard-button:disabled { opacity: .45; cursor: not-allowed; }
   .aar-file-picker-icon { color: var(--gold); font-size: 17px; line-height: 1; }
   .aar-file-picker-count { color: var(--green-faint); }
   .aar-file-picker input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
@@ -1260,6 +1263,7 @@
   @media (max-width: 760px), (pointer: coarse) {
     .aar-phone-handoff { display: none; }
     .aar-mobile-guidance { display: block; }
+    .aar-clipboard-button { display: none; }
   }
   .rank-guide-heading { padding: 12px 0 20px; }
   .rank-guide-overline { color: var(--green-dim); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; }
@@ -3621,6 +3625,35 @@ function addAarScreenshots(files) {
   return true;
 }
 
+async function pasteAarImagesFromClipboard() {
+  if (aarDraft.submitting) return;
+  if (!navigator.clipboard?.read) {
+    setAarStatus("Clipboard image access is unavailable here. Use Ctrl+V to paste instead.", "error");
+    return;
+  }
+  try {
+    const extensionByType = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
+    const screenshots = [];
+    for (const item of await navigator.clipboard.read()) {
+      for (const type of item.types) {
+        const extension = extensionByType[type];
+        if (!extension) continue;
+        const image = await item.getType(type);
+        screenshots.push(new File([image], `clipboard-${screenshots.length + 1}.${extension}`, { type }));
+      }
+    }
+    if (!screenshots.length) {
+      setAarStatus("No PNG, JPEG, or WebP image was found in the clipboard.", "error");
+      return;
+    }
+    if (addAarScreenshots(screenshots)) {
+      setAarStatus(`${screenshots.length} image${screenshots.length === 1 ? "" : "s"} added from clipboard.`, "success");
+    }
+  } catch {
+    setAarStatus("Clipboard access was denied or unavailable. Use Ctrl+V to paste instead.", "error");
+  }
+}
+
 function aarAllowedTagKeys(mode, missionValue, difficulty, brotherCount, selectedTags) {
   if (AAR_SUBMISSION_MODES[mode]?.pvp) return [];
   const mission = (AAR_PVE_MISSIONS.find(([value]) => value === missionValue)?.[1] || "").toLowerCase();
@@ -3759,12 +3792,15 @@ function renderSubmitAar() {
         <section class="aar-section" aria-labelledby="aar-evidence-heading">
           <h3 id="aar-evidence-heading">Mission Screenshots</h3>
           <div id="aar-drop-zone" class="aar-upload aar-drop-zone">
-            <label class="aar-file-picker" for="aar-screenshots">
-              <span class="aar-file-picker-icon" aria-hidden="true">+</span>
-              <span>Choose Screenshots</span>
-              <span id="aar-file-picker-count" class="aar-file-picker-count">${aarDraft.files.length} / ${AAR_MAX_SCREENSHOTS}</span>
-              <input id="aar-screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="aar-upload-hint">
-            </label>
+            <div class="aar-evidence-actions">
+              <label class="aar-file-picker" for="aar-screenshots">
+                <span class="aar-file-picker-icon" aria-hidden="true">+</span>
+                <span>Choose Screenshots</span>
+                <span id="aar-file-picker-count" class="aar-file-picker-count">${aarDraft.files.length} / ${AAR_MAX_SCREENSHOTS}</span>
+                <input id="aar-screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="aar-upload-hint">
+              </label>
+              <button id="aar-paste-clipboard" class="btn-dossier-action aar-clipboard-button" type="button"${aarDraft.submitting ? " disabled" : ""}>Paste from Clipboard</button>
+            </div>
             <p class="aar-mobile-guidance">Console captures: save the screenshot to this phone with the Xbox or PlayStation app, then choose it here from Photos or Gallery.</p>
             <span id="aar-upload-hint" class="aar-upload-hint">Choose files or paste copied screenshots · PNG, JPEG, or WebP · ${maxImageMiB} MiB each · ${selectedImageMiB} / 32 MiB selected</span>
             <div class="aar-images">${imageRows}</div>
@@ -3842,7 +3878,9 @@ function renderSubmitAar() {
   form.querySelectorAll("[data-aar-brother]").forEach(input => input.addEventListener("change", () => {
     invalidateIdempotencyKey();
     readDraftFields();
+    aarDraft.memberFilter = "";
     renderSubmitAar();
+    document.getElementById("aar-member-filter")?.focus();
   }));
   form.querySelectorAll("[data-aar-tag]").forEach(input => input.addEventListener("change", () => {
     invalidateIdempotencyKey();
@@ -3885,6 +3923,7 @@ function renderSubmitAar() {
     addAarScreenshots(event.target.files);
     event.target.value = "";
   });
+  document.getElementById("aar-paste-clipboard")?.addEventListener("click", pasteAarImagesFromClipboard);
   const dropZone = document.getElementById("aar-drop-zone");
   dropZone?.addEventListener("dragover", event => {
     if (!Array.from(event.dataTransfer?.types || []).includes("Files")) return;
