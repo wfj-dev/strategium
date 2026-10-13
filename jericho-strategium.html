@@ -3521,7 +3521,7 @@ const AAR_MAX_TOTAL_IMAGE_BYTES = 32 * 1024 * 1024;
 const aarDraft = {
   mode: "ops_strat", mission: "pve_inferno", difficulty: "@Ruthless", rank: "A", armoryData: "0",
   waves: "10", kia: "0", geneSeed: "unknown", geneCarrier: "", pvpMap: "Cathedrum",
-  pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), tags: new Set(), files: [], memberFilter: "", submitting: false, reviewing: false, idempotencyKey: ""
+  pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), inductees: new Set(), tags: new Set(), files: [], memberFilter: "", submitting: false, reviewing: false, idempotencyKey: ""
 };
 const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
 
@@ -3704,6 +3704,7 @@ function renderSubmitAar() {
   if (userId && !aarDraft.brothers.size) aarDraft.brothers.add(userId);
   const members = state.dataStatus === "live" ? (state.members || []).filter(member => member && member.id && member.name) : [];
   const selectedMembers = [...aarDraft.brothers].map(id => members.find(member => String(member.id) === id)).filter(Boolean);
+  const selectedInductees = [...aarDraft.inductees].map(id => selectedMembers.find(member => String(member.id) === id)).filter(Boolean);
   const signedInMember = members.find(member => String(member.id) === userId);
   const recentTeammateIds = new Set((signedInMember?.recentAarTeammates || []).map(String).slice(0, 5));
   const memberQuery = aarDraft.memberFilter.trim().toLocaleLowerCase();
@@ -3719,6 +3720,10 @@ function renderSubmitAar() {
     const isRecent = recentTeammateIds.has(id) && !aarDraft.brothers.has(id);
     const label = `${rank} · ${displayName(member.name)}${isRecent ? " · Recent" : ""}`;
     return `<label class="aar-member"><input type="checkbox" data-aar-brother value="${escapeHtml(id)}"${aarDraft.brothers.has(id) ? " checked" : ""}><span>${escapeHtml(label)}</span></label>`;
+  }).join("");
+  const inducteeOptions = selectedMembers.map(member => {
+    const id = String(member.id);
+    return `<label class="aar-member"><input type="checkbox" data-aar-inductee value="${escapeHtml(id)}"${aarDraft.inductees.has(id) ? " checked" : ""}><span>${escapeHtml(displayName(member.name))}</span></label>`;
   }).join("");
   const allowedTagKeys = aarAllowedTagKeys(aarDraft.mode, aarDraft.mission, aarDraft.difficulty, aarDraft.brothers.size, [...aarDraft.tags]);
   for (const tag of aarDraft.tags) if (!allowedTagKeys.includes(tag)) aarDraft.tags.delete(tag);
@@ -3760,6 +3765,7 @@ function renderSubmitAar() {
       <div class="aar-fields">
         <div class="aar-field"><span class="field-label">Report</span><div>${escapeHtml(AAR_SUBMISSION_MODES[aarDraft.mode].label)} · ${escapeHtml(missionName)} · ${escapeHtml(aarDraft.difficulty)}</div></div>
         <div class="aar-field"><span class="field-label">Team and Evidence</span><div>${selectedMembers.length} battle-brothers · ${aarDraft.files.length} screenshots · ${selectedImageMiB} MiB total</div></div>
+        ${mode.induction ? `<div class="aar-field"><span class="field-label">Inductees</span><div>${escapeHtml(selectedInductees.map(member => displayName(member.name)).join(", ") || "None selected")}</div></div>` : ""}
         ${selectedTagLabels.length ? `<div class="aar-field aar-field-wide"><span class="field-label">Mission Tags</span><div>${escapeHtml(selectedTagLabels.join(", "))}</div></div>` : ""}
       </div>
       <button class="btn-dossier-action btn-dossier-cancel" type="button" data-aar-edit>Edit report</button>
@@ -3788,6 +3794,7 @@ function renderSubmitAar() {
           <label class="aar-field aar-field-wide"><span class="field-label">Search roster</span><input id="aar-member-filter" class="field-input" type="search" autocomplete="off" value="${escapeHtml(aarDraft.memberFilter)}" placeholder="Search by name"></label>
           <div id="aar-member-list" class="aar-members" role="group" aria-label="Select report participants">${memberOptions || `<p class="aar-empty">${memberQuery ? "No roster entries match this search." : "No recent teammates yet. Search the roster to add participants."}</p>`}</div>
         </section>
+        ${mode.induction ? `<section class="aar-section" aria-labelledby="aar-inductees-heading"><h3 id="aar-inductees-heading">Inductees <span class="aar-upload-hint">${aarDraft.inductees.size} selected · 2 maximum</span></h3><p class="aar-upload-hint">Select one or two members of this team to receive induction credit.</p><div class="aar-members" role="group" aria-label="Select inductees">${inducteeOptions || `<p class="aar-empty">Add report participants before selecting inductees.</p>`}</div></section>` : ""}
         ${tagOptions ? `<section class="aar-section" aria-labelledby="aar-tags-heading"><h3 id="aar-tags-heading">Mission Tags</h3><div class="aar-members" role="group" aria-label="Select mission tags">${tagOptions}</div><p class="aar-upload-hint">Defense of Herisor is enabled for Hard Siege or Hard-Stratagem Termination/Reclamation with exactly three brothers. Other tags depend on the selected mission and team.</p></section>` : ""}
         <section class="aar-section" aria-labelledby="aar-evidence-heading">
           <h3 id="aar-evidence-heading">Mission Screenshots</h3>
@@ -3833,6 +3840,7 @@ function renderSubmitAar() {
   };
   const readDraftFields = () => {
     aarDraft.brothers = new Set([...form.querySelectorAll("[data-aar-brother]:checked")].map(input => input.value));
+    aarDraft.inductees = new Set([...form.querySelectorAll("[data-aar-inductee]:checked")].map(input => input.value).filter(id => aarDraft.brothers.has(id)));
     aarDraft.tags = new Set([...form.querySelectorAll("[data-aar-tag]:checked")].map(input => input.value));
     aarDraft.mission = document.getElementById("aar-mission")?.value || aarDraft.mission;
     aarDraft.difficulty = document.getElementById("aar-difficulty")?.value || aarDraft.difficulty;
@@ -3881,6 +3889,15 @@ function renderSubmitAar() {
     aarDraft.memberFilter = "";
     renderSubmitAar();
     document.getElementById("aar-member-filter")?.focus();
+  }));
+  form.querySelectorAll("[data-aar-inductee]").forEach(input => input.addEventListener("change", () => {
+    invalidateIdempotencyKey();
+    if (input.checked && form.querySelectorAll("[data-aar-inductee]:checked").length > 2) input.checked = false;
+    readDraftFields();
+    renderSubmitAar();
+    if (input.checked === false && aarDraft.inductees.size === 2) {
+      setAarStatus("An induction report can include no more than two inductees.", "error");
+    }
   }));
   form.querySelectorAll("[data-aar-tag]").forEach(input => input.addEventListener("change", () => {
     invalidateIdempotencyKey();
@@ -3965,6 +3982,10 @@ function renderSubmitAar() {
       setAarStatus("The signed-in brother must be included in the report team.", "error");
       return;
     }
+    if (currentMode.induction && (aarDraft.inductees.size < 1 || aarDraft.inductees.size > 2)) {
+      setAarStatus("Select one or two inductees from the report participants.", "error");
+      return;
+    }
     if (!aarDraft.files.length) {
       setAarStatus("Attach at least one mission screenshot before submitting.", "error");
       return;
@@ -3985,6 +4006,7 @@ function renderSubmitAar() {
       difficulty: aarDraft.difficulty,
       rank: aarDraft.rank,
       brother_ids: team,
+      inductee_ids: currentMode.induction ? [...aarDraft.inductees] : null,
       tags: [...aarDraft.tags],
       armory_data: Number(aarDraft.armoryData),
       gene_seed_status: aarDraft.geneSeed,
