@@ -1053,7 +1053,7 @@ const html = fs.readFileSync(process.argv[1], 'utf8');
 const start = html.indexOf('const AAR_PVE_MISSIONS = [');
 const end = html.indexOf('function renderSubmitAar()', start);
 assert(start >= 0 && end > start);
-const context = {};
+const context = { escapeHtml: value => String(value) };
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
 const allowed = (mission, difficulty, brothers) =>
@@ -1063,6 +1063,13 @@ assert.ok(allowed('pve_termination', '@Hard-Siege', 3).includes('herisor_defense
 assert.ok(!allowed('pve_termination', '@Normal-Siege', 3).includes('herisor_defense'));
 assert.ok(allowed('pve_termination', '@Hard-Stratagem', 3).includes('herisor_defense'));
 assert.ok(!allowed('pve_termination', '@Hard-Stratagem', 2).includes('herisor_defense'));
+const disabledTags = context.aarTagOptionsHtml(false, allowed('pve_termination', '@Normal-Siege', 3), []);
+assert.match(disabledTags, /value="herisor_defense" disabled/);
+assert.match(disabledTags, /Defense of Herisor/);
+const enabledTags = context.aarTagOptionsHtml(false, allowed('pve_termination', '@Hard-Siege', 3), []);
+assert.match(enabledTags, /value="herisor_defense"/);
+assert.doesNotMatch(enabledTags, /value="herisor_defense" disabled/);
+assert.equal(context.aarTagOptionsHtml(true, [], []), '');
 """
     subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
 
