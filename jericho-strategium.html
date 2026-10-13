@@ -3650,6 +3650,15 @@ function aarAllowedTagKeys(mode, missionValue, difficulty, brotherCount, selecte
   return [...new Set(allowed)];
 }
 
+function aarTagOptionsHtml(isPvp, allowedTagKeys, selectedTags) {
+  if (isPvp) return "";
+  const allowed = new Set(allowedTagKeys);
+  const selected = new Set(selectedTags);
+  return AAR_SUBMISSION_TAGS.filter(([key]) => allowed.has(key) || key === "herisor_defense").map(([key, label]) =>
+    `<label class="aar-member"><input type="checkbox" data-aar-tag value="${escapeHtml(key)}"${selected.has(key) ? " checked" : ""}${allowed.has(key) ? "" : " disabled"}><span>${escapeHtml(label)}</span></label>`
+  ).join("");
+}
+
 function renderSubmitAar() {
   const app = document.getElementById("app");
   const mode = AAR_SUBMISSION_MODES[aarDraft.mode] || AAR_SUBMISSION_MODES.ops_strat;
@@ -3680,9 +3689,7 @@ function renderSubmitAar() {
   }).join("");
   const allowedTagKeys = aarAllowedTagKeys(aarDraft.mode, aarDraft.mission, aarDraft.difficulty, aarDraft.brothers.size, [...aarDraft.tags]);
   for (const tag of aarDraft.tags) if (!allowedTagKeys.includes(tag)) aarDraft.tags.delete(tag);
-  const tagOptions = pvp ? "" : AAR_SUBMISSION_TAGS.filter(([key]) => allowedTagKeys.includes(key)).map(([key, label]) =>
-    `<label class="aar-member"><input type="checkbox" data-aar-tag value="${escapeHtml(key)}"${aarDraft.tags.has(key) ? " checked" : ""}><span>${escapeHtml(label)}</span></label>`
-  ).join("");
+  const tagOptions = aarTagOptionsHtml(pvp, allowedTagKeys, [...aarDraft.tags]);
   const modeOptions = Object.entries(AAR_SUBMISSION_MODES).map(([key, item]) => [key, item.label]);
   const rankOptions = [["A", "Rank A"], ["B", "Rank B"], ["C", "Rank C"], ["D", "Rank D"]];
   const fields = [
@@ -3748,7 +3755,7 @@ function renderSubmitAar() {
           <label class="aar-field aar-field-wide"><span class="field-label">Search roster</span><input id="aar-member-filter" class="field-input" type="search" autocomplete="off" value="${escapeHtml(aarDraft.memberFilter)}" placeholder="Search by name"></label>
           <div id="aar-member-list" class="aar-members" role="group" aria-label="Select report participants">${memberOptions || `<p class="aar-empty">${memberQuery ? "No roster entries match this search." : "No recent teammates yet. Search the roster to add participants."}</p>`}</div>
         </section>
-        ${tagOptions ? `<section class="aar-section" aria-labelledby="aar-tags-heading"><h3 id="aar-tags-heading">Mission Tags</h3><div class="aar-members" role="group" aria-label="Select mission tags">${tagOptions}</div><p class="aar-upload-hint">Only tags valid for this mission and team will be accepted by the Watch archive.</p></section>` : ""}
+        ${tagOptions ? `<section class="aar-section" aria-labelledby="aar-tags-heading"><h3 id="aar-tags-heading">Mission Tags</h3><div class="aar-members" role="group" aria-label="Select mission tags">${tagOptions}</div><p class="aar-upload-hint">Defense of Herisor is enabled for Hard Siege or Hard-Stratagem Termination/Reclamation with exactly three brothers. Other tags depend on the selected mission and team.</p></section>` : ""}
         <section class="aar-section" aria-labelledby="aar-evidence-heading">
           <h3 id="aar-evidence-heading">Mission Screenshots</h3>
           <div id="aar-drop-zone" class="aar-upload aar-drop-zone">
