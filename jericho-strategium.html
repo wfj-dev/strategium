@@ -3642,9 +3642,9 @@ function aarAllowedTagKeys(mode, missionValue, difficulty, brotherCount, selecte
     if (selected.has("black_reef_persecution") && [2, 3].includes(brotherCount)) allowed.push("black_laurels");
     if (selected.has("herisor_defense") && ["termination", "reclamation"].includes(mission) && brotherCount === 3) allowed.push("black_laurels");
   }
-  if (["@Hard-Siege", "@Normal-Siege"].includes(difficulty) && brotherCount === 3) {
+  if (difficulty === "@Hard-Siege" && brotherCount === 3) {
     allowed.push("herisor_defense");
-    if (difficulty === "@Hard-Siege" && selected.has("herisor_defense")) allowed.push("black_laurels");
+    if (selected.has("herisor_defense")) allowed.push("black_laurels");
   }
   if (selected.has("leviathan_protocol") && AAR_KADAKU_MISSIONS.has(mission) && brotherCount === 3) allowed.push("black_laurels");
   return [...new Set(allowed)];

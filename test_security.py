@@ -1043,6 +1043,30 @@ assert.equal(errors.length, 4);
         subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR tag eligibility regression")
+def test_herisor_tag_matches_challenge_eligibility():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const start = html.indexOf('const AAR_PVE_MISSIONS = [');
+const end = html.indexOf('function renderSubmitAar()', start);
+assert(start >= 0 && end > start);
+const context = {};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+const allowed = (mission, difficulty, brothers) =>
+    Array.from(context.aarAllowedTagKeys('ops_strat', mission, difficulty, brothers, []));
+
+assert.ok(allowed('pve_termination', '@Hard-Siege', 3).includes('herisor_defense'));
+assert.ok(!allowed('pve_termination', '@Normal-Siege', 3).includes('herisor_defense'));
+assert.ok(allowed('pve_termination', '@Hard-Stratagem', 3).includes('herisor_defense'));
+assert.ok(!allowed('pve_termination', '@Hard-Stratagem', 2).includes('herisor_defense'));
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the formation display regression")
 def test_honored_dreadnought_equerry_is_not_displayed_on_site():
     source = r"""
