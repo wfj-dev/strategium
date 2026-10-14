@@ -977,6 +977,8 @@ def test_aar_management_request_uses_matching_private_bot_paths_and_signatures(m
         ("records", "123", "/v1/aar/management/records/123"),
         ("delete-request", "123", "/v1/aar/management/records/123/delete-request"),
         ("delete-confirm", "123", "/v1/aar/management/records/123/delete-confirm"),
+        ("edit-resume", "123", "/v1/aar/management/records/123/edit-resume"),
+        ("reviews/0123456789abcdef01234567/acknowledge", "123", "/v1/aar/management/records/123/reviews/0123456789abcdef01234567/acknowledge"),
     ]
     for action, record_id, path in cases:
         assert server._aar_management_request("42", action, {}, record_id) == (200, {"ok": True})
@@ -1249,7 +1251,7 @@ assert.equal(context.aarDraft.files.length, 0);
 assert.equal(previews, 2);
 assert.equal(errors.length, 4);
 """
-        result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+        result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
 
 
@@ -1296,7 +1298,7 @@ vm.runInContext(html.slice(start, end), context);
     assert.equal(context.aarDraft.memberSearchStatus, 'idle');
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """
-    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
 
 
@@ -1394,7 +1396,7 @@ assert.equal(context.aarDraft.existingScreenshots.length, 1);
 assert.equal(revoked, 1);
 assert.equal(rendered, 1);
 """
-    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
 
 
@@ -1465,7 +1467,7 @@ assert.deepEqual(searches, ['']);
 assert.equal(renders, 1);
 assert.equal(focused, true);
 """
-    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
 
 
@@ -1489,7 +1491,7 @@ assert.deepEqual(context.formationEquerries('armory').map(member => member.id), 
 assert.equal(vm.runInContext('FORMATIONS.armory.ranks.includes("honored_dreadnought")', context), true);
 assert.equal(vm.runInContext('RANK_LABELS.honored_dreadnought', context), 'Honored Dreadnought');
 """
-    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
 
 
@@ -1567,7 +1569,7 @@ centerScreen = (100 - camera.targetX) * camera.targetZoom + 500;
 assert.ok(Math.abs(centerScreen - 330) < 1e-9);
 assert.ok(camera.targetZoom <= camera.baseZoom * 120);
 """
-    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
 
 
