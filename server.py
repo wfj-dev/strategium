@@ -183,7 +183,7 @@ REACH_MAX_DIRECTIVES = 500
 REACH_STATUSES = {
     "unassigned", "distributed", "recruiting", "deployed", "completed", "failed", "lapsed"
 }
-PAGE_PATHS = {"/", "/submit-aar", "/reach", "/record-of-blood", "/rank-guide"}
+PAGE_PATHS = {"/", "/submit-aar", "/manage-aars", "/reach", "/record-of-blood", "/rank-guide"}
 
 SECURITY_LOG = logging.getLogger("strategium.security")
 
@@ -271,11 +271,91 @@ def _aar_access(user_id: str) -> dict[str, Any]:
         max_file_bytes = result.get("max_file_bytes")
         if isinstance(max_file_bytes, bool) or not isinstance(max_file_bytes, int) or max_file_bytes <= 0:
             max_file_bytes = MAX_AAR_IMAGE_BYTES
+        management = result.get("aar_management")
+        if not isinstance(management, dict):
+            management = {}
         return {"allowed": result.get("allowed") is True and result.get("guild_member") is True,
                 "display_name": _text(result.get("display_name"), 100),
-                "max_file_bytes": min(max_file_bytes, MAX_AAR_IMAGE_BYTES)}
+                "max_file_bytes": min(max_file_bytes, MAX_AAR_IMAGE_BYTES),
+                "aar_management": {
+                    "can_edit": management.get("can_edit") is True,
+                    "can_delete": management.get("can_delete") is True,
+                }}
     except (OSError, ValueError, urllib.error.URLError):
         return {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
+
+
+def _aar_member_search(user_id: str, query: str) -> dict[str, Any] | None:
+    intake = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
+    secret = _bot_aar_shared_secret()
+    if not secret or not intake:
+        return None
+    body = _json_bytes({"query": query})
+    timestamp = str(int(time.time()))
+    key = f"members-{user_id}"
+    signed = f"{timestamp}\n{key}\n{user_id}\n{hashlib.sha256(body).hexdigest()}".encode()
+    signature = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+    request = urllib.request.Request(
+        intake.removesuffix("/submissions") + "/members", data=body, method="POST",
+        headers={"Content-Type": "application/json", "X-Strategium-User-ID": str(user_id),
+                 "X-Strategium-AAR-Timestamp": timestamp, "X-Strategium-AAR-Signature": signature},
+    )
+    try:
+        opener = urllib.request.build_opener(_NoRedirectHandler)
+        with opener.open(request, timeout=10) as response:
+            result = json.loads(response.read(16384))
+        if not isinstance(result, dict) or not isinstance(result.get("members"), list):
+            return None
+        members = []
+        for member in result["members"][:25]:
+            if not isinstance(member, dict):
+                continue
+            member_id = str(member.get("id") or "")
+            name = _text(member.get("name"), 100)
+            if re.fullmatch(r"[0-9]{1,20}", member_id) and name:
+                members.append({"id": member_id, "name": name})
+        return {"members": members, "has_more": result.get("has_more") is True}
+    except (OSError, ValueError, urllib.error.URLError):
+        return None
+
+
+def _aar_management_request(
+    user_id: str, action: str, payload: dict[str, Any], record_id: str = ""
+) -> tuple[int, dict[str, Any]] | None:
+    intake = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
+    secret = _bot_aar_shared_secret()
+    if not secret or not intake:
+        return None
+    body = _json_bytes(payload)
+    timestamp = str(int(time.time()))
+    key = f"management-{action}-{record_id or 'list'}"
+    signed = f"{timestamp}\n{key}\n{user_id}\n{hashlib.sha256(body).hexdigest()}".encode()
+    signature = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+    if action == "list":
+        path = "/management/list"
+    elif action == "records":
+        path = f"/management/records/{record_id}"
+    else:
+        path = f"/management/records/{record_id}/{action}"
+    request = urllib.request.Request(
+        intake.removesuffix("/submissions") + path,
+        data=body, method="POST",
+        headers={"Content-Type": "application/json", "X-Strategium-User-ID": str(user_id),
+                 "X-Strategium-AAR-Timestamp": timestamp, "X-Strategium-AAR-Signature": signature},
+    )
+    try:
+        opener = urllib.request.build_opener(_NoRedirectHandler)
+        with opener.open(request, timeout=12) as response:
+            result = json.loads(response.read(131072))
+            return response.status, result if isinstance(result, dict) else {}
+    except urllib.error.HTTPError as error:
+        try:
+            result = json.loads(error.read(16384))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            result = {"error": "aar_management_failed"}
+        return error.code, result if isinstance(result, dict) else {"error": "aar_management_failed"}
+    except (OSError, ValueError, urllib.error.URLError):
+        return None
 
 
 def _aar_image_limit(access: dict[str, Any]) -> int:
@@ -732,12 +812,29 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def _require_aar_management_access(self, capability: str) -> bool:
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return False
+        access = _aar_access(str(user["id"]))
+        if not access.get("allowed"):
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_access_denied"})
+            return False
+        management = access.get("aar_management")
+        if not isinstance(management, dict) or management.get(capability) is not True:
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_management_denied"})
+            return False
+        return True
+
     def do_OPTIONS(self) -> None:
         self._send(HTTPStatus.NO_CONTENT, {})
 
     def do_HEAD(self) -> None:
         path = urllib.parse.urlparse(self.path).path
         if path == "/submit-aar" and not self._require_aar_access(self._cookie_user()):
+            return
+        if path == "/manage-aars" and not self._require_aar_management_access("can_edit"):
             return
         if path in PAGE_PATHS:
             body = (ROOT / "jericho-strategium.html").read_bytes()
@@ -758,6 +855,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/submit-aar" and not self._require_aar_access(self._cookie_user()):
             return
+        if parsed.path == "/manage-aars" and not self._require_aar_management_access("can_edit"):
+            return
         if parsed.path == "/aar-evidence":
             body = (ROOT / "aar-evidence.html").read_bytes()
             self.send_response(HTTPStatus.OK)
@@ -777,6 +876,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.OK, {"ok": True})
         elif parsed.path == "/api/roster":
             self._send(HTTPStatus.OK, self._merged_roster())
+        elif parsed.path == "/api/aar-members":
+            self._search_aar_members(urllib.parse.parse_qs(parsed.query))
+        elif parsed.path == "/api/aar-management":
+            self._get_aar_management_list(urllib.parse.parse_qs(parsed.query))
+        elif re.fullmatch(r"/api/aar-management/records/[0-9]{1,20}", parsed.path):
+            self._get_aar_management_detail(parsed.path.rsplit("/", 1)[-1])
         elif parsed.path == "/api/chapter-lore":
             reference = _load_json(CHAPTERS_REFERENCE_PATH, {})
             chapters = reference.get("chapters", []) if isinstance(reference, dict) else []
@@ -887,6 +992,10 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/aar-submissions":
             self._forward_aar_submission()
+            return
+        management_match = re.fullmatch(r"/api/aar-management/records/([0-9]{1,20})/(delete-request|delete-confirm|edit-resume|reviews/[a-f0-9]{24}/acknowledge)", path)
+        if management_match:
+            self._post_aar_management_action(*management_match.groups())
             return
         else:
             self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
@@ -1166,7 +1275,11 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_submission_unavailable"})
 
     def do_PATCH(self) -> None:
-        if urllib.parse.urlparse(self.path).path != "/api/me/backstory":
+        path = urllib.parse.urlparse(self.path).path
+        if re.fullmatch(r"/api/aar-management/records/[0-9]{1,20}", path):
+            self._edit_aar_management_record(path.rsplit("/", 1)[-1])
+            return
+        if path != "/api/me/backstory":
             self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
             return
         self._set_backstory()
@@ -1261,7 +1374,178 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         self._send(HTTPStatus.OK, {"authenticated": bool(user), "user": public_user,
                                   "csrf": user.get("csrf") if user else None,
                                   "aar_allowed": access["allowed"],
+                                  "aar_management": access.get("aar_management", {"can_edit": False, "can_delete": False}),
                                   "aar_max_file_bytes": _aar_image_limit(access)}, {"Cache-Control": "no-store"})
+
+    def _search_aar_members(self, query: dict[str, list[str]]) -> None:
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return
+        if not self._require_aar_access(user):
+            return
+        value = (query.get("q") or [""])[0].strip()
+        if not 2 <= len(value) <= 64:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_query"})
+            return
+        result = _aar_member_search(str(user["id"]), value)
+        if result is None:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_member_search_unavailable"})
+            return
+        self._send(HTTPStatus.OK, result, {"Cache-Control": "no-store"})
+
+    def _aar_management_access(self, required_capability: str) -> tuple[dict[str, str] | None, dict[str, Any] | None]:
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return None, None
+        access = _aar_access(str(user["id"]))
+        if not access.get("allowed"):
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_access_denied"})
+            return None, None
+        management = access.get("aar_management")
+        if not isinstance(management, dict) or management.get(required_capability) is not True:
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_management_denied"})
+            return None, None
+        return user, access
+
+    def _get_aar_management_list(self, query: dict[str, list[str]]) -> None:
+        user, _access = self._aar_management_access("can_edit")
+        if not user:
+            return
+        search = (query.get("q") or [""])[0].strip()
+        if len(search) > 64:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_query"})
+            return
+        try:
+            offset = max(0, min(int((query.get("offset") or ["0"])[0]), 100000))
+        except ValueError:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_offset"})
+            return
+        response = _aar_management_request(str(user["id"]), "list", {"query": search, "offset": offset})
+        if response is None:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
+            return
+        status, payload = response
+        self._send(status, payload, {"Cache-Control": "no-store"})
+
+    def _get_aar_management_detail(self, record_id: str) -> None:
+        user, _access = self._aar_management_access("can_edit")
+        if not user:
+            return
+        response = _aar_management_request(str(user["id"]), "records", {}, record_id)
+        if response is None:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
+            return
+        status, payload = response
+        self._send(status, payload, {"Cache-Control": "no-store"})
+
+    def _edit_aar_management_record(self, record_id: str) -> None:
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return
+        if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
+            self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
+            return
+        access = _aar_access(str(user["id"]))
+        management = access.get("aar_management")
+        if not access.get("allowed") or not isinstance(management, dict) or management.get("can_edit") is not True:
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_management_denied"})
+            return
+        content_type = self.headers.get("Content-Type", "")
+        if not content_type.lower().startswith("multipart/form-data;"):
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "multipart_required"})
+            return
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            content_length = 0
+        if content_length <= 0 or content_length > MAX_AAR_SUBMISSION_BYTES:
+            self._send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "invalid_submission_size"})
+            return
+        request_id = self.headers.get("X-AAR-Management-Request-ID", "")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{16,128}", request_id):
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_request_id"})
+            return
+        secret = _bot_aar_shared_secret()
+        intake_url = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
+        if not secret or not intake_url:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
+            return
+        if not _AAR_SUBMISSION_SLOTS.acquire(blocking=False):
+            self._send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "aar_upload_capacity"}, {"Retry-After": "5"})
+            return
+        try:
+            self.connection.settimeout(20)
+            body = self.rfile.read(content_length)
+            if len(body) != content_length:
+                self._send(HTTPStatus.BAD_REQUEST, {"error": "incomplete_submission"})
+                return
+            timestamp = str(int(time.time()))
+            key = f"edit-{record_id}-{request_id}"
+            digest = hashlib.sha256(body).hexdigest()
+            signed = f"{timestamp}\n{key}\n{user['id']}\n{digest}".encode()
+            signature = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+            request = urllib.request.Request(
+                intake_url.removesuffix("/submissions") + f"/management/records/{record_id}",
+                data=body,
+                headers={
+                    "Content-Type": content_type,
+                    "X-Strategium-AAR-Timestamp": timestamp,
+                    "X-Strategium-User-ID": str(user["id"]),
+                    "X-Strategium-AAR-Signature": signature,
+                    "X-AAR-Management-Request-ID": request_id,
+                },
+                method="PATCH",
+            )
+            try:
+                opener = urllib.request.build_opener(_NoRedirectHandler)
+                with opener.open(request, timeout=60) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+                    self._send(response.status, payload, {"Cache-Control": "no-store"})
+            except urllib.error.HTTPError as error:
+                try:
+                    payload = json.loads(error.read().decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    payload = {"error": "aar_management_failed"}
+                self._send(error.code, payload)
+            except (OSError, urllib.error.URLError, json.JSONDecodeError):
+                self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
+        finally:
+            _AAR_SUBMISSION_SLOTS.release()
+
+    def _post_aar_management_action(self, record_id: str, action: str) -> None:
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return
+        if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
+            self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
+            return
+        capability = "can_delete" if action == "delete-confirm" or action.startswith("reviews/") else "can_edit"
+        access = _aar_access(str(user["id"]))
+        management = access.get("aar_management")
+        if not access.get("allowed") or not isinstance(management, dict) or management.get(capability) is not True:
+            self._send(HTTPStatus.FORBIDDEN, {"error": "aar_management_denied"})
+            return
+        if not self.headers.get("Content-Type", "").lower().startswith("application/json"):
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "json_required"})
+            return
+        try:
+            _, payload = self._read_json()
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+        if not isinstance(payload, dict):
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_request"})
+            return
+        response = _aar_management_request(str(user["id"]), action, payload, record_id)
+        if response is None:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
+            return
+        status, result = response
+        self._send(status, result, {"Cache-Control": "no-store"})
 
     def _set_backstory(self) -> None:
         user = self._cookie_user()

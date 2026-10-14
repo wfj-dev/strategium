@@ -1243,6 +1243,15 @@
   .aar-file-picker input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
   .aar-upload-hint, .aar-empty { color: var(--green-faint); font-size: 10px; line-height: 1.5; }
   .aar-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .aar-management-list { display: grid; gap: 12px; }
+  .aar-management-entry { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .aar-management-open { display: grid; gap: 5px; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--white); text-align: left; cursor: pointer; }
+  .aar-management-open:disabled { opacity: .6; cursor: not-allowed; }
+  .aar-management-open strong { overflow-wrap: anywhere; color: var(--gold); font-size: 12px; }
+  .aar-management-open span, .aar-management-entry-actions { color: var(--green-dim); font-size: 10px; }
+  .aar-management-entry-actions { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .aar-management-entry-actions a, .aar-management-list a { color: var(--green); }
+  .aar-management-list textarea.field-input { min-height: 90px; resize: vertical; }
   .aar-image { position: relative; min-width: 0; border: 1px solid var(--border-dim); background: #050705; }
   .aar-image img { display: block; width: 100%; height: 100px; object-fit: contain; }
   .aar-image-name { display: block; overflow: hidden; padding: 5px 7px; color: var(--green-dim); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1259,6 +1268,8 @@
     .aar-field-wide { grid-column: auto; }
     .aar-members { grid-template-columns: minmax(0, 1fr); max-height: 240px; }
     .aar-submit-row { align-items: stretch; flex-direction: column; }
+    .aar-management-entry { align-items: flex-start; flex-direction: column; }
+    .aar-management-entry-actions { flex-wrap: wrap; }
   }
   @media (max-width: 760px), (pointer: coarse) {
     .aar-phone-handoff { display: none; }
@@ -1459,6 +1470,7 @@
       <nav class="site-nav" aria-label="Ordo Xenos intelligence channels">
         <a href="/" data-atlas-home>Fortress Atlas</a>
         <a href="/submit-aar" data-page="submit-aar" hidden>Submit AARs</a>
+        <a href="/manage-aars" data-page="manage-aars" hidden>Manage AARs</a>
         <a href="/reach" data-page="reach">Sector Operations</a>
         <a href="/" data-page="fortress">Personnel Docket</a>
         <a href="/record-of-blood" data-page="blood">Chapter Origins</a>
@@ -2117,7 +2129,7 @@ function generateSampleRoster() {
 /* ---------------------------------------------------------------------- */
 
 const state = {
-  page: "fortress",    // 'fortress' | 'submit-aar' | 'reach' | 'blood' | 'rank-guide'
+  page: "fortress",    // 'fortress' | 'submit-aar' | 'manage-aars' | 'reach' | 'blood' | 'rank-guide'
   view: "landing",   // 'landing' | 'strategium' | 'company' | 'killteam' | 'formation'
   companyId: null,
   killTeamId: null,
@@ -2226,6 +2238,7 @@ async function loadAuth() {
 
 function renderAuthButton() {
   document.querySelector('.site-nav [data-page="submit-aar"]')?.toggleAttribute("hidden", !state.auth.aar_allowed);
+  document.querySelector('.site-nav [data-page="manage-aars"]')?.toggleAttribute("hidden", state.auth.aar_management?.can_edit !== true);
   const container = document.getElementById("auth-container");
   if (!container) return;
   if (state.auth && state.auth.authenticated && state.auth.user) {
@@ -2634,6 +2647,10 @@ function renderBreadcrumb() {
   }
   if (state.page === "submit-aar") {
     el.innerHTML = current("Submit AAR");
+    return;
+  }
+  if (state.page === "manage-aars") {
+    el.innerHTML = current("Manage AARs");
     return;
   }
   if (state.view === "landing") {
@@ -3450,6 +3467,7 @@ function render(originPct, direction) {
   document.body.classList.toggle("blood-page", state.page === "blood");
   document.body.classList.toggle("rank-guide-page", state.page === "rank-guide");
   document.body.classList.toggle("submit-aar-page", state.page === "submit-aar");
+  document.body.classList.toggle("manage-aars-page", state.page === "manage-aars");
   document.body.classList.toggle("atlas-page", state.page === "fortress" && state.view === "landing");
   renderBreadcrumb();
   updateSiteNav();
@@ -3458,6 +3476,7 @@ function render(originPct, direction) {
   else if (state.page === "blood") renderRecordOfBlood();
   else if (state.page === "rank-guide") renderRankGuide();
   else if (state.page === "submit-aar") renderSubmitAar();
+  else if (state.page === "manage-aars") renderAarManagement();
   else if (state.view === "landing") renderLanding();
   else if (state.view === "strategium") renderStrategium();
   else if (state.view === "company") renderCompany(state.companyId);
@@ -3521,9 +3540,13 @@ const AAR_MAX_TOTAL_IMAGE_BYTES = 32 * 1024 * 1024;
 const aarDraft = {
   mode: "ops_strat", mission: "pve_inferno", difficulty: "@Ruthless", rank: "A", armoryData: "0",
   waves: "10", kia: "0", geneSeed: "unknown", geneCarrier: "", pvpMap: "Cathedrum",
-  pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), inductees: new Set(), tags: new Set(), files: [], memberFilter: "", submitting: false, reviewing: false, idempotencyKey: ""
+  pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), inductees: new Set(), tags: new Set(), files: [], memberFilter: "",
+  memberDirectory: new Map(), memberSearchStatus: "idle", memberSearchHasMore: false, memberSearchSequence: 0, memberSearchTimer: null,
+  managementRecordId: "", existingScreenshots: [],
+  submitting: false, reviewing: false, idempotencyKey: ""
 };
 const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
+const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, pendingDeletions: [], pendingEdits: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
 
 async function closeAarPhoneHandoff() {
   const sessionId = aarPhoneHandoff.sessionId;
@@ -3594,6 +3617,55 @@ function setAarStatus(message, tone = "") {
   status.dataset.tone = tone;
 }
 
+function rerenderAarMemberSearch() {
+  const input = document.getElementById("aar-member-filter");
+  const preserveFocus = Boolean(input && document.activeElement === input);
+  const cursor = preserveFocus ? input.selectionStart : null;
+  renderSubmitAar();
+  if (!preserveFocus) return;
+  const nextInput = document.getElementById("aar-member-filter");
+  nextInput?.focus();
+  if (cursor !== null) nextInput?.setSelectionRange(cursor, cursor);
+}
+
+function scheduleAarGuildMemberSearch(query) {
+  if (aarDraft.memberSearchTimer) clearTimeout(aarDraft.memberSearchTimer);
+  aarDraft.memberSearchTimer = null;
+  const sequence = ++aarDraft.memberSearchSequence;
+  const normalizedQuery = String(query || "").trim();
+  if (normalizedQuery.length < 2) {
+    aarDraft.memberSearchStatus = "idle";
+    aarDraft.memberSearchHasMore = false;
+    return;
+  }
+  aarDraft.memberSearchStatus = "idle";
+  aarDraft.memberSearchHasMore = false;
+  aarDraft.memberSearchTimer = setTimeout(async () => {
+    if (sequence !== aarDraft.memberSearchSequence || !["submit-aar", "manage-aars"].includes(state.page)) return;
+    aarDraft.memberSearchStatus = "loading";
+    rerenderAarMemberSearch();
+    try {
+      const response = await fetch(apiUrl(`/api/aar-members?q=${encodeURIComponent(normalizedQuery)}`), {
+        credentials: "include", cache: "no-store"
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error("Guild member search is unavailable.");
+      if (sequence !== aarDraft.memberSearchSequence || !["submit-aar", "manage-aars"].includes(state.page)) return;
+      for (const member of result.members || []) {
+        if (!member || !/^\d{1,20}$/.test(String(member.id || "")) || typeof member.name !== "string") continue;
+        aarDraft.memberDirectory.set(String(member.id), { id: String(member.id), name: member.name });
+      }
+      aarDraft.memberSearchStatus = result.members?.length ? "results" : "empty";
+      aarDraft.memberSearchHasMore = result.has_more === true;
+    } catch {
+      if (sequence !== aarDraft.memberSearchSequence || !["submit-aar", "manage-aars"].includes(state.page)) return;
+      aarDraft.memberSearchStatus = "error";
+      aarDraft.memberSearchHasMore = false;
+    }
+    rerenderAarMemberSearch();
+  }, 250);
+}
+
 function revokeAarPreview(file) {
   if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);
 }
@@ -3620,6 +3692,7 @@ function addAarScreenshots(files) {
   }
   aarDraft.idempotencyKey = "";
   aarDraft.reviewing = false;
+  if (aarDraft.managementRecordId) aarDraft.existingScreenshots = [];
   aarDraft.files.push(...selected.map(file => ({ file, name: file.name, size: file.size, type: file.type, previewUrl: URL.createObjectURL(file) })));
   renderSubmitAar();
   return true;
@@ -3694,6 +3767,7 @@ function aarTagOptionsHtml(isPvp, allowedTagKeys, selectedTags) {
 
 function renderSubmitAar() {
   const app = document.getElementById("app");
+  const managementEdit = Boolean(aarDraft.managementRecordId);
   const mode = AAR_SUBMISSION_MODES[aarDraft.mode] || AAR_SUBMISSION_MODES.ops_strat;
   const pvp = Boolean(mode.pvp);
   const missionOptions = mode.missions;
@@ -3701,26 +3775,42 @@ function renderSubmitAar() {
   if (!mode.difficulties.includes(aarDraft.difficulty)) aarDraft.difficulty = mode.difficulty;
 
   const userId = String(state.auth?.user?.id || "");
-  if (userId && !aarDraft.brothers.size) aarDraft.brothers.add(userId);
-  const members = state.dataStatus === "live" ? (state.members || []).filter(member => member && member.id && member.name) : [];
-  const selectedMembers = [...aarDraft.brothers].map(id => members.find(member => String(member.id) === id)).filter(Boolean);
+  if (!managementEdit && userId && !aarDraft.brothers.size) aarDraft.brothers.add(userId);
+  const rosterMembers = state.dataStatus === "live" ? (state.members || []).filter(member => member && member.id && member.name) : [];
+  const availableMembers = new Map(aarDraft.memberDirectory);
+  rosterMembers.forEach(member => availableMembers.set(String(member.id), member));
+  if (userId && state.auth?.user?.name) {
+    availableMembers.set(userId, { id: userId, name: state.auth.user.name, rank: "Watch Brother" });
+  }
+  const members = [...availableMembers.values()];
+  const selectedMembers = [...aarDraft.brothers].map(id => availableMembers.get(id)).filter(Boolean);
   const selectedInductees = [...aarDraft.inductees].map(id => selectedMembers.find(member => String(member.id) === id)).filter(Boolean);
   const signedInMember = members.find(member => String(member.id) === userId);
   const recentTeammateIds = new Set((signedInMember?.recentAarTeammates || []).map(String).slice(0, 5));
   const memberQuery = aarDraft.memberFilter.trim().toLocaleLowerCase();
   const pickerMembers = members.filter(member => {
     const id = String(member.id);
-    return aarDraft.brothers.has(id) || (memberQuery
+    const hasSearch = memberQuery.length >= 2;
+    return aarDraft.brothers.has(id) || (hasSearch
       ? displayName(member.name).toLocaleLowerCase().includes(memberQuery)
       : recentTeammateIds.has(id));
   });
   const memberOptions = pickerMembers.map(member => {
     const id = String(member.id);
-    const rank = RANK_LABELS[member.rank] || member.rank || "Watch Brother";
+    const rank = RANK_LABELS[member.rank] || member.rank || "Guild Member";
     const isRecent = recentTeammateIds.has(id) && !aarDraft.brothers.has(id);
     const label = `${rank} · ${displayName(member.name)}${isRecent ? " · Recent" : ""}`;
     return `<label class="aar-member"><input type="checkbox" data-aar-brother value="${escapeHtml(id)}"${aarDraft.brothers.has(id) ? " checked" : ""}><span>${escapeHtml(label)}</span></label>`;
   }).join("");
+  const memberSearchStatus = aarDraft.memberSearchStatus === "loading"
+    ? `<p class="aar-empty">Searching guild members…</p>`
+    : aarDraft.memberSearchStatus === "empty"
+    ? `<p class="aar-empty">No guild members match this search.</p>`
+    : aarDraft.memberSearchStatus === "error"
+    ? `<p class="aar-empty">Guild member search is unavailable. Try again.</p>`
+    : aarDraft.memberSearchHasMore
+    ? `<p class="aar-upload-hint">Showing the first 25 matches. Refine the search for more precise results.</p>`
+    : "";
   const inducteeOptions = selectedMembers.map(member => {
     const id = String(member.id);
     return `<label class="aar-member"><input type="checkbox" data-aar-inductee value="${escapeHtml(id)}"${aarDraft.inductees.has(id) ? " checked" : ""}><span>${escapeHtml(displayName(member.name))}</span></label>`;
@@ -3744,6 +3834,10 @@ function renderSubmitAar() {
   const carrierField = !pvp && aarDraft.geneSeed === "carried"
     ? aarSelectField("aar-gene-carrier", "Gene-Seed Carrier", selectedMembers.map(member => [String(member.id), displayName(member.name)]), aarDraft.geneCarrier || String(selectedMembers[0]?.id || ""), true)
     : "";
+  const existingImageRows = !aarDraft.files.length ? (aarDraft.existingScreenshots || []).map((image, index) => {
+    const url = String(image.url || "");
+    return url.startsWith("https://") ? `<div class="aar-image"><img src="${escapeHtml(url)}" alt="Existing screenshot ${index + 1}"><span class="aar-image-name">${escapeHtml(image.filename || `Screenshot ${index + 1}`)} · Existing evidence</span></div>` : "";
+  }).join("") : "";
   const imageRows = aarDraft.files.map((file, index) => `
     <div class="aar-image">
       <img src="${file.previewUrl}" alt="Screenshot ${index + 1}: ${escapeHtml(file.name)}">
@@ -3753,34 +3847,35 @@ function renderSubmitAar() {
   const authMessage = state.auth?.authenticated
     ? !state.auth.aar_allowed
       ? `<p class="aar-empty">AAR submission is not available for this account.</p>`
-      : state.dataStatus === "live"
-      ? `<p class="aar-upload-hint">Signed in as ${escapeHtml(state.auth.user?.name || "Watch member")}.</p>`
-      : `<p class="aar-empty">The live fortress roster is unavailable. AAR submission requires verified participants.</p>`
+      : `<p class="aar-upload-hint">Signed in as ${escapeHtml(state.auth.user?.name || "Watch member")}.</p>`
     : `<p class="aar-empty">Sign in with Discord to submit an After-Action Report.</p><button class="btn-primary aar-login" type="button" data-aar-login>Login with Discord</button>`;
     const missionName = missionOptions.find(([value]) => value === aarDraft.mission)?.[1] || "Unspecified mission";
     const selectedTagLabels = AAR_SUBMISSION_TAGS.filter(([key]) => aarDraft.tags.has(key)).map(([, label]) => label);
-    const selectedImageMiB = (aarDraft.files.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024)).toFixed(2);
+    const existingScreenshotBytes = !aarDraft.files.length ? (aarDraft.existingScreenshots || []).reduce((sum, image) => sum + (Number(image.size) || 0), 0) : 0;
+    const selectedImageMiB = ((aarDraft.files.reduce((sum, file) => sum + file.size, 0) + existingScreenshotBytes) / (1024 * 1024)).toFixed(2);
+    const evidenceCount = aarDraft.files.length || aarDraft.existingScreenshots?.length || 0;
     const reviewPanel = `<section class="aar-section" aria-labelledby="aar-review-heading">
-      <h3 id="aar-review-heading">Confirm Archive Entry</h3>
+      <h3 id="aar-review-heading">${managementEdit ? "Confirm AAR Correction" : "Confirm Archive Entry"}</h3>
       <div class="aar-fields">
         <div class="aar-field"><span class="field-label">Report</span><div>${escapeHtml(AAR_SUBMISSION_MODES[aarDraft.mode].label)} · ${escapeHtml(missionName)} · ${escapeHtml(aarDraft.difficulty)}</div></div>
-        <div class="aar-field"><span class="field-label">Team and Evidence</span><div>${selectedMembers.length} battle-brothers · ${aarDraft.files.length} screenshots · ${selectedImageMiB} MiB total</div></div>
+        <div class="aar-field"><span class="field-label">Team and Evidence</span><div>${selectedMembers.length} battle-brothers · ${evidenceCount} screenshots · ${selectedImageMiB} MiB total</div></div>
         ${mode.induction ? `<div class="aar-field"><span class="field-label">Inductees</span><div>${escapeHtml(selectedInductees.map(member => displayName(member.name)).join(", ") || "None selected")}</div></div>` : ""}
         ${selectedTagLabels.length ? `<div class="aar-field aar-field-wide"><span class="field-label">Mission Tags</span><div>${escapeHtml(selectedTagLabels.join(", "))}</div></div>` : ""}
       </div>
-      <button class="btn-dossier-action btn-dossier-cancel" type="button" data-aar-edit>Edit report</button>
+      <button class="btn-dossier-action btn-dossier-cancel" type="button" data-aar-edit>${managementEdit ? "Return to correction" : "Edit report"}</button>
     </section>`;
   const maxImageMiB = Math.ceil(Math.min(AAR_MAX_IMAGE_BYTES, Number(state.auth?.aar_max_file_bytes) || AAR_MAX_IMAGE_BYTES) / (1024 * 1024));
 
   app.innerHTML = `
-    <section class="aar-room" aria-label="After-action report submission">
+    <section class="aar-room" aria-label="${managementEdit ? "Edit submitted after-action report" : "After-action report submission"}">
       <header class="aar-heading">
-        <div class="blood-overline">&gt; COGITATOR INTAKE // AFTER-ACTION REPORT</div>
-        <h2>Submit AAR</h2>
-        <p class="aar-description">Record the operation, its participants, and the evidence for the Watch archive.</p>
+        <div class="blood-overline">&gt; ${managementEdit ? "ARCHIVE CONTROL // STAFF CORRECTION" : "COGITATOR INTAKE // AFTER-ACTION REPORT"}</div>
+        <h2>${managementEdit ? "Edit AAR" : "Submit AAR"}</h2>
+        <p class="aar-description">${managementEdit ? `Correct record ${escapeHtml(aarDraft.managementRecordId)}. The Discord receipt will be synchronized when saved.` : "Record the operation, its participants, and the evidence for the Watch archive."}</p>
+        ${managementEdit ? `<button class="btn-dossier-action" type="button" data-aar-edit-cancel>Back to AAR archive</button>` : ""}
       </header>
       ${authMessage}
-      ${state.auth?.authenticated && state.auth.aar_allowed && state.dataStatus === "live" ? `<form id="aar-form" class="aar-form">
+      ${state.auth?.authenticated && state.auth.aar_allowed ? `<form id="aar-form" class="aar-form">
         <section class="aar-section" aria-labelledby="aar-details-heading">
           <h3 id="aar-details-heading">Operation Details</h3>
           <div class="aar-fields">
@@ -3790,9 +3885,10 @@ function renderSubmitAar() {
         </section>
         <section class="aar-section" aria-labelledby="aar-team-heading">
           <h3 id="aar-team-heading">Battle-Brothers <span class="aar-upload-hint">${aarDraft.brothers.size} selected · ${mode.maxBrothers} maximum</span></h3>
-          <p class="aar-upload-hint">${memberQuery ? "Matching roster entries" : "Recent comrades · Search to find anyone in the roster"}</p>
-          <label class="aar-field aar-field-wide"><span class="field-label">Search roster</span><input id="aar-member-filter" class="field-input" type="search" autocomplete="off" value="${escapeHtml(aarDraft.memberFilter)}" placeholder="Search by name"></label>
-          <div id="aar-member-list" class="aar-members" role="group" aria-label="Select report participants">${memberOptions || `<p class="aar-empty">${memberQuery ? "No roster entries match this search." : "No recent teammates yet. Search the roster to add participants."}</p>`}</div>
+          <p class="aar-upload-hint">${memberQuery.length >= 2 ? "Guild directory results" : "Recent comrades"}</p>
+          <label class="aar-field aar-field-wide"><span class="field-label">Search guild members</span><input id="aar-member-filter" class="field-input" type="search" autocomplete="off" value="${escapeHtml(aarDraft.memberFilter)}" placeholder="Search by name"></label>
+          <div id="aar-member-list" class="aar-members" role="group" aria-label="Select report participants">${memberOptions || (memberQuery.length >= 2 ? memberSearchStatus : `<p class="aar-empty">No recent teammates yet.</p>`)}</div>
+          ${memberOptions ? memberSearchStatus : ""}
         </section>
         ${mode.induction ? `<section class="aar-section" aria-labelledby="aar-inductees-heading"><h3 id="aar-inductees-heading">Inductees <span class="aar-upload-hint">${aarDraft.inductees.size} selected · 2 maximum</span></h3><p class="aar-upload-hint">Select one or two members of this team to receive induction credit.</p><div class="aar-members" role="group" aria-label="Select inductees">${inducteeOptions || `<p class="aar-empty">Add report participants before selecting inductees.</p>`}</div></section>` : ""}
         ${tagOptions ? `<section class="aar-section" aria-labelledby="aar-tags-heading"><h3 id="aar-tags-heading">Mission Tags</h3><div class="aar-members" role="group" aria-label="Select mission tags">${tagOptions}</div><p class="aar-upload-hint">Defense of Herisor is enabled for Hard Siege or Hard-Stratagem Termination/Reclamation with exactly three brothers. Other tags depend on the selected mission and team.</p></section>` : ""}
@@ -3803,33 +3899,41 @@ function renderSubmitAar() {
               <label class="aar-file-picker" for="aar-screenshots">
                 <span class="aar-file-picker-icon" aria-hidden="true">+</span>
                 <span>Choose Screenshots</span>
-                <span id="aar-file-picker-count" class="aar-file-picker-count">${aarDraft.files.length} / ${AAR_MAX_SCREENSHOTS}</span>
+                <span id="aar-file-picker-count" class="aar-file-picker-count">${aarDraft.files.length || aarDraft.existingScreenshots?.length || 0} / ${AAR_MAX_SCREENSHOTS}</span>
                 <input id="aar-screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="aar-upload-hint">
               </label>
               <button id="aar-paste-clipboard" class="btn-dossier-action aar-clipboard-button" type="button"${aarDraft.submitting ? " disabled" : ""}>Paste from Clipboard</button>
             </div>
             <p class="aar-mobile-guidance">Console captures: save the screenshot to this phone with the Xbox or PlayStation app, then choose it here from Photos or Gallery.</p>
-            <span id="aar-upload-hint" class="aar-upload-hint">Choose files or paste copied screenshots · PNG, JPEG, or WebP · ${maxImageMiB} MiB each · ${selectedImageMiB} / 32 MiB selected</span>
-            <div class="aar-images">${imageRows}</div>
-            <div class="aar-phone-handoff">
+            <span id="aar-upload-hint" class="aar-upload-hint">${managementEdit && aarDraft.existingScreenshots.length && !aarDraft.files.length ? "Current screenshots are retained unless you choose replacement images. " : "Choose files or paste copied screenshots · "}PNG, JPEG, or WebP · ${maxImageMiB} MiB each · ${selectedImageMiB} / 32 MiB selected</span>
+            <div class="aar-images">${existingImageRows}${imageRows}</div>
+            ${managementEdit ? "" : `<div class="aar-phone-handoff">
               ${aarPhoneHandoff.sessionId ? `
                 <img src="${aarPhoneHandoff.qr}" alt="QR code for phone screenshot upload" width="164" height="164">
                 <div><a href="${escapeHtml(aarPhoneHandoff.url)}" target="_blank" rel="noopener noreferrer">Phone Upload Link</a>
                 <p class="aar-upload-hint">Expires ${escapeHtml(new Date(aarPhoneHandoff.expiresAt * 1000).toLocaleTimeString())}</p>
                 <button type="button" id="aar-phone-close" class="btn-dossier-action btn-dossier-cancel">Close Link</button></div>
               ` : `<button type="button" id="aar-phone-start" class="btn-dossier-action"${aarPhoneHandoff.busy || aarDraft.submitting ? " disabled" : ""}>${aarPhoneHandoff.busy ? "Opening..." : "Add From Phone"}</button>`}
-            </div>
+            </div>`}
           </div>
         </section>
         ${aarDraft.reviewing ? reviewPanel : ""}
         <div class="aar-submit-row">
-          <button id="aar-submit" class="btn-primary" type="submit"${aarDraft.submitting ? " disabled" : ""}>${aarDraft.submitting ? "Submitting…" : aarDraft.reviewing ? "Submit AAR" : "Review AAR"}</button>
+          <button id="aar-submit" class="btn-primary" type="submit"${aarDraft.submitting ? " disabled" : ""}>${aarDraft.submitting ? (managementEdit ? "Saving…" : "Submitting…") : aarDraft.reviewing ? (managementEdit ? "Save correction" : "Submit AAR") : (managementEdit ? "Review correction" : "Review AAR")}</button>
           <div id="aar-status" class="aar-status" role="status" aria-live="polite"></div>
         </div>
       </form>` : ""}
     </section>`;
 
   const form = document.getElementById("aar-form");
+  document.querySelector("[data-aar-edit-cancel]")?.addEventListener("click", () => {
+    aarDraft.managementRecordId = "";
+    aarDraft.existingScreenshots = [];
+    aarManager.selectedId = "";
+    aarManager.detail = null;
+    aarManager.status = "ready";
+    renderAarManagement();
+  });
   if (!form) {
     document.querySelector("[data-aar-login]")?.addEventListener("click", startDiscordLogin);
     return;
@@ -3887,6 +3991,7 @@ function renderSubmitAar() {
     invalidateIdempotencyKey();
     readDraftFields();
     aarDraft.memberFilter = "";
+    scheduleAarGuildMemberSearch("");
     renderSubmitAar();
     document.getElementById("aar-member-filter")?.focus();
   }));
@@ -3912,6 +4017,7 @@ function renderSubmitAar() {
     const nextFilter = document.getElementById("aar-member-filter");
     nextFilter?.focus();
     nextFilter?.setSelectionRange(cursor, cursor);
+    scheduleAarGuildMemberSearch(aarDraft.memberFilter);
   });
   document.getElementById("aar-mode")?.addEventListener("change", event => {
     invalidateIdempotencyKey();
@@ -3978,7 +4084,7 @@ function renderSubmitAar() {
       setAarStatus(`Select between 2 and ${maximum} battle-brothers for this report.`, "error");
       return;
     }
-    if (!team.includes(userId)) {
+    if (!aarDraft.managementRecordId && !team.includes(userId)) {
       setAarStatus("The signed-in brother must be included in the report team.", "error");
       return;
     }
@@ -3986,7 +4092,7 @@ function renderSubmitAar() {
       setAarStatus("Select one or two inductees from the report participants.", "error");
       return;
     }
-    if (!aarDraft.files.length) {
+    if (!aarDraft.files.length && !(aarDraft.managementRecordId && aarDraft.existingScreenshots.length)) {
       setAarStatus("Attach at least one mission screenshot before submitting.", "error");
       return;
     }
@@ -4020,22 +4126,44 @@ function renderSubmitAar() {
     const body = new FormData();
     body.append("submission", JSON.stringify(payload));
     aarDraft.files.forEach(item => body.append("screenshots", item.file, item.name));
+    if (aarDraft.managementRecordId && !aarDraft.files.length) body.append("keep_screenshots", "true");
     aarDraft.submitting = true;
     renderSubmitAar();
-    setAarStatus("Transmitting report and evidence to the Watch archive…");
+    setAarStatus(aarDraft.managementRecordId ? "Saving correction to the Watch archive…" : "Transmitting report and evidence to the Watch archive…");
     try {
       const idempotencyKey = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       if (!aarDraft.idempotencyKey) aarDraft.idempotencyKey = idempotencyKey;
-      const response = await fetch(apiUrl("/api/aar-submissions"), {
-        method: "POST", credentials: "include",
-        headers: { "X-CSRF-Token": state.auth.csrf || "", "X-AAR-Idempotency-Key": aarDraft.idempotencyKey },
+      const managementRecordId = aarDraft.managementRecordId;
+      const response = await fetch(apiUrl(managementRecordId
+        ? `/api/aar-management/records/${encodeURIComponent(managementRecordId)}`
+        : "/api/aar-submissions"), {
+        method: managementRecordId ? "PATCH" : "POST", credentials: "include",
+        headers: managementRecordId
+          ? { "X-CSRF-Token": state.auth.csrf || "", "X-AAR-Management-Request-ID": aarDraft.idempotencyKey }
+          : { "X-CSRF-Token": state.auth.csrf || "", "X-AAR-Idempotency-Key": aarDraft.idempotencyKey },
         body
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.message || result.error || "The AAR could not be submitted.");
+      if (!response.ok) throw new Error(result.message || result.error || (managementRecordId ? "The AAR correction could not be saved." : "The AAR could not be submitted."));
+      if (managementRecordId && result.processing_pending) {
+        aarDraft.submitting = false;
+        renderSubmitAar();
+        setAarStatus("The receipt is updated; archive or award reconciliation is pending. Retry to resume safely.");
+        return;
+      }
       aarDraft.files.forEach(revokeAarPreview);
       aarDraft.files = [];
       aarDraft.idempotencyKey = "";
+      if (managementRecordId) {
+        aarDraft.managementRecordId = "";
+        aarDraft.existingScreenshots = [];
+        aarDraft.submitting = false;
+        aarDraft.reviewing = false;
+        aarManager.notice = "AAR correction saved and Discord receipt synchronized.";
+        await loadAarManagement();
+        await openAarManagementRecord(managementRecordId);
+        return;
+      }
       await closeAarPhoneHandoff();
       aarDraft.submitting = false;
       aarDraft.reviewing = false;
@@ -4064,6 +4192,268 @@ function renderSubmitAar() {
   });
 }
 
+function beginAarManagementEdit(detail) {
+  const submission = detail?.submission;
+  if (!submission || !detail.id) return;
+  aarDraft.files.forEach(revokeAarPreview);
+  aarDraft.managementRecordId = String(detail.id);
+  aarDraft.mode = submission.mode || "ops_strat";
+  aarDraft.mission = submission.mission || "pve_inferno";
+  aarDraft.difficulty = submission.difficulty || AAR_SUBMISSION_MODES[aarDraft.mode]?.difficulty || "@Ruthless";
+  aarDraft.rank = submission.rank || "A";
+  aarDraft.armoryData = String(submission.armory_data ?? 0);
+  aarDraft.waves = String(submission.waves ?? 10);
+  aarDraft.kia = String(submission.kia ?? 0);
+  aarDraft.geneSeed = submission.gene_seed_status || "unknown";
+  aarDraft.geneCarrier = submission.gene_seed_carrier_id ? String(submission.gene_seed_carrier_id) : "";
+  aarDraft.pvpMap = submission.pvp_map || "Cathedrum";
+  aarDraft.pvpMode = submission.pvp_game_mode || "Seize Ground";
+  aarDraft.pvpResult = submission.pvp_result || "W";
+  aarDraft.brothers = new Set((submission.brother_ids || []).map(String));
+  aarDraft.inductees = new Set((submission.inductee_ids || []).map(String));
+  aarDraft.tags = new Set((submission.tags || []).map(String));
+  aarDraft.memberDirectory = new Map((detail.brothers || []).map(member => [String(member.id), {
+    id: String(member.id), name: member.name || String(member.id), rank: "Guild Member"
+  }]));
+  aarDraft.existingScreenshots = Array.isArray(detail.screenshots) ? detail.screenshots : [];
+  aarDraft.files = [];
+  aarDraft.memberFilter = "";
+  aarDraft.reviewing = false;
+  aarDraft.submitting = false;
+  aarDraft.idempotencyKey = "";
+  renderSubmitAar();
+}
+
+async function loadAarManagement() {
+  if (state.auth?.aar_management?.can_edit !== true) return;
+  aarManager.status = "loading";
+  renderAarManagement();
+  try {
+    const params = new URLSearchParams({ q: aarManager.query, offset: String(aarManager.offset) });
+    const response = await fetch(apiUrl(`/api/aar-management?${params}`), { credentials: "include", cache: "no-store" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || "AAR archive is unavailable.");
+    aarManager.records = Array.isArray(result.records) ? result.records : [];
+    aarManager.total = Number(result.total) || 0;
+    aarManager.hasMore = result.has_more === true;
+    aarManager.pendingDeletions = Array.isArray(result.pending_deletions) ? result.pending_deletions : [];
+    aarManager.pendingEdits = Array.isArray(result.pending_edits) ? result.pending_edits : [];
+    aarManager.reconciliationReviews = Array.isArray(result.reconciliation_reviews) ? result.reconciliation_reviews : [];
+    aarManager.status = "ready";
+  } catch (error) {
+    aarManager.records = [];
+    aarManager.total = 0;
+    aarManager.hasMore = false;
+    aarManager.status = "error";
+    aarManager.error = error.message || "AAR archive is unavailable.";
+  }
+  renderAarManagement();
+}
+
+async function openAarManagementRecord(recordId) {
+  aarManager.selectedId = String(recordId);
+  aarManager.detail = null;
+  aarManager.status = "loading-detail";
+  renderAarManagement();
+  try {
+    const response = await fetch(apiUrl(`/api/aar-management/records/${encodeURIComponent(aarManager.selectedId)}`), {
+      credentials: "include", cache: "no-store"
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || result.error || "AAR could not be loaded.");
+    aarManager.detail = result;
+    aarManager.status = "detail";
+  } catch (error) {
+    aarManager.status = "detail-error";
+    aarManager.error = error.message || "AAR could not be loaded.";
+  }
+  renderAarManagement();
+}
+
+function renderAarManagement() {
+  const app = document.getElementById("app");
+  const detail = aarManager.detail;
+  const deleteRequest = detail?.delete_request;
+  const deleteControl = deleteRequest?.status
+    ? `<section class="aar-section"><h3>Deletion Request</h3><p class="aar-upload-hint">${escapeHtml(deleteRequest.status.replaceAll("_", " "))}${deleteRequest.reason ? ` · ${escapeHtml(deleteRequest.reason)}` : ""}</p>
+        ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}">Confirm permanent deletion</button>` : `<p class="aar-upload-hint">Awaiting Forgemaster confirmation.</p>`}</section>`
+    : detail
+    ? `<section class="aar-section"><h3>Delete Request</h3><label class="aar-field aar-field-wide"><span class="field-label">Reason</span><textarea id="aar-delete-reason" class="field-input" rows="3" maxlength="400" placeholder="Explain why this report must be removed"></textarea></label><button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-request="${escapeHtml(detail.id)}">Request deletion</button></section>`
+    : "";
+  const rows = aarManager.records.map(record => {
+    const participants = (record.brother_names || []).map(name => escapeHtml(name)).join(", ");
+    const date = record.timestamp ? new Date(record.timestamp).toLocaleString() : "Unknown date";
+    const receipt = String(record.receipt_url || "");
+    const receiptLink = receipt.startsWith("https://discord.com/channels/")
+      ? `<a href="${escapeHtml(receipt)}" target="_blank" rel="noopener noreferrer">Discord receipt</a>` : "";
+    return `<article class="aar-section aar-management-entry">
+      <button class="aar-management-open" type="button" data-aar-manage-open="${escapeHtml(record.id)}"${record.editable ? "" : " disabled"}>
+        <strong>${escapeHtml(record.mission || "AAR")} · ${escapeHtml(record.difficulty || "")}</strong>
+        <span>${escapeHtml(date)} · ${escapeHtml(participants || "Participants unavailable")}</span>
+      </button>
+      <div class="aar-management-entry-actions">${receiptLink}<span>${record.editable ? "Editable" : "Submission data unavailable"}</span></div>
+    </article>`;
+  }).join("");
+  const pendingDeletionRows = aarManager.pendingDeletions.map(item => `<article class="aar-section aar-management-entry">
+    <div><strong>Deletion ${escapeHtml(item.status.replaceAll("_", " "))} · AAR ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.reason || "No reason recorded")}</p></div>
+    ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-recover-delete-confirm="${escapeHtml(item.id)}">Resume Forgemaster confirmation</button>` : `<span class="aar-upload-hint">Forgemaster action required</span>`}
+  </article>`).join("");
+  const pendingEditRows = aarManager.pendingEdits.map(item => `<article class="aar-section aar-management-entry">
+    <div><strong>Edit pending · ${escapeHtml(item.mission || "AAR")} · ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.status.replaceAll("_", " "))}</p></div>
+    <button type="button" class="btn-dossier-action" data-aar-resume-edit="${escapeHtml(item.id)}" data-aar-edit-request="${escapeHtml(item.request_id)}">Resume archive update</button>
+  </article>`).join("");
+  const reconciliationReviewRows = state.auth.aar_management?.can_delete === true
+    ? aarManager.reconciliationReviews.map(item => `<article class="aar-section aar-management-entry"><div><strong>${escapeHtml(item.challenge || "Challenge award")}</strong><p class="aar-upload-hint">AAR ${escapeHtml(item.record_id)} · Brother ${escapeHtml(item.user_id)} · ${escapeHtml(item.operation)}</p></div><button type="button" class="btn-dossier-action" data-aar-review-ack="${escapeHtml(item.review_id)}" data-aar-review-record="${escapeHtml(item.record_id)}">Acknowledge review</button></article>`).join("")
+    : aarManager.reconciliationReviews.length
+    ? `<p class="aar-empty">${aarManager.reconciliationReviews.length} award case${aarManager.reconciliationReviews.length === 1 ? "" : "s"} need Forgemaster review.</p>`
+    : "";
+  const body = aarManager.selectedId
+    ? aarManager.status === "loading-detail"
+      ? `<p class="aar-empty">Loading archive entry…</p>`
+      : aarManager.status === "detail-error"
+      ? `<p class="aar-empty" data-tone="error">${escapeHtml(aarManager.error || "AAR could not be loaded.")}</p>`
+      : detail
+      ? `<section class="aar-section"><button type="button" class="btn-dossier-action" data-aar-manage-back>Back to archive</button>
+          <h3>${escapeHtml(AAR_SUBMISSION_MODES[detail.submission?.mode]?.label || "AAR")} · ${escapeHtml(detail.submission?.mission || detail.id)}</h3>
+          <div class="aar-fields">
+            <div class="aar-field"><span class="field-label">Difficulty / Rank</span><div>${escapeHtml(detail.submission?.difficulty || "")} · ${escapeHtml(detail.submission?.rank || "")}</div></div>
+            <div class="aar-field"><span class="field-label">Participants</span><div>${escapeHtml((detail.brothers || []).map(member => member.name).join(", ") || "Unavailable")}</div></div>
+            <div class="aar-field"><span class="field-label">Evidence</span><div>${(detail.screenshots || []).length} screenshots</div></div>
+          </div>
+          ${(detail.screenshots || []).map((image, index) => String(image.url || "").startsWith("https://") ? `<div class="aar-image"><img src="${escapeHtml(image.url)}" alt="Mission screenshot ${index + 1}"><span class="aar-image-name">${escapeHtml(image.filename || `Screenshot ${index + 1}`)}</span></div>` : "").join("")}
+          ${String(detail.receipt_url || "").startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(detail.receipt_url)}" target="_blank" rel="noopener noreferrer">Open Discord receipt</a>` : ""}
+          ${deleteRequest?.status ? "" : `<button type="button" class="btn-primary" data-aar-manage-edit="${escapeHtml(detail.id)}">Edit report</button>`}
+          ${deleteControl}
+        </section>`
+      : `<p class="aar-empty">No archive entry selected.</p>`
+    : aarManager.status === "loading"
+    ? `<p class="aar-empty">Querying the Watch archive…</p>`
+    : aarManager.status === "error"
+    ? `<p class="aar-empty" data-tone="error">${escapeHtml(aarManager.error || "AAR archive is unavailable.")}</p>`
+    : rows || `<p class="aar-empty">${aarManager.query ? "No AARs match this search." : "No Strategium-submitted AARs are in the archive."}</p>`;
+  app.innerHTML = `<section class="aar-room" aria-label="Manage submitted AARs">
+    <header class="aar-heading"><div class="blood-overline">&gt; ARCHIVE CONTROL // STAFF ACCESS</div><h2>Manage AARs</h2><p class="aar-description">Search Strategium-submitted reports in the Watch archive.</p>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
+    ${aarManager.selectedId ? "" : `<label class="aar-field aar-field-wide"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission, participant, or submitter ID"></label>`}
+    ${pendingDeletionRows ? `<section class="aar-section"><h3>Pending Deletions</h3><div class="aar-management-list">${pendingDeletionRows}</div></section>` : ""}
+    ${pendingEditRows ? `<section class="aar-section"><h3>Pending Edits</h3><div class="aar-management-list">${pendingEditRows}</div></section>` : ""}
+    ${reconciliationReviewRows ? `<section class="aar-section"><h3>Award Reconciliation Review</h3><div class="aar-management-list">${reconciliationReviewRows}</div></section>` : ""}
+    <div class="aar-management-list">${body}</div>
+    ${!aarManager.selectedId && aarManager.status === "ready" ? `<div class="aar-submit-row"><button type="button" class="btn-dossier-action" data-aar-manage-page="previous"${aarManager.offset <= 0 ? " disabled" : ""}>Previous</button><span class="aar-upload-hint">${aarManager.total ? `${aarManager.offset + 1}–${Math.min(aarManager.offset + aarManager.records.length, aarManager.total)} of ${aarManager.total}` : "0 records"}</span><button type="button" class="btn-dossier-action" data-aar-manage-page="next"${aarManager.hasMore ? "" : " disabled"}>Next</button></div>` : ""}
+    <div id="aar-management-status" class="aar-status" role="status" aria-live="polite"></div>
+  </section>`;
+  document.getElementById("aar-management-search")?.addEventListener("input", event => {
+    aarManager.query = event.target.value;
+    aarManager.offset = 0;
+    if (aarManager.timer) clearTimeout(aarManager.timer);
+    aarManager.timer = setTimeout(loadAarManagement, 250);
+  });
+  document.querySelectorAll("[data-aar-manage-open]").forEach(button => button.addEventListener("click", () => {
+    void openAarManagementRecord(button.dataset.aarManageOpen);
+  }));
+  document.querySelector("[data-aar-manage-back]")?.addEventListener("click", () => {
+    aarManager.selectedId = "";
+    aarManager.detail = null;
+    aarManager.status = "ready";
+    renderAarManagement();
+  });
+  document.querySelector("[data-aar-manage-edit]")?.addEventListener("click", () => {
+    beginAarManagementEdit(aarManager.detail);
+  });
+  document.querySelector("[data-aar-manage-delete-request]")?.addEventListener("click", async event => {
+    const reason = document.getElementById("aar-delete-reason")?.value.trim() || "";
+    if (reason.length < 8) {
+      const status = document.getElementById("aar-management-status");
+      if (status) status.textContent = "Enter a deletion reason of at least 8 characters.";
+      return;
+    }
+    const recordId = event.currentTarget.dataset.aarManageDeleteRequest;
+    try {
+      const response = await fetch(apiUrl(`/api/aar-management/records/${recordId}/delete-request`), {
+        method: "POST", credentials: "include", headers: {
+          "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""
+        }, body: JSON.stringify({ reason })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || "Deletion request failed.");
+      aarManager.notice = "Deletion request recorded; a Forgemaster must confirm it.";
+      await openAarManagementRecord(recordId);
+    } catch (error) {
+      const status = document.getElementById("aar-management-status");
+      if (status) status.textContent = error.message || "Deletion request failed.";
+    }
+  });
+  document.querySelectorAll("[data-aar-manage-delete-confirm], [data-aar-recover-delete-confirm]").forEach(button => button.addEventListener("click", async event => {
+    const recordId = event.currentTarget.dataset.aarManageDeleteConfirm || event.currentTarget.dataset.aarRecoverDeleteConfirm;
+    if (!window.confirm(`Permanently delete AAR ${recordId}, its Discord receipt, and its active award credit?`)) return;
+    try {
+      const response = await fetch(apiUrl(`/api/aar-management/records/${recordId}/delete-confirm`), {
+        method: "POST", credentials: "include", headers: {
+          "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""
+        }, body: JSON.stringify({})
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || "Deletion could not be confirmed.");
+      if (result.status === "processing_pending") {
+        aarManager.notice = "Deletion is still processing; retry confirmation to resume.";
+        if (aarManager.detail) {
+          aarManager.detail.delete_request = { ...aarManager.detail.delete_request, status: result.resume_status || "record_deleted" };
+          aarManager.selectedId = recordId;
+          aarManager.status = "detail";
+          renderAarManagement();
+        }
+        return;
+      }
+      aarManager.notice = "AAR and Discord receipt deleted; affected awards reconciled.";
+      aarManager.selectedId = "";
+      aarManager.detail = null;
+      await loadAarManagement();
+    } catch (error) {
+      const status = document.getElementById("aar-management-status");
+      if (status) status.textContent = error.message || "Deletion could not be confirmed.";
+    }
+  }));
+  document.querySelectorAll("[data-aar-resume-edit]").forEach(button => button.addEventListener("click", async event => {
+    const recordId = event.currentTarget.dataset.aarResumeEdit;
+    const requestId = event.currentTarget.dataset.aarEditRequest;
+    try {
+      const response = await fetch(apiUrl(`/api/aar-management/records/${recordId}/edit-resume`), {
+        method: "POST", credentials: "include", headers: {
+          "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""
+        }, body: JSON.stringify({ request_id: requestId })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || "AAR update could not be resumed.");
+      aarManager.notice = result.processing_pending ? "The edit remains pending; resume again after the bridge is available." : "AAR archive and award reconciliation resumed successfully.";
+      await loadAarManagement();
+    } catch (error) {
+      const status = document.getElementById("aar-management-status");
+      if (status) status.textContent = error.message || "AAR update could not be resumed.";
+    }
+  }));
+  document.querySelectorAll("[data-aar-review-ack]").forEach(button => button.addEventListener("click", async event => {
+    const recordId = event.currentTarget.dataset.aarReviewRecord;
+    const reviewId = event.currentTarget.dataset.aarReviewAck;
+    try {
+      const response = await fetch(apiUrl(`/api/aar-management/records/${recordId}/reviews/${reviewId}/acknowledge`), {
+        method: "POST", credentials: "include", headers: {
+          "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""
+        }, body: JSON.stringify({})
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || "Review acknowledgement failed.");
+      aarManager.notice = "Award review acknowledged and removed from the pending queue.";
+      await loadAarManagement();
+    } catch (error) {
+      const status = document.getElementById("aar-management-status");
+      if (status) status.textContent = error.message || "Review acknowledgement failed.";
+    }
+  }));
+  document.querySelectorAll("[data-aar-manage-page]").forEach(button => button.addEventListener("click", () => {
+    aarManager.offset = Math.max(0, aarManager.offset + (button.dataset.aarManagePage === "next" ? 25 : -25));
+    void loadAarManagement();
+  }));
+}
+
 function updateStatusBadge() {
   const slateCount = document.getElementById("slate-count");
   if (slateCount) {
@@ -4084,6 +4474,11 @@ function updateStatusBadge() {
     }
     if (state.page === "submit-aar") {
       slateCount.textContent = "AAR INTAKE: READY";
+      slateCount.style.display = "";
+      return;
+    }
+    if (state.page === "manage-aars") {
+      slateCount.textContent = `WEB AAR ARCHIVE: ${aarManager.total}`;
       slateCount.style.display = "";
       return;
     }
@@ -4196,7 +4591,7 @@ async function restoreNavigation(snapshot) {
   state.bloodPage = snapshot.bloodPage;
   if (state.page === "reach" && state.reachStatus === "idle") await loadReach();
   render(null, "out");
-  const path = state.page === "submit-aar" ? "/submit-aar" : state.page === "reach" ? "/reach" : state.page === "blood" ? "/record-of-blood" : state.page === "rank-guide" ? "/rank-guide" : "/";
+  const path = state.page === "submit-aar" ? "/submit-aar" : state.page === "manage-aars" ? "/manage-aars" : state.page === "reach" ? "/reach" : state.page === "blood" ? "/record-of-blood" : state.page === "rank-guide" ? "/rank-guide" : "/";
   if (window.location.protocol.startsWith("http")) history.replaceState({ page: state.page }, "", path);
   if (state.page === "blood") checkBloodAudio();
   if (snapshot.modalMemberId) openMemberModal(snapshot.modalMemberId);
@@ -4717,7 +5112,7 @@ function relativeTime(iso) {
 
 function pageFromLocation() {
   const path = window.location.pathname.replace(/\/+$/, "");
-  return path === "/submit-aar" ? "submit-aar" : path === "/reach" ? "reach" : path === "/record-of-blood" ? "blood" : path === "/rank-guide" ? "rank-guide" : "fortress";
+  return path === "/submit-aar" ? "submit-aar" : path === "/manage-aars" ? "manage-aars" : path === "/reach" ? "reach" : path === "/record-of-blood" ? "blood" : path === "/rank-guide" ? "rank-guide" : "fortress";
 }
 
 function updateSiteNav() {
@@ -4736,6 +5131,7 @@ function updateSiteNav() {
 
 async function setPage(page, push, originEl = null) {
   if (page === "submit-aar" && !state.auth.aar_allowed) return;
+  if (page === "manage-aars" && state.auth.aar_management?.can_edit !== true) return;
   if (page === state.page) {
     if (page === "fortress" && push) navigate("strategium", {}, null, "out");
     return;
@@ -4750,10 +5146,11 @@ async function setPage(page, push, originEl = null) {
   closePlanetModal();
   if (page !== "blood") pauseBloodAudio();
   if (push && window.location.protocol.startsWith("http")) {
-    history.pushState({ page }, "", page === "submit-aar" ? "/submit-aar" : page === "reach" ? "/reach" : page === "blood" ? "/record-of-blood" : page === "rank-guide" ? "/rank-guide" : "/");
+    history.pushState({ page }, "", page === "submit-aar" ? "/submit-aar" : page === "manage-aars" ? "/manage-aars" : page === "reach" ? "/reach" : page === "blood" ? "/record-of-blood" : page === "rank-guide" ? "/rank-guide" : "/");
   }
   if (page === "reach" && state.reachStatus === "idle") await loadReach();
   if (page === "blood" && state.chapterLore === null) await loadChapterLore();
+  if (page === "manage-aars") await loadAarManagement();
   render(null, "out");
   if (page === "blood") checkBloodAudio();
   window.scrollTo({ top: 0, behavior: "instant" });
@@ -7644,6 +8041,7 @@ async function init() {
     document.body.classList.add("atlas-booting");
   }
   render();
+  if (state.page === "manage-aars" && state.auth.aar_management?.can_edit === true) await loadAarManagement();
   if (state.page === "fortress" && window.location.protocol.startsWith("http")) {
     history.replaceState({ page: "fortress", view: "landing" }, "", "/");
   }
