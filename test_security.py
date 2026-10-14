@@ -644,6 +644,25 @@ def test_submit_aar_direct_route_serves_the_site_page(local_site, monkeypatch) -
                 assert page == b""
 
 
+def test_manage_aars_direct_route_requires_editor_capability(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    cookie = _session_value({"id": "42", "name": "AccountName", "csrf": "csrf-token"})
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {
+        "allowed": True, "display_name": "Guild Nickname", "aar_management": {"can_edit": False, "can_delete": False}
+    })
+    request = urllib.request.Request(local_site + "/manage-aars", headers={"Cookie": f"strategium_session={cookie}"})
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 403
+
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {
+        "allowed": True, "display_name": "Guild Nickname", "aar_management": {"can_edit": True, "can_delete": False}
+    })
+    with urllib.request.urlopen(urllib.request.Request(local_site + "/manage-aars", headers={"Cookie": f"strategium_session={cookie}"})) as response:
+        assert response.status == 200
+        assert b'data-page="manage-aars"' in response.read()
+
+
 def test_aar_submission_requires_login(local_site) -> None:
     request = urllib.request.Request(
         local_site + "/api/aar-submissions",
@@ -781,6 +800,195 @@ def test_aar_submission_forwards_signed_body_and_authenticated_user(local_site, 
     assert sent_headers["x-strategium-aar-signature"] == expected
     assert forwarded["timeout"] == 60
     assert payload["receipt_url"] == "https://discord.com/channels/1/2/3"
+
+
+def test_aar_member_search_forwards_signed_query_and_authenticated_user(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Guild Nickname"})
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.delenv("STRATEGIUM_BOT_SHARED_SECRET", raising=False)
+    monkeypatch.setenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "test-aar-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    cookie = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+    forwarded = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _limit=-1):
+            return b'{"members":[{"id":"99","name":"Jules Reserve"}],"has_more":false}'
+
+    class FakeOpener:
+        def open(self, request, data=None, timeout=None):
+            if request.full_url.startswith(local_site):
+                return original_build_opener().open(request, data=data, timeout=timeout)
+            forwarded["request"] = request
+            forwarded["timeout"] = timeout
+            return FakeResponse()
+
+    original_build_opener = server.urllib.request.build_opener
+    previous_opener = server.urllib.request._opener
+    server.urllib.request._opener = original_build_opener()
+    monkeypatch.setattr(server.urllib.request, "build_opener", lambda *_handlers: FakeOpener())
+    request = urllib.request.Request(
+        local_site + "/api/aar-members?q=Jules",
+        headers={"Cookie": f"strategium_session={cookie}"},
+    )
+
+    try:
+        with urllib.request.urlopen(request) as response:
+            payload = json.loads(response.read())
+    finally:
+        server.urllib.request._opener = previous_opener
+
+    sent = forwarded["request"]
+    sent_headers = {key.lower(): value for key, value in sent.header_items()}
+    body = sent.data
+    timestamp = sent_headers["x-strategium-aar-timestamp"]
+    digest = server.hashlib.sha256(body).hexdigest()
+    signed = f"{timestamp}\nmembers-42\n42\n{digest}".encode()
+    expected = server.hmac.new(b"test-aar-secret", signed, server.hashlib.sha256).hexdigest()
+    assert payload == {"members": [{"id": "99", "name": "Jules Reserve"}], "has_more": False}
+    assert json.loads(body) == {"query": "Jules"}
+    assert sent_headers["x-strategium-user-id"] == "42"
+    assert sent_headers["x-strategium-aar-signature"] == expected
+    assert forwarded["timeout"] == 10
+
+
+def test_aar_member_search_requires_login(local_site):
+    request = urllib.request.Request(local_site + "/api/aar-members?q=Jules")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == 401
+    assert json.loads(error.value.read())["error"] == "login_required"
+
+
+def test_aar_management_edit_proxy_signs_staff_request_and_requires_csrf(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {
+        "allowed": True, "display_name": "Techmarine", "aar_management": {"can_edit": True, "can_delete": False}
+    })
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    monkeypatch.delenv("STRATEGIUM_BOT_SHARED_SECRET", raising=False)
+    monkeypatch.setenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "edit-proxy-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    cookie = _session_value({"id": "42", "name": "Test", "csrf": "csrf-token"})
+    forwarded = {}
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _limit=-1):
+            return b'{"ok":true,"record_id":"123"}'
+
+    class FakeOpener:
+        def open(self, request, data=None, timeout=None):
+            if request.full_url.startswith(local_site):
+                return original_build_opener().open(request, data=data, timeout=timeout)
+            forwarded["request"] = request
+            forwarded["timeout"] = timeout
+            return FakeResponse()
+
+    original_build_opener = server.urllib.request.build_opener
+    previous_opener = server.urllib.request._opener
+    server.urllib.request._opener = original_build_opener()
+    monkeypatch.setattr(server.urllib.request, "build_opener", lambda *_handlers: FakeOpener())
+    body = b"multipart-edit-body"
+    request_id = "staff-edit-request-123456"
+    request = urllib.request.Request(
+        local_site + "/api/aar-management/records/123",
+        data=body,
+        headers={
+            "Content-Type": "multipart/form-data; boundary=x",
+            "Cookie": f"strategium_session={cookie}",
+            "Origin": local_site,
+            "X-CSRF-Token": "csrf-token",
+            "X-AAR-Management-Request-ID": request_id,
+        },
+        method="PATCH",
+    )
+    try:
+        with urllib.request.urlopen(request) as response:
+            assert response.status == 200
+            assert json.loads(response.read())["record_id"] == "123"
+        sent = forwarded["request"]
+        headers = {key.lower(): value for key, value in sent.header_items()}
+        timestamp = headers["x-strategium-aar-timestamp"]
+        digest = server.hashlib.sha256(body).hexdigest()
+        signed = f"{timestamp}\nedit-123-{request_id}\n42\n{digest}".encode()
+        expected = server.hmac.new(b"edit-proxy-secret", signed, server.hashlib.sha256).hexdigest()
+        assert sent.data == body
+        assert headers["x-strategium-user-id"] == "42"
+        assert headers["x-aar-management-request-id"] == request_id
+        assert headers["x-strategium-aar-signature"] == expected
+        sent_request = sent
+
+        denied = urllib.request.Request(
+            local_site + "/api/aar-management/records/123", data=body,
+            headers={
+                "Content-Type": "multipart/form-data; boundary=x",
+                "Cookie": f"strategium_session={cookie}", "Origin": local_site,
+                "X-CSRF-Token": "wrong", "X-AAR-Management-Request-ID": request_id,
+            }, method="PATCH",
+        )
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(denied)
+        assert error.value.code == 403
+        assert forwarded["request"] is sent_request
+    finally:
+        server.urllib.request._opener = previous_opener
+
+
+def test_aar_management_request_uses_matching_private_bot_paths_and_signatures(monkeypatch) -> None:
+    monkeypatch.delenv("STRATEGIUM_BOT_SHARED_SECRET", raising=False)
+    monkeypatch.setenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "management-path-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    forwarded = []
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _limit=-1):
+            return b'{"ok":true}'
+
+    class FakeOpener:
+        def open(self, request, timeout=None):
+            forwarded.append(request)
+            return FakeResponse()
+
+    monkeypatch.setattr(server.urllib.request, "build_opener", lambda *_handlers: FakeOpener())
+    cases = [
+        ("list", "", "/v1/aar/management/list"),
+        ("records", "123", "/v1/aar/management/records/123"),
+        ("delete-request", "123", "/v1/aar/management/records/123/delete-request"),
+        ("delete-confirm", "123", "/v1/aar/management/records/123/delete-confirm"),
+    ]
+    for action, record_id, path in cases:
+        assert server._aar_management_request("42", action, {}, record_id) == (200, {"ok": True})
+        request = forwarded[-1]
+        headers = {key.lower(): value for key, value in request.header_items()}
+        assert request.full_url == "http://127.0.0.1:8080" + path
+        timestamp = headers["x-strategium-aar-timestamp"]
+        key = f"management-{action}-{record_id or 'list'}"
+        digest = server.hashlib.sha256(request.data).hexdigest()
+        signed = f"{timestamp}\n{key}\n42\n{digest}".encode()
+        expected = server.hmac.new(b"management-path-secret", signed, server.hashlib.sha256).hexdigest()
+        assert headers["x-strategium-aar-signature"] == expected
 
 
 def test_ambience_is_optional_and_served_from_fixed_path(local_site, tmp_path, monkeypatch) -> None:
@@ -991,12 +1199,13 @@ def test_aar_pilot_rejects_logged_in_nonstaff(local_site, monkeypatch, path, met
 
 def test_me_uses_guild_display_name_not_account_name(local_site, monkeypatch):
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
-    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Watch Techmarine Jules", "max_file_bytes": 24 * 1024 * 1024})
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {"allowed": True, "display_name": "Watch Techmarine Jules", "max_file_bytes": 24 * 1024 * 1024, "aar_management": {"can_edit": True, "can_delete": False}})
     cookie = _session_value({"id": "42", "name": "real-account-username", "csrf": "csrf-token"})
     with urllib.request.urlopen(urllib.request.Request(local_site + "/api/me", headers={"Cookie": f"strategium_session={cookie}"})) as response:
         body = response.read()
         payload = json.loads(body)
     assert payload["aar_allowed"] is True
+    assert payload["aar_management"] == {"can_edit": True, "can_delete": False}
     assert payload["aar_max_file_bytes"] == 24 * 1024 * 1024
     assert payload["user"]["name"] == "Watch Techmarine Jules"
     assert b"real-account-username" not in body
@@ -1040,7 +1249,55 @@ assert.equal(context.aarDraft.files.length, 0);
 assert.equal(previews, 2);
 assert.equal(errors.length, 4);
 """
-        subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+        result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the guild member search regression")
+def test_aar_member_search_queries_and_retains_guild_results():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const start = html.indexOf('function rerenderAarMemberSearch()');
+const end = html.indexOf('function revokeAarPreview(', start);
+assert(start >= 0 && end > start);
+let timerCallback;
+let requestedUrl = '';
+let renderCount = 0;
+const context = {
+    aarDraft: {
+        memberSearchTimer: null, memberSearchSequence: 0, memberSearchStatus: 'idle',
+        memberSearchHasMore: false, memberDirectory: new Map()
+    },
+    state: { page: 'submit-aar' },
+    document: { activeElement: null, getElementById: () => null },
+    setTimeout: callback => { timerCallback = callback; return 1; },
+    clearTimeout: () => {},
+    apiUrl: path => path,
+    fetch: async url => {
+        requestedUrl = url;
+        return { ok: true, json: async () => ({ members: [{ id: '99', name: 'Brother Reserve' }], has_more: true }) };
+    },
+    renderSubmitAar: () => { renderCount++; }
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+(async () => {
+    context.scheduleAarGuildMemberSearch('Reserve Name');
+    await timerCallback();
+    assert.equal(requestedUrl, '/api/aar-members?q=Reserve%20Name');
+    assert.deepEqual({ ...context.aarDraft.memberDirectory.get('99') }, { id: '99', name: 'Brother Reserve' });
+    assert.equal(context.aarDraft.memberSearchStatus, 'results');
+    assert.equal(context.aarDraft.memberSearchHasMore, true);
+    assert.ok(renderCount >= 2);
+    context.scheduleAarGuildMemberSearch('x');
+    assert.equal(context.aarDraft.memberSearchStatus, 'idle');
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the clipboard image import regression")
@@ -1090,6 +1347,57 @@ vm.runInContext(html.slice(start, end), context);
     subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for AAR editor hydration regression")
+def test_aar_management_edit_hydrates_existing_submission():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const start = html.indexOf('function beginAarManagementEdit(');
+const end = html.indexOf('async function loadAarManagement(', start);
+assert(start >= 0 && end > start);
+let rendered = 0;
+let revoked = 0;
+const context = {
+    aarDraft: {
+        files: [{ previewUrl: 'blob:old' }], memberDirectory: new Map(), brothers: new Set(),
+        inductees: new Set(), tags: new Set()
+    },
+    AAR_SUBMISSION_MODES: { induction_omega: { difficulty: '@Omega' } },
+    revokeAarPreview: () => { revoked++; },
+    renderSubmitAar: () => { rendered++; }
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+context.beginAarManagementEdit({
+    id: '123',
+    submission: {
+        mode: 'induction_omega', mission: 'pve_inferno', difficulty: '@Omega-Strat', rank: 'A',
+        armory_data: 2, waves: 10, kia: 1, gene_seed_status: 'carried', gene_seed_carrier_id: '102',
+        brother_ids: ['101', '102'], inductee_ids: ['102'], tags: ['black_laurels'],
+        pvp_map: 'Bridge', pvp_game_mode: 'Seize Ground', pvp_result: 'L'
+    },
+    brothers: [{ id: '101', name: 'Brother One' }, { id: '102', name: 'Brother Two' }],
+    screenshots: [{ filename: 'proof.png', url: 'https://cdn.discordapp.com/proof.png', size: 100 }]
+});
+assert.equal(context.aarDraft.managementRecordId, '123');
+assert.equal(context.aarDraft.mode, 'induction_omega');
+assert.equal(context.aarDraft.mission, 'pve_inferno');
+assert.equal(context.aarDraft.difficulty, '@Omega-Strat');
+assert.deepEqual([...context.aarDraft.brothers], ['101', '102']);
+assert.deepEqual([...context.aarDraft.inductees], ['102']);
+assert.deepEqual([...context.aarDraft.tags], ['black_laurels']);
+assert.equal(context.aarDraft.memberDirectory.get('102').name, 'Brother Two');
+assert.equal(context.aarDraft.geneCarrier, '102');
+assert.equal(context.aarDraft.existingScreenshots.length, 1);
+assert.equal(revoked, 1);
+assert.equal(rendered, 1);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR tag eligibility regression")
 def test_herisor_tag_matches_challenge_eligibility():
     source = r"""
@@ -1129,11 +1437,12 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const html = fs.readFileSync(process.argv[1], 'utf8');
 const start = html.indexOf('form.querySelectorAll("[data-aar-brother]")');
-const end = html.indexOf('form.querySelectorAll("[data-aar-tag]")', start);
+const end = html.indexOf('form.querySelectorAll("[data-aar-inductee]")', start);
 assert(start >= 0 && end > start);
 let changeHandler;
 let renders = 0;
 let focused = false;
+const searches = [];
 const form = { querySelectorAll: () => [{ addEventListener: (name, handler) => {
     assert.equal(name, 'change');
     changeHandler = handler;
@@ -1143,6 +1452,7 @@ const context = {
     aarDraft: { memberFilter: 'watch brother' },
     invalidateIdempotencyKey: () => {},
     readDraftFields: () => {},
+    scheduleAarGuildMemberSearch: query => searches.push(query),
     renderSubmitAar: () => { renders++; },
     document: { getElementById: () => ({ focus: () => { focused = true; } }) }
 };
@@ -1151,10 +1461,12 @@ vm.runInContext(html.slice(start, end), context);
 assert.equal(typeof changeHandler, 'function');
 changeHandler();
 assert.equal(context.aarDraft.memberFilter, '');
+assert.deepEqual(searches, ['']);
 assert.equal(renders, 1);
 assert.equal(focused, true);
 """
-    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the formation display regression")
