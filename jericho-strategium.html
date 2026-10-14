@@ -3546,7 +3546,7 @@ const aarDraft = {
   submitting: false, reviewing: false, idempotencyKey: ""
 };
 const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
-const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, pendingDeletions: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
+const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, pendingDeletions: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
 
 async function closeAarPhoneHandoff() {
   const sessionId = aarPhoneHandoff.sessionId;
@@ -4237,6 +4237,7 @@ async function loadAarManagement() {
     aarManager.total = Number(result.total) || 0;
     aarManager.hasMore = result.has_more === true;
     aarManager.pendingDeletions = Array.isArray(result.pending_deletions) ? result.pending_deletions : [];
+    aarManager.reconciliationReviews = Array.isArray(result.reconciliation_reviews) ? result.reconciliation_reviews : [];
     aarManager.status = "ready";
   } catch (error) {
     aarManager.records = [];
@@ -4296,6 +4297,11 @@ function renderAarManagement() {
     <div><strong>Deletion ${escapeHtml(item.status.replaceAll("_", " "))} · AAR ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.reason || "No reason recorded")}</p></div>
     ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-recover-delete-confirm="${escapeHtml(item.id)}">Resume Forgemaster confirmation</button>` : `<span class="aar-upload-hint">Forgemaster action required</span>`}
   </article>`).join("");
+  const reconciliationReviewRows = state.auth.aar_management?.can_delete === true
+    ? aarManager.reconciliationReviews.map(item => `<article class="aar-section"><strong>${escapeHtml(item.challenge || "Challenge award")}</strong><p class="aar-upload-hint">AAR ${escapeHtml(item.record_id)} · Brother ${escapeHtml(item.user_id)} · ${escapeHtml(item.operation)}</p></article>`).join("")
+    : aarManager.reconciliationReviews.length
+    ? `<p class="aar-empty">${aarManager.reconciliationReviews.length} award case${aarManager.reconciliationReviews.length === 1 ? "" : "s"} need Forgemaster review.</p>`
+    : "";
   const body = aarManager.selectedId
     ? aarManager.status === "loading-detail"
       ? `<p class="aar-empty">Loading archive entry…</p>`
@@ -4324,6 +4330,7 @@ function renderAarManagement() {
     <header class="aar-heading"><div class="blood-overline">&gt; ARCHIVE CONTROL // STAFF ACCESS</div><h2>Manage AARs</h2><p class="aar-description">Search Strategium-submitted reports in the Watch archive.</p>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
     ${aarManager.selectedId ? "" : `<label class="aar-field aar-field-wide"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission, participant, or submitter ID"></label>`}
     ${pendingDeletionRows ? `<section class="aar-section"><h3>Pending Deletions</h3><div class="aar-management-list">${pendingDeletionRows}</div></section>` : ""}
+    ${reconciliationReviewRows ? `<section class="aar-section"><h3>Award Reconciliation Review</h3><div class="aar-management-list">${reconciliationReviewRows}</div></section>` : ""}
     <div class="aar-management-list">${body}</div>
     ${!aarManager.selectedId && aarManager.status === "ready" ? `<div class="aar-submit-row"><button type="button" class="btn-dossier-action" data-aar-manage-page="previous"${aarManager.offset <= 0 ? " disabled" : ""}>Previous</button><span class="aar-upload-hint">${aarManager.total ? `${aarManager.offset + 1}–${Math.min(aarManager.offset + aarManager.records.length, aarManager.total)} of ${aarManager.total}` : "0 records"}</span><button type="button" class="btn-dossier-action" data-aar-manage-page="next"${aarManager.hasMore ? "" : " disabled"}>Next</button></div>` : ""}
     <div id="aar-management-status" class="aar-status" role="status" aria-live="polite"></div>
