@@ -993,7 +993,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if path == "/api/aar-submissions":
             self._forward_aar_submission()
             return
-        management_match = re.fullmatch(r"/api/aar-management/records/([0-9]{1,20})/(delete-request|delete-confirm)", path)
+        management_match = re.fullmatch(r"/api/aar-management/records/([0-9]{1,20})/(delete-request|delete-confirm|edit-resume|reviews/[a-f0-9]{24}/acknowledge)", path)
         if management_match:
             self._post_aar_management_action(*management_match.groups())
             return
@@ -1523,7 +1523,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
             self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
             return
-        capability = "can_delete" if action == "delete-confirm" else "can_edit"
+        capability = "can_delete" if action == "delete-confirm" or action.startswith("reviews/") else "can_edit"
         access = _aar_access(str(user["id"]))
         management = access.get("aar_management")
         if not access.get("allowed") or not isinstance(management, dict) or management.get(capability) is not True:
