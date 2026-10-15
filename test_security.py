@@ -1255,6 +1255,112 @@ assert.equal(errors.length, 4);
         assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR navigation regression")
+def test_aar_detail_back_navigation_is_available_before_detail_loads():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+assert.match(html, /aarManager.selectedId \? `<nav[^\n]*data-aar-manage-back[^\n]*Back to Manage AARs/);
+assert.equal((html.match(/data-aar-manage-back>/g) || []).length, 1);
+const navigation = html.indexOf('data-aar-manage-back>');
+assert(navigation < html.indexOf('${pendingDeletionRows ?'));
+const start = html.indexOf('async function openAarManagementRecord(');
+const end = html.indexOf('function renderAarManagement()', start);
+let finishFetch;
+const context = {
+    aarManager: { selectedId: '', detail: null, status: 'ready', query: 'Inferno', offset: 25 },
+    renderAarManagement: () => {}, apiUrl: path => path,
+    fetch: () => new Promise(resolve => { finishFetch = resolve; })
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+(async () => {
+    const pending = context.openAarManagementRecord('123');
+    assert.equal(context.aarManager.status, 'loading-detail');
+    const handlerStart = html.indexOf('document.querySelector("[data-aar-manage-back]")');
+    const handlerEnd = html.indexOf('document.querySelector("[data-aar-manage-edit]")', handlerStart);
+    context.document = { querySelector: () => ({ addEventListener: (_event, callback) => callback() }) };
+    vm.runInContext(html.slice(handlerStart, handlerEnd), context);
+    finishFetch({ ok: true, json: async () => ({ id: '123' }) });
+    await pending;
+    assert.equal(context.aarManager.selectedId, '');
+    assert.equal(context.aarManager.detail, null);
+    assert.equal(context.aarManager.status, 'ready');
+    assert.equal(context.aarManager.query, 'Inferno');
+    assert.equal(context.aarManager.offset, 25);
+})().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the acting-sergeant regression")
+def test_kill_team_officers_are_shown_as_acting_sergeants():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const context = { state: { members: [], killTeams: {} } };
+vm.createContext(context);
+const ranksStart = html.indexOf('const KILL_TEAM_LEAD_RANKS =');
+const ranksEnd = html.indexOf('const COMPANY_NAMES =', ranksStart);
+vm.runInContext(html.slice(ranksStart, ranksEnd), context);
+const sortingStart = html.indexOf('const RANK_TIERS =');
+const sortingEnd = html.indexOf('const RANK_GUIDE =', sortingStart);
+vm.runInContext(html.slice(sortingStart, sortingEnd), context);
+const sortStart = html.indexOf('const RANK_TIER_INDEX =');
+const sortEnd = html.indexOf('function formationEquerries(', sortStart);
+assert(sortStart >= 0 && sortEnd > sortStart);
+vm.runInContext(html.slice(sortStart, sortEnd), context);
+context.RANK_LABELS = { watch_master: 'Watch Master', watch_captain: 'Watch Captain', watch_lieutenant: 'Watch Lieutenant', watch_sergeant: 'Watch Sergeant' };
+context.displayName = name => name;
+const helperStart = html.indexOf('function killTeamLead(');
+const helperEnd = html.indexOf('function formationMembers(', helperStart);
+vm.runInContext(html.slice(helperStart, helperEnd), context);
+let commandPlate;
+const app = { innerHTML: '' };
+Object.assign(context, {
+    document: { getElementById: () => app }, COMPANY_NAMES: { 1: 'Primus' },
+    escapeHtml: value => String(value || ''),
+    plateHtml: options => { commandPlate = options; return options.rankLabel; },
+    renownSummaryHtml: () => '', unitHonoursHtml: () => '',
+    commandSectionHtml: (_label, content) => content
+});
+const renderStart = html.indexOf('function renderKillTeam(');
+vm.runInContext(html.slice(renderStart, html.indexOf('function chaptersOnRecord(', renderStart)), context);
+for (const catalogued of [true, false]) {
+    context.state.killTeams = catalogued ? { '1': [{ id: '1-1', name: 'Kill Team Test' }] } : {};
+    for (const rank of ['watch_lieutenant', 'watch_captain', 'watch_master']) {
+        const officer = { id: 'officer', name: 'Officer', rank, company: 1, killTeam: '1-1' };
+        const brother = { id: 'brother', name: 'Brother', rank: 'watch_brother', company: 1, killTeam: '1-1' };
+        context.state.members = [brother, officer, { ...officer, id: 'other', company: 2 }];
+        assert.equal(context.killTeamsForCompany(1)[0].lead, officer);
+        const detail = context.killTeamDetail(1, '1-1');
+        assert.equal(detail.lead, officer);
+        assert.equal(detail.rest.length, 1);
+        assert.equal(detail.rest[0], brother);
+        context.renderKillTeam(1, '1-1');
+        assert.equal(commandPlate.member, officer);
+        assert.equal(commandPlate.rankLabel, `Acting Sergeant · ${context.RANK_LABELS[rank]}`);
+        assert.equal(commandPlate.vacant, false);
+        assert.equal(officer.rank, rank);
+        const sergeant = { ...brother, id: 'sergeant', rank: 'watch_sergeant' };
+        context.state.members.push(sergeant);
+        assert.equal(context.killTeamDetail(1, '1-1').lead, sergeant);
+        assert.equal(context.killTeamsForCompany(1)[0].lead, sergeant);
+    }
+}
+context.state.members = [{ rank: 'watch_brother', company: 1, killTeam: '1-1' }];
+assert.equal(context.killTeamDetail(1, '1-1').lead, null);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the guild member search regression")
 def test_aar_member_search_queries_and_retains_guild_results():
     source = r"""
