@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -578,6 +579,16 @@ def test_pauldron_assets_are_allowlisted(local_site, tmp_path, monkeypatch) -> N
         with pytest.raises(urllib.error.HTTPError) as error:
             urllib.request.urlopen(local_site + "/assets/pauldrons/" + name.replace(" ", "%20"))
         assert error.value.code == 404
+
+
+@pytest.mark.parametrize("chapter", ["Consecrators", "Doom Eagles"])
+def test_new_chapter_pauldron_is_registered_and_served(local_site, chapter) -> None:
+    page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
+    art = page.split("const PAULDRON_ART =", 1)[1].split("].map(", 1)[0]
+    assert f'"{chapter}"' in art
+    with urllib.request.urlopen(local_site + "/assets/pauldrons/" + urllib.parse.quote(chapter + ".webp")) as response:
+        assert response.headers["Content-Type"] == "image/webp"
+        assert response.read().startswith(b"RIFF")
 
 
 def test_rank_ribbons_serve_only_known_images(local_site, tmp_path, monkeypatch) -> None:
@@ -1245,10 +1256,14 @@ assert.equal(context.addAarScreenshots(Array(10).fill(image)), false);
 context.aarDraft.files = Array(2).fill({ ...image, size: 16 * 1024 * 1024 });
 assert.equal(context.addAarScreenshots([image]), false);
 context.aarDraft.files = [];
+assert.equal(context.addAarScreenshots(Array(4).fill(image)), true);
+assert.equal(context.aarDraft.files.length, 4);
+assert.ok(context.aarDraft.files.every(file => file.previewUrl === 'blob:preview'));
+context.aarDraft.files = [];
 context.aarDraft.submitting = true;
 assert.equal(context.addAarScreenshots([image]), false);
 assert.equal(context.aarDraft.files.length, 0);
-assert.equal(previews, 2);
+assert.equal(previews, 6);
 assert.equal(errors.length, 4);
 """
         result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
@@ -1345,20 +1360,67 @@ for (const catalogued of [true, false]) {
         assert.equal(detail.rest[0], brother);
         context.renderKillTeam(1, '1-1');
         assert.equal(commandPlate.member, officer);
-        assert.equal(commandPlate.rankLabel, `Acting Sergeant · ${context.RANK_LABELS[rank]}`);
+        assert.equal(commandPlate.rankLabel, context.RANK_LABELS[rank]);
+        assert.equal(commandPlate.dutyLabel, 'ACTING SERGEANT');
+        assert.equal(context.killTeamLeadLabel(officer), context.RANK_LABELS[rank]);
         assert.equal(commandPlate.vacant, false);
         assert.equal(officer.rank, rank);
         const sergeant = { ...brother, id: 'sergeant', rank: 'watch_sergeant' };
         context.state.members.push(sergeant);
         assert.equal(context.killTeamDetail(1, '1-1').lead, sergeant);
         assert.equal(context.killTeamsForCompany(1)[0].lead, sergeant);
+        context.renderKillTeam(1, '1-1');
+        assert.equal(commandPlate.dutyLabel, '');
     }
 }
 context.state.members = [{ rank: 'watch_brother', company: 1, killTeam: '1-1' }];
 assert.equal(context.killTeamDetail(1, '1-1').lead, null);
+context.renderKillTeam(1, '1-1');
+assert.equal(commandPlate.dutyLabel, '');
+assert.equal(commandPlate.vacant, true);
+context.serviceRecord = () => '';
+const plateStart = html.indexOf('function plateHtml(');
+vm.runInContext(html.slice(plateStart, html.indexOf('function renderBreadcrumb(', plateStart)), context);
+const plate = context.plateHtml({ id: 'officer', name: 'Officer', rankLabel: 'Watch Captain', dutyLabel: 'ACTING SERGEANT' });
+assert.match(plate, /class="plate-duty">ACTING SERGEANT/);
+assert.match(plate, /class="plate-rank">Watch Captain/);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
+
+
+def test_unit_detail_headers_and_overview_symbols_share_scoped_layout():
+    page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
+    company = page.split("function renderCompany(", 1)[1].split("function renderFormation(", 1)[0]
+    formation = page.split("function renderFormation(", 1)[1].split("function renderKillTeam(", 1)[0]
+    for section, lore_class in ((company, "company-lore"), (formation, "formation-lore")):
+        assert '<header class="unit-detail-header">' in section
+        assert '<h2 class="tier-label unit-detail-title">' in section
+        assert 'class="unit-detail-symbol"' in section
+        assert section.index(f'class="{lore_class}"') < section.index('${renownSummaryHtml(')
+    assert '<span class="company-plate-label"><span class="company-sigil"' in page
+    assert 'style="--team-count:${teamList.length}"' in company
+
+
+def test_company_title_text_can_shrink_beside_its_symbol():
+    page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
+    overview = page.split("function renderStrategium()", 1)[1].split("function drawMapConnectors()", 1)[0]
+    assert '<span class="company-plate-name">Company ${COMPANY_NAMES[id]}</span>' in overview
+    rule = re.search(r"\.company-plate-name\s*\{([^}]+)\}", page)
+    assert rule is not None
+    assert "min-width: 0" in rule.group(1)
+    assert "overflow-wrap: anywhere" in rule.group(1)
+    assert "if (!map || !svg || window.innerWidth <= 760) return;" in page
+
+
+def test_header_emblem_column_accounts_for_all_three_title_lines():
+    page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
+    header = re.search(r"\.header-left\s*\{([^}]+)\}", page)
+    title = re.search(r"\.header-title\s*\{([^}]+)\}", page)
+    assert header is not None and title is not None
+    assert "calc(var(--brand-font-size) * 3 * 81 / 96)" in header.group(1)
+    assert "font-size: var(--brand-font-size)" in title.group(1)
+    assert ".header-left { --brand-font-size: 17px; }" in page
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the guild member search regression")
@@ -1431,8 +1493,10 @@ class MockFile {
 }
 const context = {
     navigator: { clipboard: { read: async () => [
-        { types: ['text/plain', 'image/png', 'image/gif'], getType: async type => ({ type, size: 512 }) },
-        { types: ['image/webp'], getType: async type => ({ type, size: 256 }) }
+        { types: ['text/plain', 'image/png', 'image/jpeg'], getType: async type => ({ type, size: 512 }) },
+        { types: ['image/webp'], getType: async type => ({ type, size: 256 }) },
+        { types: ['image/jpeg'], getType: async type => ({ type, size: 256 }) },
+        { types: ['image/png'], getType: async type => ({ type, size: 256 }) }
     ] } },
     File: MockFile,
     aarDraft: { submitting: false },
@@ -1444,15 +1508,77 @@ vm.runInContext(html.slice(start, end), context);
 (async () => {
     await context.pasteAarImagesFromClipboard();
     assert.deepEqual(imported.map(file => [file.name, file.type]), [
-        ['clipboard-1.png', 'image/png'], ['clipboard-2.webp', 'image/webp']
+        ['clipboard-1.png', 'image/png'], ['clipboard-2.webp', 'image/webp'],
+        ['clipboard-3.jpg', 'image/jpeg'], ['clipboard-4.png', 'image/png']
     ]);
-    assert.deepEqual(statuses.at(-1), ['2 images added from clipboard.', 'success']);
+    assert.deepEqual(statuses.at(-1), ['4 images added from clipboard.', 'success']);
     context.navigator.clipboard.read = async () => [{ types: ['text/plain'], getType: async () => ({ size: 5 }) }];
     await context.pasteAarImagesFromClipboard();
     assert.match(statuses.at(-1)[0], /No PNG, JPEG, or WebP image/);
+    context.navigator.clipboard.read = async () => { throw new Error('NotAllowedError'); };
+    await context.pasteAarImagesFromClipboard();
+    assert.match(statuses.at(-1)[0], /denied or unavailable/);
+    delete context.navigator.clipboard.read;
+    await context.pasteAarImagesFromClipboard();
+    assert.match(statuses.at(-1)[0], /unavailable here/);
+    context.aarDraft.submitting = true;
+    context.navigator.clipboard.read = async () => { throw new Error('must not read during submission'); };
+    const statusCount = statuses.length;
+    await context.pasteAarImagesFromClipboard();
+    assert.equal(statuses.length, statusCount);
+    assert.equal(imported.length, 4);
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """
     subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for clipboard paste regression")
+def test_aar_paste_imports_all_files_without_duplicate_representations():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const start = html.indexOf('  document.addEventListener("paste", event => {');
+const end = html.indexOf('  for (const eventName of ["dragover", "drop"])', start);
+const images = Array.from({ length: 4 }, () => ({ name: 'image.png', type: 'image/png', size: 512 }));
+let handler;
+let prevented = 0;
+const imported = [];
+let form = true;
+const context = {
+    state: { page: 'submit-aar' },
+    document: { addEventListener: (_, callback) => { handler = callback; }, getElementById: () => form },
+    addAarScreenshots: files => imported.push(...files)
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start, end), context);
+const event = {
+    clipboardData: { files: images, items: images.map(image => ({ kind: 'file', type: image.type, getAsFile: () => image })) },
+    preventDefault: () => { prevented++; }
+};
+handler(event);
+assert.equal(imported.length, 4);
+assert.deepEqual(imported, images);
+event.clipboardData.files = [];
+handler(event);
+assert.equal(imported.length, 8);
+context.state.page = 'manage-aars';
+handler(event);
+assert.equal(imported.length, 12);
+context.state.page = 'fortress';
+handler(event);
+context.state.page = 'submit-aar';
+form = false;
+handler(event);
+form = true;
+event.clipboardData.items = [{ kind: 'string', type: 'text/plain' }];
+handler(event);
+assert.equal(imported.length, 12);
+assert.equal(prevented, 3);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for AAR editor hydration regression")
