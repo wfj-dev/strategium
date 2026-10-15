@@ -1834,6 +1834,7 @@ const FORMATION_MEMBER_RANKS = Object.values(FORMATIONS).flatMap(f => f.ranks).c
 
 const COMPANY_COMMAND_RANKS = ["watch_captain", "watch_lieutenant"];
 const KILL_TEAM_LEAD_RANKS = ["watch_sergeant", "veteran_sergeant"];
+const KILL_TEAM_ACTING_LEAD_RANKS = ["watch_master", "watch_captain", "watch_lieutenant"];
 const KILL_TEAM_ROSTER_RANKS = ["watch_brother", "watch_veteran", "oathsworn"];
 
 const COMPANY_NAMES = { 1: "Primus", 2: "Secundus", 3: "Tertius", 4: "Quartus", 5: "Quintus" };
@@ -2329,6 +2330,18 @@ function companyCommand(companyId) {
   }));
 }
 
+function killTeamLead(roster) {
+  return roster.find(member => KILL_TEAM_LEAD_RANKS.includes(member.rank))
+    || sortByRank(roster.filter(member => KILL_TEAM_ACTING_LEAD_RANKS.includes(member.rank)))[0]
+    || null;
+}
+
+function killTeamLeadLabel(member) {
+  return KILL_TEAM_ACTING_LEAD_RANKS.includes(member.rank)
+    ? `Acting Sergeant · ${RANK_LABELS[member.rank]}`
+    : RANK_LABELS[member.rank];
+}
+
 function killTeamsForCompany(companyId) {
   const companyMembers = state.members.filter(m => m.company === companyId);
   const catalog = state.killTeams && state.killTeams[String(companyId)];
@@ -2337,7 +2350,7 @@ function killTeamsForCompany(companyId) {
     catalog.forEach((team, index) => {
       const roster = companyMembers.filter(m => m.killTeam === team.id || m.killTeamName === team.name || m.killTeam === team.name);
       if (roster.length === 0) return; // Omit completely empty kill teams
-      const lead = roster.find(m => KILL_TEAM_LEAD_RANKS.includes(m.rank)) || null;
+      const lead = killTeamLead(roster);
       teams.push({
         killTeam: team.id,
         slot: index + 1,
@@ -2354,7 +2367,7 @@ function killTeamsForCompany(companyId) {
     const killTeam = `${companyId}-${slot}`;
     const roster = companyMembers.filter(m => m.killTeam === killTeam);
     if (roster.length === 0) continue; // Omit completely empty kill teams
-    const lead = roster.find(m => KILL_TEAM_LEAD_RANKS.includes(m.rank)) || null;
+    const lead = killTeamLead(roster);
     const namedMember = roster.find(m => m.killTeamName);
     teams.push({
       killTeam,
@@ -2373,7 +2386,7 @@ function killTeamDetail(companyId, killTeam) {
   const catalogEntry = catalog.find(t => t.id === killTeam || t.name === killTeam);
   const targetName = catalogEntry ? catalogEntry.name : killTeam;
   const roster = state.members.filter(m => m.company === companyId && (m.killTeam === killTeam || m.killTeamName === targetName || m.killTeam === targetName));
-  const lead = roster.find(m => KILL_TEAM_LEAD_RANKS.includes(m.rank)) || null;
+  const lead = killTeamLead(roster);
   const rest = sortByRank(roster.filter(m => m !== lead));
   const name = catalogEntry ? catalogEntry.name : (roster.find(m => m.killTeamName)?.killTeamName || killTeam);
   return { lead, rest, name };
@@ -3045,7 +3058,7 @@ function renderCompany(companyId) {
       <button class="killteam-plate" data-nav="killteam" data-company="${companyId}" data-killteam="${t.killTeam}" type="button">
         <span class="killteam-numeral" aria-hidden="true">${t.slot}</span>
         <span class="killteam-plate-label">${escapeHtml(t.name)}</span>
-        <span class="killteam-plate-lead">${t.lead ? RANK_LABELS[t.lead.rank] + " " + escapeHtml(displayName(leadName)) : "No active Watch Sergeant"}</span>
+        <span class="killteam-plate-lead">${t.lead ? escapeHtml(killTeamLeadLabel(t.lead)) + " " + escapeHtml(displayName(leadName)) : "No active Watch Sergeant"}</span>
         <span class="killteam-plate-count">${t.count} in team</span>
         <div class="killteam-plate-renown">
           <span class="killteam-plate-renown-label">RENOWN: ${renownInfoHtml("killteam", directive.tier || "Unproven", false)}</span>
@@ -3127,7 +3140,7 @@ function renderKillTeam(companyId, killTeam) {
   const directive = (state.directiveStats && state.directiveStats.killTeams && state.directiveStats.killTeams[name]) || {};
   const leadHtml = plateHtml({
     id: lead && lead.id, member: lead, name: lead && lead.name,
-    rankLabel: lead ? RANK_LABELS[lead.rank] : "Watch Sergeant", accent: "red", vacant: !lead, size: "md"
+    rankLabel: lead ? killTeamLeadLabel(lead) : "Watch Sergeant", accent: "red", vacant: !lead, size: "md"
   });
 
   const rows = rest.map(m => `
@@ -4252,6 +4265,7 @@ async function loadAarManagement() {
 
 async function openAarManagementRecord(recordId) {
   aarManager.selectedId = String(recordId);
+  const selectedId = aarManager.selectedId;
   aarManager.detail = null;
   aarManager.status = "loading-detail";
   renderAarManagement();
@@ -4260,10 +4274,12 @@ async function openAarManagementRecord(recordId) {
       credentials: "include", cache: "no-store"
     });
     const result = await response.json().catch(() => ({}));
+    if (aarManager.selectedId !== selectedId) return;
     if (!response.ok) throw new Error(result.message || result.error || "AAR could not be loaded.");
     aarManager.detail = result;
     aarManager.status = "detail";
   } catch (error) {
+    if (aarManager.selectedId !== selectedId) return;
     aarManager.status = "detail-error";
     aarManager.error = error.message || "AAR could not be loaded.";
   }
@@ -4313,7 +4329,7 @@ function renderAarManagement() {
       : aarManager.status === "detail-error"
       ? `<p class="aar-empty" data-tone="error">${escapeHtml(aarManager.error || "AAR could not be loaded.")}</p>`
       : detail
-      ? `<section class="aar-section"><button type="button" class="btn-dossier-action" data-aar-manage-back>Back to archive</button>
+      ? `<section class="aar-section">
           <h3>${escapeHtml(AAR_SUBMISSION_MODES[detail.submission?.mode]?.label || "AAR")} · ${escapeHtml(detail.submission?.mission || detail.id)}</h3>
           <div class="aar-fields">
             <div class="aar-field"><span class="field-label">Difficulty / Rank</span><div>${escapeHtml(detail.submission?.difficulty || "")} · ${escapeHtml(detail.submission?.rank || "")}</div></div>
@@ -4332,6 +4348,7 @@ function renderAarManagement() {
     ? `<p class="aar-empty" data-tone="error">${escapeHtml(aarManager.error || "AAR archive is unavailable.")}</p>`
     : rows || `<p class="aar-empty">${aarManager.query ? "No AARs match this search." : "No Strategium-submitted AARs are in the archive."}</p>`;
   app.innerHTML = `<section class="aar-room" aria-label="Manage submitted AARs">
+    ${aarManager.selectedId ? `<nav aria-label="AAR archive"><button type="button" class="btn-dossier-action" data-aar-manage-back><span aria-hidden="true">&larr;</span> Back to Manage AARs</button></nav>` : ""}
     <header class="aar-heading"><div class="blood-overline">&gt; ARCHIVE CONTROL // STAFF ACCESS</div><h2>Manage AARs</h2><p class="aar-description">Search Strategium-submitted reports in the Watch archive.</p>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
     ${aarManager.selectedId ? "" : `<label class="aar-field aar-field-wide"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission, participant, or submitter ID"></label>`}
     ${pendingDeletionRows ? `<section class="aar-section"><h3>Pending Deletions</h3><div class="aar-management-list">${pendingDeletionRows}</div></section>` : ""}
