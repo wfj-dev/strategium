@@ -51,23 +51,25 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; border-bottom: 1px solid var(--border-dim); padding-bottom: 16px; margin-bottom: 24px;
   }
-  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-left { --brand-font-size: 22px; display: grid; grid-template-columns: calc(var(--brand-font-size) * 3 * 81 / 96) minmax(0, 1fr); align-items: stretch; column-gap: 10px; row-gap: 5px; min-width: 0; }
   .header-home { color: inherit; text-decoration: none; }
   .header-home:focus-visible { outline: 1px solid var(--gold); outline-offset: 5px; }
   .header-icon {
-    width: 44px; height: 44px; flex-shrink: 0;
+    grid-column: 1; grid-row: 1; position: relative; min-height: 0;
     border: 0; background: transparent;
     display: flex; align-items: center; justify-content: center; color: var(--gold);
   }
-  .header-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .header-icon img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
   .header-title {
-    font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px;
+    grid-column: 2; grid-row: 1;
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: var(--brand-font-size);
     letter-spacing: 0.04em; text-transform: uppercase; color: var(--gold);
-    margin: 0; line-height: 1.1; text-shadow: 0 0 16px rgba(207,174,104,.12);
+    margin: 0; line-height: 1; text-shadow: 0 0 16px rgba(207,174,104,.12);
   }
   .header-sub {
+    grid-column: 2; grid-row: 2;
     font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.14em;
-    color: var(--green-dim); margin-top: 5px;
+    color: var(--green-dim); margin: 0;
   }
 
   .header-right { display: flex; align-items: center; gap: 10px; }
@@ -327,7 +329,7 @@
   .map-node .formation-plate-label, .map-node .company-plate-label { font-size: 12px; }
   .map-node .formation-plate-lead, .map-node .company-plate-captain { font-size: 10px; }
   .map-node .formation-plate-count, .map-node .company-plate-count { font-size: 9px; }
-  .map-node .company-sigil { right: 6px; top: 6px; width: 19px; height: 19px; }
+  .map-node .company-sigil { width: 22px; height: 22px; flex-basis: 22px; }
   .map-node .company-sigil svg { width: 18px; height: 18px; }
   .formation-slot-armory { grid-column: 1; grid-row: 1; }
   .formation-slot-apothecarion { grid-column: 5; grid-row: 1; }
@@ -415,7 +417,7 @@
     width: 50%; min-width: 0; height: 92px; padding: 10px 9px 11px; align-self: center;
   }
   .map-top .plate-name { font-size: 16px; }
-  @media (max-width: 600px) {
+  @media (max-width: 760px) {
     .fortress-map { display: block; max-width: none; }
     .map-connectors { display: none; }
     .map-top, .map-middle, .map-company-row { display: grid; grid-template-columns: 1fr; margin-top: 0; }
@@ -488,6 +490,7 @@
     color: var(--gold-dim); border: 1px solid var(--gold-dim); padding: 1px 6px; font-weight: 700;
   }
 
+  .plate-duty { display: block; margin-bottom: 5px; color: #ef7772; font-size: 10px; font-weight: 700; line-height: 1.4; }
   .plate.size-lg { min-width: 240px; padding: 16px 20px 18px; }
   .plate.size-lg .plate-name { font-size: 19px; }
   .plate.size-md { min-width: 190px; }
@@ -510,32 +513,33 @@
   .company-plate-label {
     font-family: 'Cinzel', serif; font-weight: 600; font-size: 14.5px; letter-spacing: 0.02em; color: var(--white);
     border-bottom: 1px solid var(--border-dim); padding-bottom: 6px; margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
   }
   .company-plate-captain { font-size: 12.5px; color: var(--green); }
+  .company-plate-name { min-width: 0; overflow-wrap: anywhere; }
   .company-plate-count { font-size: 10.5px; color: var(--green-faint); }
 
   .company-sigil {
-    position: absolute; top: 8px; right: 10px;
-    width: 24px; height: 24px; border-radius: 50%;
+    position: static; flex: 0 0 22px;
+    width: 22px; height: 22px; border-radius: 50%;
     background: #030303; color: #d8352b;
     display: flex; align-items: center; justify-content: center;
     border: 1px solid #3a3a3a;
   }
   .company-sigil svg { width: 15px; height: 15px; }
 
-  .company-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+  .unit-detail-header { position: relative; min-height: 48px; padding-right: 64px; margin: 6px 0 16px; }
+  .unit-detail-title { margin: 0 0 16px; font-family: inherit; font-weight: 400; overflow-wrap: anywhere; }
+  .unit-detail-symbol { position: absolute; top: 0; right: 0; width: 48px; height: 48px; }
+  .unit-detail-symbol .formation-symbol { width: 48px; height: 48px; }
+  .unit-detail-meta { font-size: 11.5px; line-height: 1.5; color: var(--green-dim); }
   .company-sigil-lg {
-    width: 48px; height: 48px; border-radius: 50%;
+    width: 48px; height: 48px; flex-basis: 48px; border-radius: 50%;
     background: #030303; color: #d8352b;
     display: flex; align-items: center; justify-content: center;
     border: 2px solid #3a3a3a; flex-shrink: 0;
   }
   .company-sigil-lg svg { width: 27px; height: 27px; }
-  .company-header-title {
-    font-family: 'Cinzel', serif; font-weight: 700; font-size: 20px; letter-spacing: 0.03em;
-    text-transform: uppercase; color: var(--white); margin: 0 0 2px;
-  }
-  .company-header-sub { font-size: 11.5px; color: var(--green-dim); }
 
   .company-note {
     font-size: 11.5px; color: var(--green-faint); font-style: italic;
@@ -563,7 +567,6 @@
   }
   .formation-plate-label::before { content: none; }
   .formation-symbol { display: block; width: 22px; height: 22px; flex: 0 0 22px; object-fit: contain; border-radius: 50%; }
-  .formation-tier-label .formation-symbol { order: 0; }
   .formation-plate-lead { font-size: 12px; color: var(--green); }
   .formation-plate-count { font-size: 10.5px; color: var(--green-faint); }
   .formation-plate-blurb {
@@ -571,11 +574,8 @@
   }
   .company-plate-blurb {
     display: none; color: var(--green-dim); font-size: 11px; line-height: 1.45;
-    padding-right: 28px;
   }
 
-  .formation-tier-label { display: flex; align-items: center; gap: 10px; }
-  .formation-tier-label::before { content: none; }
 
   .tier-formation-lead { margin-bottom: 30px; justify-content: flex-start; }
 
@@ -584,7 +584,13 @@
     font-size: 12px; line-height: 1.65; text-align: center;
   }
 
-  .tier-killteams { width: 100%; max-width: none; margin: 0 auto; flex-wrap: nowrap; justify-content: stretch; gap: 8px; padding: 20px 3px 8px; }
+  .tier-killteams { --team-gap: 8px; --team-padding: 3px; width: 100%; max-width: none; margin: 0 auto; flex-wrap: nowrap; justify-content: stretch; gap: var(--team-gap); padding: 20px var(--team-padding) 8px; }
+  .tier-killteams::before {
+    --rail-inset: calc(var(--team-padding) + (100% - 2 * var(--team-padding) - (var(--team-count) - 1) * var(--team-gap)) / var(--team-count) / 2);
+    left: var(--rail-inset); right: var(--rail-inset);
+  }
+  .tier-killteams > .killteam-plate::before { left: calc(50% - 1px); top: -21px; }
+  .tier-killteams.single-team::before { display: none; }
 
   .killteam-plate {
     position: relative;
@@ -597,9 +603,9 @@
     cursor: pointer; color: var(--green);
     transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
   }
-  .killteam-plate:hover { border-color: var(--green); box-shadow: 0 0 12px rgba(79,214,122,0.15); transform: translateY(-2px); }
+  .killteam-plate:hover { border-color: var(--green); box-shadow: 0 0 12px rgba(79,214,122,0.15); }
   .killteam-plate:active { transform: translateY(0) scale(0.98); }
-  .killteam-plate-label { font-family: 'Cinzel', serif; font-weight: 600; font-size: 14.5px; color: var(--white); letter-spacing: 0.01em; }
+  .killteam-plate-label { font-family: 'Cinzel', serif; font-weight: 600; font-size: 14.5px; color: var(--white); letter-spacing: 0.01em; padding-right: 22px; }
   .killteam-plate-lead { font-size: 11.5px; color: var(--green-dim); }
   .killteam-plate-count { font-size: 10.5px; color: var(--green-faint); }
   .killteam-plate-label, .killteam-plate-lead, .killteam-plate-count, .killteam-plate-renown { overflow-wrap: break-word; }
@@ -626,9 +632,12 @@
   .renown-unlocks { flex-basis: 100%; color: var(--green-dim); font-size: 10px; text-align: center; text-transform: none; }
   .renown-info { position: relative; display: inline-block; outline: none; }
   .renown-info:hover > .renown-rank, .renown-info:focus > .renown-rank { color: var(--gold); background: rgba(207,174,104,.12); box-shadow: 0 0 8px rgba(207,174,104,.18); }
-  .renown-popover { position: absolute; z-index: 70; left: 50%; bottom: calc(100% + 8px); width: min(320px, calc(100vw - 32px)); padding: 9px 11px; border: 1px solid var(--gold-dim); background: rgba(5,10,7,.98); box-shadow: 0 8px 20px #030503; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, 4px); transition: opacity .12s, transform .12s, visibility .12s; text-align: left; text-transform: none; letter-spacing: 0; }
-  .renown-info:hover .renown-popover, .renown-info:focus .renown-popover, .renown-info:focus-within .renown-popover { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
-  .killteam-plate:focus .renown-popover { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+  .renown-popover { position: absolute; z-index: 70; left: 50%; bottom: calc(100% + 8px); width: min(320px, calc(100vw - 32px)); padding: 9px 11px; border: 1px solid var(--gold-dim); background: rgba(5,10,7,.98); box-shadow: 0 8px 20px #030503; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(var(--popover-shift, -50%), 4px); transition: opacity .12s, transform .12s, visibility .12s; text-align: left; text-transform: none; letter-spacing: 0; }
+  .renown-info:hover .renown-popover, .renown-info:focus .renown-popover, .renown-info:focus-within .renown-popover { opacity: 1; visibility: visible; transform: translate(var(--popover-shift, -50%), 0); }
+  .killteam-plate:focus .renown-popover { opacity: 1; visibility: visible; transform: translate(var(--popover-shift, -50%), 0); }
+  .tier-killteams .killteam-plate:first-child .renown-info, .tier-killteams .killteam-plate:last-child .renown-info { position: static; }
+  .tier-killteams .killteam-plate:first-child .renown-popover { --popover-shift: 0%; left: 0; }
+  .tier-killteams .killteam-plate:last-child .renown-popover { --popover-shift: 0%; left: auto; right: 0; }
   .renown-popover-title { display: block; margin: 0 0 5px; color: var(--gold); font: 700 9px 'Cinzel', serif; text-transform: uppercase; letter-spacing: .08em; }
   .renown-ladder { display: block; }
   .renown-tier { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-top: 1px solid rgba(79,214,122,.12); color: var(--green-faint); font-size: 9px; line-height: 1.35; }
@@ -884,13 +893,14 @@
   @media (max-width: 600px) {
     .page { padding: 16px 14px 40px; }
     .slate { padding: 30px 16px 34px; }
-    .header-title { font-size: 17px; }
+    .header-left { --brand-font-size: 17px; }
     .header-sub { font-size: 9px; }
     .plate { min-width: 130px; }
     .company-plate, .formation-plate { min-width: 100%; max-width: 100%; }
-    .tier-killteams { gap: 4px; padding: 12px 0 6px; }
+    .tier-killteams { --team-gap: 4px; --team-padding: 0px; padding: 12px 0 6px; }
     .tier-killteams .killteam-plate { min-width: 0; padding: 8px 5px; }
-    .tier-killteams .killteam-plate-label { font-size: 11px; }
+    .tier-killteams .killteam-plate-label { font-size: 11px; padding-right: 0; }
+    .tier-killteams .killteam-numeral { position: static; align-self: flex-end; flex-shrink: 0; }
     .tier-killteams .killteam-plate-lead, .tier-killteams .killteam-plate-count, .tier-killteams .killteam-plate-renown { display: none; }
     .roster-table { font-size: 12px; }
     .roster-chapter { display: none; }
@@ -1355,6 +1365,12 @@
     .blood-roster { padding: 16px 12px; }
   }
 
+  @media (max-width: 1100px) {
+    .header { flex-wrap: wrap; }
+    .header-left { flex: 1 1 300px; }
+    .site-nav { order: 3; width: 100%; flex-wrap: wrap; }
+    .site-nav a { flex: 1; text-align: center; }
+  }
   @media (max-width: 600px) {
     .header { flex-wrap: wrap; }
     .header-right { width: auto; flex-wrap: nowrap; gap: 7px; }
@@ -1462,10 +1478,8 @@
         <div class="header-icon">
           <img src="/assets/jericho-symbol.webp" alt="Jericho Deathwatch emblem" width="44" height="44">
         </div>
-        <div>
-          <h1 class="header-title">Watch Fortress Jericho</h1>
-          <div class="header-sub">Ordo Xenos &middot; Jericho Sector Intelligence</div>
-        </div>
+        <h1 class="header-title">Watch Fortress Jericho</h1>
+        <div class="header-sub">Ordo Xenos &middot; Jericho Sector Intelligence</div>
       </a>
       <nav class="site-nav" aria-label="Ordo Xenos intelligence channels">
         <a href="/" data-atlas-home>Fortress Atlas</a>
@@ -2337,9 +2351,7 @@ function killTeamLead(roster) {
 }
 
 function killTeamLeadLabel(member) {
-  return KILL_TEAM_ACTING_LEAD_RANKS.includes(member.rank)
-    ? `Acting Sergeant · ${RANK_LABELS[member.rank]}`
-    : RANK_LABELS[member.rank];
+  return RANK_LABELS[member.rank];
 }
 
 function killTeamsForCompany(companyId) {
@@ -2629,12 +2641,13 @@ function commandSectionHtml(label, tierHtml, honoursHtml) {
   return honoursHtml ? `<div class="command-row">${command}${honoursHtml}</div>` : command;
 }
 
-function plateHtml({ id, member, name, rankLabel, sub, accent, vacant, size }) {
+function plateHtml({ id, member, name, rankLabel, dutyLabel, sub, accent, vacant, size }) {
   const cls = ["plate", accent ? `accent-${accent}` : "", vacant ? "vacant" : "", size ? `size-${size}` : ""]
     .filter(Boolean).join(" ");
   const clickAttr = id ? `data-member="${escapeHtml(id)}"` : "";
   return `
     <button class="${cls}" ${clickAttr} ${id ? "" : "disabled"} type="button">
+      ${dutyLabel ? `<span class="plate-duty">${escapeHtml(dutyLabel)}</span>` : ""}
       <span class="plate-rank">${escapeHtml(rankLabel)}</span>
       <span class="plate-name">${vacant ? "Vacant" : escapeHtml(displayName(name))}</span>
       ${sub || serviceRecord(member) ? `<span class="plate-sub">${escapeHtml(sub || serviceRecord(member))}</span>` : ""}
@@ -2913,8 +2926,7 @@ function renderStrategium() {
     return `
       <div class="map-node company-slot company-slot-${id}">
       <button class="company-plate ${isUnformed ? 'unit-unformed' : ''}" data-nav="company" data-company="${id}" type="button">
-        <span class="company-sigil" aria-hidden="true">${COMPANY_SIGILS[id]}</span>
-        <span class="company-plate-label">Company ${COMPANY_NAMES[id]}</span>
+        <span class="company-plate-label"><span class="company-sigil" aria-hidden="true">${COMPANY_SIGILS[id]}</span><span class="company-plate-name">Company ${COMPANY_NAMES[id]}</span></span>
         ${captain ? `<span class="company-plate-captain">Watch Captain ${escapeHtml(displayName(captain.name))}</span>` : ""}
         ${lieutenant ? `<span class="company-plate-captain">Watch Lieutenant ${escapeHtml(displayName(lieutenant.name))}</span>` : ""}
         ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Unfounded &mdash;</span>` : `<span class="company-plate-count">${count} sworn</span>`}
@@ -2978,7 +2990,7 @@ function renderStrategium() {
 function drawMapConnectors() {
   const map = document.querySelector(".fortress-map");
   const svg = map && map.querySelector(".map-connectors");
-  if (!map || !svg || window.innerWidth <= 600) return;
+  if (!map || !svg || window.innerWidth <= 760) return;
 
   const mapRect = map.getBoundingClientRect();
   const rectFor = selector => map.querySelector(selector).getBoundingClientRect();
@@ -3069,22 +3081,20 @@ function renderCompany(companyId) {
   }).join("");
 
   document.getElementById("app").innerHTML = `
-    <div class="company-header">
-      <span class="company-sigil company-sigil-lg" aria-hidden="true">${COMPANY_SIGILS[companyId]}</span>
-      <div>
-        <h2 class="company-header-title">Company ${COMPANY_NAMES[companyId]}</h2>
-        <div class="company-header-sub">${numeral} &middot; ${count} battle-brothers sworn to this company</div>
-      </div>
-    </div>
+    <header class="unit-detail-header">
+      <h2 class="tier-label unit-detail-title">Company ${COMPANY_NAMES[companyId]}</h2>
+      <span class="unit-detail-symbol" aria-hidden="true"><span class="company-sigil company-sigil-lg">${COMPANY_SIGILS[companyId]}</span></span>
+      <div class="unit-detail-meta">${numeral} &middot; ${count} battle-brothers sworn to this company</div>
+    </header>
+    <p class="company-lore">${escapeHtml(COMPANY_LORE[companyId] || "This company serves the Fortress wherever the Vigil calls.")}</p>
     ${isUnformed ? `
       <div class="unit-dormant-banner">
         <span class="unit-dormant-tag">COGITATOR RECORD</span>
         <span>Company ${COMPANY_NAMES[companyId]} is currently unfounded &middot; No battle-brothers assigned to this battle line.</span>
       </div>` : ""}
     ${renownSummaryHtml(companyDirective, "company")}
-    <p class="company-lore">${escapeHtml(COMPANY_LORE[companyId] || "This company serves the Fortress wherever the Vigil calls.")}</p>
     ${cmdHtml ? commandSectionHtml("Company Command", `<div class="tier tier-company-command tree-row">${cmdHtml}</div>`, unitHonoursHtml(state.members.filter(m => m.company === companyId), "Honours of the Company")) : ""}
-    ${teams ? `<div class="tier-label">Kill Teams (${teamList.length})</div><div class="tier tier-killteams tree-row">${teams}</div>` : ""}
+    ${teams ? `<div class="tier-label">Kill Teams (${teamList.length})</div><div class="tier tier-killteams tree-row${teamList.length === 1 ? " single-team" : ""}" style="--team-count:${teamList.length}">${teams}</div>` : ""}
   `;
 }
 
@@ -3115,7 +3125,10 @@ function renderFormation(key) {
     </tr>`).join("");
 
   document.getElementById("app").innerHTML = `
-    <div class="tier-label formation-tier-label" style="--formation-accent:${FORMATION_COLORS[key]}">${escapeHtml(f.name)}${formationSymbolHtml(key)}</div>
+    <header class="unit-detail-header">
+      <h2 class="tier-label unit-detail-title">${escapeHtml(f.name)}</h2>
+      <span class="unit-detail-symbol" aria-hidden="true">${formationSymbolHtml(key)}</span>
+    </header>
     <p class="formation-lore">${escapeHtml(FORMATION_LORE[key] || "This formation serves the Watch according to its own discipline and mandate.")}</p>
     ${isDormant ? `
       <div class="unit-dormant-banner">
@@ -3140,7 +3153,9 @@ function renderKillTeam(companyId, killTeam) {
   const directive = (state.directiveStats && state.directiveStats.killTeams && state.directiveStats.killTeams[name]) || {};
   const leadHtml = plateHtml({
     id: lead && lead.id, member: lead, name: lead && lead.name,
-    rankLabel: lead ? killTeamLeadLabel(lead) : "Watch Sergeant", accent: "red", vacant: !lead, size: "md"
+    rankLabel: lead ? killTeamLeadLabel(lead) : "Watch Sergeant",
+    dutyLabel: lead && KILL_TEAM_ACTING_LEAD_RANKS.includes(lead.rank) ? "ACTING SERGEANT" : "",
+    accent: "red", vacant: !lead, size: "md"
   });
 
   const rows = rest.map(m => `
@@ -3180,7 +3195,7 @@ function chaptersOnRecord() {
 const PAULDRON_ART = Object.fromEntries([
   "Angels Encarmine", "Angels of Defiance", "Angels of Vengeance", "Black Templars",
   "Blood Angels", "Blood Ravens", "Blood Scythes", "Carcharodons", "Carmine Blades",
-  "Cowled Wardens", "Crimson Fists", "Dark Angels", "Dark Krakens", "Death Spectres",
+  "Consecrators", "Cowled Wardens", "Crimson Fists", "Dark Angels", "Dark Krakens", "Death Spectres", "Doom Eagles",
   "Executioners", "Exorcists", "Flesh Tearers", "Genesis Chapter", "Hawk Lords",
   "Hospitallers", "Howling Griffons", "Imperial Fists", "Imperius Reavers", "Iron Hands",
   "Iron Ravens", "Knights of Abhorrence", "Lamenters", "Marines Errant",
@@ -3721,12 +3736,10 @@ async function pasteAarImagesFromClipboard() {
     const extensionByType = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
     const screenshots = [];
     for (const item of await navigator.clipboard.read()) {
-      for (const type of item.types) {
-        const extension = extensionByType[type];
-        if (!extension) continue;
-        const image = await item.getType(type);
-        screenshots.push(new File([image], `clipboard-${screenshots.length + 1}.${extension}`, { type }));
-      }
+      const type = Object.keys(extensionByType).find(candidate => item.types.includes(candidate));
+      if (!type) continue;
+      const image = await item.getType(type);
+      screenshots.push(new File([image], `clipboard-${screenshots.length + 1}.${extensionByType[type]}`, { type }));
     }
     if (!screenshots.length) {
       setAarStatus("No PNG, JPEG, or WebP image was found in the clipboard.", "error");
@@ -7632,8 +7645,9 @@ function closeSearch() {
 
 function wireEvents() {
   document.addEventListener("paste", event => {
-    if (state.page !== "submit-aar" || !document.getElementById("aar-form")) return;
-    const screenshots = Array.from(event.clipboardData?.items || [])
+    if (!["submit-aar", "manage-aars"].includes(state.page) || !document.getElementById("aar-form")) return;
+    const files = Array.from(event.clipboardData?.files || []).filter(file => file.type.startsWith("image/"));
+    const screenshots = files.length ? files : Array.from(event.clipboardData?.items || [])
       .filter(item => item.kind === "file" && item.type.startsWith("image/"))
       .map(item => item.getAsFile()).filter(Boolean);
     if (!screenshots.length) return;
