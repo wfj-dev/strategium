@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import threading
 import time
 import urllib.error
@@ -168,6 +169,14 @@ BOT_AAR_INTAKE_URL = os.getenv(
     "STRATEGIUM_BOT_AAR_INTAKE_URL",
     "http://127.0.0.1:8080/v1/aar/submissions",
 )
+AAR_ACCESS_TIMEOUT_SECONDS = 3
+AAR_ACCESS_TTL_SECONDS = 60
+AAR_ACCESS_FAILURE_TTL_SECONDS = 5
+AAR_ACCESS_CACHE_MAX = 2048
+_AAR_ACCESS_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+_AAR_ACCESS_LOCK = threading.Lock()
+
+
 def _bot_aar_shared_secret() -> str:
     return os.getenv("STRATEGIUM_BOT_SHARED_SECRET") or os.getenv("STRATEGIUM_BOT_AAR_SHARED_SECRET", "")
 
@@ -189,6 +198,7 @@ SECURITY_LOG = logging.getLogger("strategium.security")
 
 _LOCK = threading.RLock()
 _GEOGRAPHY_CACHE: tuple[Path, int, int, bytes] | None = None
+_ROSTER_CACHE: tuple[Any, bytes] | None = None
 
 
 def _normalize_origin(value: str) -> str:
@@ -248,10 +258,29 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 
 def _aar_access(user_id: str) -> dict[str, Any]:
+    with _AAR_ACCESS_LOCK:
+        cached = _AAR_ACCESS_CACHE.get(user_id)
+        if cached and cached[0] > time.monotonic():
+            return cached[1]
+    access = _fetch_aar_access(user_id)
+    ttl = AAR_ACCESS_TTL_SECONDS if access.get("available", True) else AAR_ACCESS_FAILURE_TTL_SECONDS
+    with _AAR_ACCESS_LOCK:
+        now = time.monotonic()
+        if len(_AAR_ACCESS_CACHE) >= AAR_ACCESS_CACHE_MAX:
+            for key in [key for key, (expires, _) in _AAR_ACCESS_CACHE.items() if expires <= now]:
+                del _AAR_ACCESS_CACHE[key]
+            if len(_AAR_ACCESS_CACHE) >= AAR_ACCESS_CACHE_MAX:
+                _AAR_ACCESS_CACHE.clear()
+        _AAR_ACCESS_CACHE[user_id] = (now + ttl, access)
+    return access
+
+
+def _fetch_aar_access(user_id: str) -> dict[str, Any]:
+    unavailable = {"allowed": False, "available": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
     intake = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
     secret = _bot_aar_shared_secret()
     if not secret or not intake:
-        return {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
+        return unavailable
     body = _json_bytes({"user_id": str(user_id)})
     timestamp = str(int(time.time()))
     key = f"access-{user_id}"
@@ -264,10 +293,10 @@ def _aar_access(user_id: str) -> dict[str, Any]:
     )
     try:
         opener = urllib.request.build_opener(_NoRedirectHandler)
-        with opener.open(request, timeout=5) as response:
+        with opener.open(request, timeout=AAR_ACCESS_TIMEOUT_SECONDS) as response:
             result = json.loads(response.read(4096))
         if not isinstance(result, dict):
-            return {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
+            return unavailable
         max_file_bytes = result.get("max_file_bytes")
         if isinstance(max_file_bytes, bool) or not isinstance(max_file_bytes, int) or max_file_bytes <= 0:
             max_file_bytes = MAX_AAR_IMAGE_BYTES
@@ -282,7 +311,7 @@ def _aar_access(user_id: str) -> dict[str, Any]:
                     "can_delete": management.get("can_delete") is True,
                 }}
     except (OSError, ValueError, urllib.error.URLError):
-        return {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
+        return unavailable
 
 
 def _aar_member_search(user_id: str, query: str) -> dict[str, Any] | None:
@@ -469,6 +498,23 @@ def _geography_bytes() -> bytes:
         if _GEOGRAPHY_CACHE is None or _GEOGRAPHY_CACHE[:3] != key:
             _GEOGRAPHY_CACHE = (*key, _json_bytes(load_geography(GEOGRAPHY_PATH)))
         return _GEOGRAPHY_CACHE[3]
+
+
+def _file_key(path: Path) -> tuple[int, int] | None:
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return stat.st_mtime_ns, stat.st_size
+
+
+def _roster_bytes(build: Any) -> bytes:
+    global _ROSTER_CACHE
+    with _LOCK:
+        key = (_file_key(ROSTER_PATH), _file_key(BACKSTORIES_PATH))
+        if _ROSTER_CACHE is None or _ROSTER_CACHE[0] != key:
+            _ROSTER_CACHE = (key, _json_bytes(build()))
+        return _ROSTER_CACHE[1]
 
 
 def _signature(body: bytes) -> str:
@@ -875,7 +921,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/health":
             self._send(HTTPStatus.OK, {"ok": True})
         elif parsed.path == "/api/roster":
-            self._send(HTTPStatus.OK, self._merged_roster())
+            self._send(HTTPStatus.OK, _roster_bytes(self._merged_roster))
         elif parsed.path == "/api/aar-members":
             self._search_aar_members(urllib.parse.parse_qs(parsed.query))
         elif parsed.path == "/api/aar-management":
@@ -968,7 +1014,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         if not head and status == HTTPStatus.OK:
-            self.wfile.write(path.read_bytes())
+            with path.open("rb") as file:
+                shutil.copyfileobj(file, self.wfile, 256 * 1024)
 
     def _send_page(self) -> None:
         body = (ROOT / "jericho-strategium.html").read_bytes()
@@ -1370,9 +1417,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
     def _get_me(self) -> None:
         user = self._cookie_user()
         access = _aar_access(str(user["id"])) if user else {"allowed": False, "display_name": "", "max_file_bytes": MAX_AAR_IMAGE_BYTES}
-        public_user = {"id": str(user["id"]), "name": access["display_name"] or "Watch Member"} if user else None
+        # Session name only when the bot bridge is down, so a bot stall doesn't show "Watch Member".
+        fallback_name = (user.get("name") if user and access.get("available") is False else "") or "Watch Member"
+        public_user = {"id": str(user["id"]), "name": access["display_name"] or fallback_name} if user else None
         self._send(HTTPStatus.OK, {"authenticated": bool(user), "user": public_user,
                                   "csrf": user.get("csrf") if user else None,
+                                  "degraded": access.get("available") is False,
                                   "aar_allowed": access["allowed"],
                                   "aar_management": access.get("aar_management", {"can_edit": False, "can_delete": False}),
                                   "aar_max_file_bytes": _aar_image_limit(access)}, {"Cache-Control": "no-store"})
@@ -1673,6 +1723,11 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             )
 
 
+class StrategiumServer(ThreadingHTTPServer):
+    # Default backlog of 5 drops connections when a page load fans out into many asset requests.
+    request_queue_size = 128
+
+
 def main() -> None:
     if not BOT_SHARED_SECRET:
         raise SystemExit("STRATEGIUM_BOT_SHARED_SECRET is required")
@@ -1684,7 +1739,7 @@ def main() -> None:
         and HOST != "127.0.0.1"
     ):
         pass
-    server = ThreadingHTTPServer((HOST, PORT), StrategiumHandler)
+    server = StrategiumServer((HOST, PORT), StrategiumHandler)
     print(f"Strategium backend listening on http://{HOST}:{PORT}")
     server.serve_forever()
 
