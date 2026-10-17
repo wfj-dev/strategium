@@ -3720,7 +3720,6 @@ function addAarScreenshots(files) {
   }
   aarDraft.idempotencyKey = "";
   aarDraft.reviewing = false;
-  if (aarDraft.managementRecordId) aarDraft.existingScreenshots = [];
   aarDraft.files.push(...selected.map(file => ({ file, name: file.name, size: file.size, type: file.type, previewUrl: URL.createObjectURL(file) })));
   renderSubmitAar();
   return true;

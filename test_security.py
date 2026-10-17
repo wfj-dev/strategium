@@ -1335,6 +1335,31 @@ assert.equal(errors.length, 4);
         assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR edit evidence regression")
+def test_aar_edit_keeps_existing_screenshots_after_replacement_is_removed():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const snippet = html.slice(html.indexOf('function addAarScreenshots('), html.indexOf('function aarAllowedTagKeys('));
+const existing = [{ filename: 'old.png', url: 'https://cdn.discordapp.com/old.png', size: 10 }];
+const context = {
+    state: { auth: { aar_max_file_bytes: 16 * 1024 * 1024 } },
+    aarDraft: { files: [], submitting: false, idempotencyKey: 'k', reviewing: false, managementRecordId: '123', existingScreenshots: existing },
+    AAR_MAX_SCREENSHOTS: 10, AAR_MAX_IMAGE_BYTES: 32 * 1024 * 1024, AAR_MAX_TOTAL_IMAGE_BYTES: 32 * 1024 * 1024,
+    URL: { createObjectURL: () => 'blob:preview' }, setAarStatus: () => {}, renderSubmitAar: () => {}
+};
+vm.createContext(context);
+vm.runInContext(snippet, context);
+assert.equal(context.addAarScreenshots([{ name: 'new.png', type: 'image/png', size: 1024 }]), true);
+context.aarDraft.files.splice(0, 1);
+assert.deepEqual(context.aarDraft.existingScreenshots, existing);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR navigation regression")
 def test_aar_detail_back_navigation_is_available_before_detail_loads():
     source = r"""
