@@ -29,6 +29,71 @@ from server import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _clear_aar_access_cache():
+    server._AAR_ACCESS_CACHE.clear()
+    yield
+    server._AAR_ACCESS_CACHE.clear()
+
+
+def test_aar_access_caches_success_and_briefly_caches_bridge_failure(monkeypatch) -> None:
+    calls = []
+    responses = [
+        {"allowed": False, "available": False, "display_name": "", "max_file_bytes": 1},
+        {"allowed": True, "display_name": "Brother", "max_file_bytes": 1},
+    ]
+
+    def fake_fetch(user_id):
+        calls.append(user_id)
+        return responses[len(calls) - 1]
+
+    clock = [1000.0]
+    monkeypatch.setattr(server, "_fetch_aar_access", fake_fetch)
+    monkeypatch.setattr(server.time, "monotonic", lambda: clock[0])
+
+    assert server._aar_access("42")["available"] is False
+    assert server._aar_access("42")["available"] is False
+    assert len(calls) == 1
+    clock[0] += server.AAR_ACCESS_FAILURE_TTL_SECONDS + 1
+    assert server._aar_access("42")["display_name"] == "Brother"
+    clock[0] += server.AAR_ACCESS_TTL_SECONDS - 1
+    assert server._aar_access("42")["display_name"] == "Brother"
+    assert len(calls) == 2
+
+
+def test_me_falls_back_to_session_name_when_bridge_unavailable(local_site, monkeypatch) -> None:
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "_aar_access", lambda _user_id: {
+        "allowed": False, "available": False, "display_name": "", "max_file_bytes": 1,
+    })
+    cookie = _session_value({"id": "42", "name": "Jules", "csrf": "csrf-token"})
+    request = urllib.request.Request(local_site + "/api/me", headers={"Cookie": f"strategium_session={cookie}"})
+    with urllib.request.urlopen(request) as response:
+        payload = json.loads(response.read())
+    assert payload["user"]["name"] == "Jules"
+    assert payload["degraded"] is True
+
+
+def test_roster_response_is_cached_until_files_change(local_site, tmp_path, monkeypatch) -> None:
+    roster = tmp_path / "roster_snapshot.json"
+    backstories = tmp_path / "backstories.json"
+    roster.write_text('{"members":[{"id":"1","name":"A"}]}', encoding="utf-8")
+    monkeypatch.setattr(server, "ROSTER_PATH", roster)
+    monkeypatch.setattr(server, "BACKSTORIES_PATH", backstories)
+    monkeypatch.setattr(server, "_ROSTER_CACHE", None)
+    loads = []
+    original_load = server._load_json
+    monkeypatch.setattr(server, "_load_json", lambda path, default: loads.append(path) or original_load(path, default))
+    for _ in range(2):
+        with urllib.request.urlopen(local_site + "/api/roster") as response:
+            assert json.loads(response.read())["members"][0]["name"] == "A"
+    assert len(loads) == 2
+    backstories.write_text('{"1":{"backstory":"Hello"}}', encoding="utf-8")
+    with urllib.request.urlopen(local_site + "/api/roster") as response:
+        assert json.loads(response.read())["members"][0]["backstory"] == "Hello"
+    assert len(loads) == 4
+
+
 def test_origin_matches_exact_allowed_origin() -> None:
     assert _origin_matches("http://127.0.0.1:8787", "http://127.0.0.1:8787")
     assert _origin_matches("http://127.0.0.1:8787/", "http://127.0.0.1:8787")
