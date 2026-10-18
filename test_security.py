@@ -36,6 +36,19 @@ def _clear_aar_access_cache():
     server._AAR_ACCESS_CACHE.clear()
 
 
+def test_server_silences_client_disconnects_but_reports_real_errors(capsys) -> None:
+    httpd = server.StrategiumServer(("127.0.0.1", 0), server.StrategiumHandler)
+    try:
+        for error, expect_output in ((BrokenPipeError(), False), (ConnectionResetError(), False), (ValueError("boom"), True)):
+            try:
+                raise error
+            except Exception:
+                httpd.handle_error(None, ("127.0.0.1", 1))
+            assert bool(capsys.readouterr().err) is expect_output
+    finally:
+        httpd.server_close()
+
+
 def test_aar_access_caches_success_and_briefly_caches_bridge_failure(monkeypatch) -> None:
     calls = []
     responses = [
@@ -1333,6 +1346,31 @@ assert.equal(errors.length, 4);
 """
         result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR edit evidence regression")
+def test_aar_edit_keeps_existing_screenshots_after_replacement_is_removed():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const snippet = html.slice(html.indexOf('function addAarScreenshots('), html.indexOf('function aarAllowedTagKeys('));
+const existing = [{ filename: 'old.png', url: 'https://cdn.discordapp.com/old.png', size: 10 }];
+const context = {
+    state: { auth: { aar_max_file_bytes: 16 * 1024 * 1024 } },
+    aarDraft: { files: [], submitting: false, idempotencyKey: 'k', reviewing: false, managementRecordId: '123', existingScreenshots: existing },
+    AAR_MAX_SCREENSHOTS: 10, AAR_MAX_IMAGE_BYTES: 32 * 1024 * 1024, AAR_MAX_TOTAL_IMAGE_BYTES: 32 * 1024 * 1024,
+    URL: { createObjectURL: () => 'blob:preview' }, setAarStatus: () => {}, renderSubmitAar: () => {}
+};
+vm.createContext(context);
+vm.runInContext(snippet, context);
+assert.equal(context.addAarScreenshots([{ name: 'new.png', type: 'image/png', size: 1024 }]), true);
+context.aarDraft.files.splice(0, 1);
+assert.deepEqual(context.aarDraft.existingScreenshots, existing);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the AAR navigation regression")
