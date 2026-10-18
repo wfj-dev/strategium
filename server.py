@@ -15,6 +15,7 @@ import os
 import re
 import secrets
 import shutil
+import sys
 import threading
 import time
 import urllib.error
@@ -1726,6 +1727,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 class StrategiumServer(ThreadingHTTPServer):
     # Default backlog of 5 drops connections when a page load fans out into many asset requests.
     request_queue_size = 128
+
+    def handle_error(self, request: Any, client_address: Any) -> None:
+        # Visitors closing the tab mid-response is routine, not a server fault.
+        if isinstance(sys.exc_info()[1], ConnectionError):
+            return
+        super().handle_error(request, client_address)
 
 
 def main() -> None:

@@ -36,6 +36,19 @@ def _clear_aar_access_cache():
     server._AAR_ACCESS_CACHE.clear()
 
 
+def test_server_silences_client_disconnects_but_reports_real_errors(capsys) -> None:
+    httpd = server.StrategiumServer(("127.0.0.1", 0), server.StrategiumHandler)
+    try:
+        for error, expect_output in ((BrokenPipeError(), False), (ConnectionResetError(), False), (ValueError("boom"), True)):
+            try:
+                raise error
+            except Exception:
+                httpd.handle_error(None, ("127.0.0.1", 1))
+            assert bool(capsys.readouterr().err) is expect_output
+    finally:
+        httpd.server_close()
+
+
 def test_aar_access_caches_success_and_briefly_caches_bridge_failure(monkeypatch) -> None:
     calls = []
     responses = [
