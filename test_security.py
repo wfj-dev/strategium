@@ -174,6 +174,58 @@ def test_cookie_flags_include_secure_when_required() -> None:
     assert "SameSite=Lax" in flags
 
 
+def test_war_read_and_mutations_require_login(local_site):
+    for method in ("GET", "POST"):
+        request = urllib.request.Request(local_site + "/api/war", data=b"{}" if method == "POST" else None, method=method)
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request)
+        assert error.value.code == 401
+
+
+def test_war_mutation_requires_csrf_and_uses_authenticated_identity(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    cookie = _session_value({"id": "42", "name": "Member", "csrf": "csrf-token"})
+    captured = []
+    monkeypatch.setattr(server, "_war_request", lambda user, payload: captured.append((user, payload)) or (200, {"version": 1}))
+    body = json.dumps({"action": "commit", "user_id": "999"}).encode()
+    headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "Content-Type": "application/json"}
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(urllib.request.Request(local_site + "/api/war", data=body, headers=headers))
+    assert error.value.code == 403
+    assert captured == []
+    headers["X-CSRF-Token"] = "csrf-token"
+    with urllib.request.urlopen(urllib.request.Request(local_site + "/api/war", data=body, headers=headers)) as response:
+        assert response.status == 200
+        assert response.headers["Cache-Control"] == "no-store"
+    assert captured[0][0] == "42"
+
+
+def test_member_correction_requests_require_csrf_but_not_editor_permission(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    monkeypatch.setattr(server, "_aar_access", lambda user: {"allowed": True, "aar_management": {"can_edit": False, "can_delete": False}})
+    captured = []
+    monkeypatch.setattr(server, "_aar_management_request", lambda *args: captured.append(args) or (201, {"ok": True, "status": "pending"}))
+    cookie = _session_value({"id": "42", "name": "Brother", "csrf": "csrf-token"})
+    headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "Content-Type": "application/json"}
+    body = json.dumps({"record_id": "123", "requested_changes": "Correct armory data."}).encode()
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(urllib.request.Request(local_site + "/api/aar-edit-requests", data=body, headers=headers))
+    assert error.value.code == 403
+    assert not captured
+    headers["X-CSRF-Token"] = "csrf-token"
+    with urllib.request.urlopen(urllib.request.Request(local_site + "/api/aar-edit-requests", data=body, headers=headers)) as response:
+        assert response.status == 201
+    assert captured[0][0:2] == ("42", "request-edit")
+    for path in ("/api/aar-management", "/manage-aars", "/api/aar-management/edit-requests/" + "a" * 24 + "/reject"):
+        request = urllib.request.Request(local_site + path, data=b'{"note":"Not permitted"}' if path.endswith("reject") else None, headers=headers)
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request)
+        assert error.value.code == 403
+    assert len(captured) == 1
+
+
 def test_request_is_secure_uses_forwarded_proto() -> None:
     headers = {"X-Forwarded-Proto": "https"}
     assert _request_is_secure(headers)
@@ -1300,6 +1352,69 @@ def test_me_uses_guild_display_name_not_account_name(local_site, monkeypatch):
     assert payload["aar_max_file_bytes"] == 24 * 1024 * 1024
     assert payload["user"]["name"] == "Watch Techmarine Jules"
     assert b"real-account-username" not in body
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the war signup regression")
+def test_locked_strike_ui_has_no_launch_step_and_prefills_normal_aar():
+        source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+const handlers = {};
+const navigation = [];
+const offer = {id: 'offer', attempt_id: 'GW-' + 'a'.repeat(32), name: 'Psychic Hunt', briefing: 'Support the operation', aar_mission: 'Inferno', aar_mission_value: 'pve_inferno', aar_mode: 'omega', aar_difficulty: '@Omega', status: 'locked', capacity: 5, required_rank: 'Watch Librarian', specialist_id: '43', participants: ['42','43','44','45','46']};
+const context = {
+    state: {auth: {authenticated: true}, selectedSector: 'alpha', geography: {sectors: [{id:'alpha',name:'Alpha'}],systems: []}},
+    warView: {busy: false, error: '', planet: 'world', subsector: 'alpha', pool: 'omega', data: {version: 1, actor: {id: '42', roles: ['Watch Captain'], company_id: '1'}, campaigns: {}, commitments: {}, kill_teams: [], proposals: [], planets: [{id: 'world', name:'World',subsector_id:'alpha'}], boards: {world: [offer, {...offer,id:'vanilla-offer',name:'Vanilla only',aar_mode:'ops_strat',pool:'vanilla',capacity:3}]}, content: {objectives:29}, participant_names: {'42':'Captain','43':'Librarian'}}},
+    COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? ''), titleCase: value=>value,
+    aarDraft: {memberDirectory:new Map(), managementRecordId:'old', idempotencyKey:'old', reviewing:true},
+    document: {addEventListener:(name,callback)=>{handlers[name]=callback;}},
+    setPage:async (...args)=>navigation.push(args), renderReach:()=>{}
+};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
+const markup = context.warConsoleHtml();
+assert.match(markup,/Roster locked/);
+assert.match(markup,/data-war-action="report"/);
+assert.match(markup,/data-war-action="cancel"/);
+assert.doesNotMatch(markup,/data-war-action="deploy"|data-war-action="ready"|coordinator/i);
+assert.doesNotMatch(markup,/Vanilla only/);
+assert.match(markup,/data-war-pool="omega" aria-pressed="true"/);
+assert.doesNotMatch(markup,/aria-label="Strike evidence review"/);
+context.warView.data.actor.can_review=true;
+context.warView.data.reviews=[{mission:'Inferno',aar_id:'99',reason:'Evidence reused',status:'pending',participants:['43'],strike_id:'held',receipt_url:'https://discord.com/channels/1/2/99'}];
+assert.match(context.warConsoleHtml(),/data-war-action="review"/);
+assert.match(context.warConsoleHtml(),/data-war-action="reverse"/);
+context.warView.data.actor.can_review=false;
+(async()=>{
+    await handlers.click({target:{closest:()=>({dataset:{warPool:'vanilla'}})}});
+    assert.equal(context.warView.pool,'vanilla');
+    assert.match(context.warConsoleHtml(),/Vanilla only/);
+    assert.doesNotMatch(context.warConsoleHtml(),/Psychic Hunt/);
+    context.warView.pool='omega';
+        const players=offer.participants;
+        offer.participants=[];offer.status='available';
+        context.warView.data.actor.watch_brother=false;
+        assert.doesNotMatch(context.warConsoleHtml(),/data-war-action="join"/);
+        context.warView.data.actor.watch_brother=true;
+        assert.match(context.warConsoleHtml(),/data-war-action="join"/);
+        offer.participants=players;offer.status='locked';
+    await handlers.click({target:{closest:()=>({dataset:{warAction:'report',strike:'offer'}})}});
+    assert.equal(context.aarDraft.strikeId,offer.attempt_id);
+    assert.equal(context.aarDraft.mode,'omega');
+    assert.equal(context.aarDraft.mission,'pve_inferno');
+    assert.equal(context.aarDraft.difficulty,'@Omega');
+    assert.deepEqual(Array.from(context.aarDraft.brothers),offer.participants);
+    assert.equal(context.aarDraft.memberDirectory.get('43').name,'Librarian');
+    assert.equal(context.aarDraft.managementRecordId,'');
+    assert.equal(context.aarDraft.idempotencyKey,'');
+    assert.deepEqual(navigation,[['submit-aar',true]]);
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+        result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+        assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the browser-handler regression")

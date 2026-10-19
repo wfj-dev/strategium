@@ -23,10 +23,31 @@ from scripts.build_reach_geography import (
     STAR_NAMES,
     STELLAR_CLASSES,
     build_geography,
+    build_war_definition,
 )
 
 
 GEOGRAPHY_PATH = Path(__file__).resolve().parent / "data" / "reach_geography.json"
+
+
+def test_war_setup_uses_artwork_adjacency_and_preserves_manual_terrain():
+    import numpy as np
+    mask = np.zeros((120, 240), dtype=np.uint8)
+    mask[10:110, 10:70] = 1
+    mask[10:110, 76:136] = 2
+    mask[10:110, 142:230] = 3
+    geography = {
+        "sectors": [{"id": identity, "number": number} for number, identity in enumerate(("alpha", "beta", "gamma"), 1)],
+        "bodies": [{"id": "manual", "kind": "hive_world", "battleEligible": True}, {"id": "generated", "kind": "planet", "battleEligible": True}, {"id": "star", "kind": "star", "battleEligible": False}],
+    }
+    definition = {"objectives": [{"id": "preserved"}], "planets": {"manual": {"world_type": "hive", "biome": "industrial", "provisional": False}}}
+    result = build_war_definition(geography, mask, definition)
+    assert result["neighbors"] == {"alpha": ["beta"], "beta": ["alpha", "gamma"], "gamma": ["beta"]}
+    assert result["planets"]["manual"] == definition["planets"]["manual"]
+    assert result["planets"]["generated"] == {"world_type": "civilised", "biome": "warzone", "provisional": True}
+    assert "star" not in result["planets"]
+    assert result["objectives"] == definition["objectives"]
+    assert build_war_definition(geography, mask, result) == result
 
 
 def _sample_geography() -> dict:
