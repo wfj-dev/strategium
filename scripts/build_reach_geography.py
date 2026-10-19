@@ -389,12 +389,77 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
     })
 
 
+def build_war_definition(geography: dict, sector_mask: np.ndarray, definition: dict) -> dict:
+    numbers = {sector["number"]: sector["id"] for sector in geography["sectors"]}
+    if set(np.unique(sector_mask)) - {0} != set(numbers):
+        raise ValueError("War adjacency mask does not match the numbered geography")
+    distances, labels = cv2.distanceTransformWithLabels((sector_mask == 0).astype(np.uint8), cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
+    lookup = np.zeros(int(labels.max()) + 1, dtype=np.uint8)
+    lookup[labels[sector_mask != 0]] = sector_mask[sector_mask != 0]
+    nearest = lookup[labels]
+    nearest[distances > 8] = 0
+    contacts: dict[tuple[int, int], int] = {}
+    for first, second in ((nearest[:, :-1], nearest[:, 1:]), (nearest[:-1, :], nearest[1:, :])):
+        touching = (first != 0) & (second != 0) & (first != second)
+        pairs = np.sort(np.column_stack((first[touching], second[touching])), axis=1)
+        unique, counts = np.unique(pairs, axis=0, return_counts=True)
+        for pair, count in zip(unique, counts):
+            key = (int(pair[0]), int(pair[1]))
+            contacts[key] = contacts.get(key, 0) + int(count)
+    neighbors = {identity: [] for identity in numbers.values()}
+    for (source, target), count in contacts.items():
+        if count >= 20:
+            neighbors[numbers[source]].append(numbers[target])
+            neighbors[numbers[target]].append(numbers[source])
+    visited = set()
+    pending = [next(iter(neighbors))]
+    while pending:
+        identity = pending.pop()
+        if identity not in visited:
+            visited.add(identity)
+            pending.extend(neighbors[identity])
+    if visited != set(neighbors):
+        raise ValueError("Artwork-derived war adjacency is disconnected; review the map mask")
+    worlds = {
+        "hive_world": "hive", "forge_world": "forge", "agri_world": "agri",
+        "feral_world": "feral", "death_world": "death", "dead_world": "dead",
+        "station": "research", "research_world": "research", "cemetery_world": "cemetery",
+    }
+    biomes = {"hive": "underhive", "forge": "industrial", "agri": "jungle", "civilised": "warzone", "feral": "jungle", "death": "jungle", "dead": "desert", "research": "jungle", "cemetery": "warzone"}
+    planets = {identity: dict(metadata) for identity, metadata in definition.get("planets", {}).items()}
+    for body in geography["bodies"]:
+        if body.get("battleEligible") is not True:
+            continue
+        metadata = planets.setdefault(body["id"], {})
+        if not metadata.get("world_type") or not metadata.get("biome"):
+            metadata.setdefault("world_type", worlds.get(body["kind"], "civilised"))
+            if metadata["world_type"] not in biomes:
+                raise ValueError(f"Unknown gameplay world type for {body['id']}")
+            metadata.setdefault("biome", biomes[metadata["world_type"]])
+            metadata["provisional"] = True
+    return {**definition, "neighbors": {identity: sorted(values) for identity, values in neighbors.items()}, "planets": planets, "adjacency_source": "numbered_artwork_shared_borders"}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--war-definition", type=Path, help="Prepare war adjacency and provisional gameplay terrain without changing canonical geography")
     args = parser.parse_args()
+    if args.war_definition:
+        geography = validate_geography(json.loads(args.output.read_text(encoding="utf-8")))
+        definition = json.loads(args.war_definition.read_text(encoding="utf-8"))
+        mask = np.asarray(Image.open(MAP_ASSETS / "sectors.png"))
+        prepared = build_war_definition(geography, mask, definition)
+        print(f"Prepared {sum(len(values) for values in prepared['neighbors'].values()) // 2} shared borders and {len(prepared['planets'])} gameplay terrain entries.")
+        if args.write:
+            temporary = args.war_definition.with_suffix(".tmp")
+            temporary.write_text(json.dumps(prepared, indent=2) + "\n", encoding="utf-8")
+            temporary.replace(args.war_definition)
+        else:
+            print("Dry run only. Re-run with --write to update the war definition.")
+        return
     geography = build_geography(json.loads(args.source.read_text(encoding="utf-8")))
     print(f"Validated {len(geography['sectors'])} sectors, {len(geography['systems'])} systems, {len(geography['bodies'])} bodies and {len(geography['routes'])} routes.")
     if args.write:

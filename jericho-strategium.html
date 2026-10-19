@@ -648,6 +648,18 @@
   .renown-tier.future { opacity: .48; }
   .renown-tier-unlock { color: var(--green-dim); }
   .renown-scope-note { display: block; margin: 8px 0 0; padding-top: 7px; border-top: 1px solid var(--border-dim); color: var(--green-faint); font-size: 9px; line-height: 1.45; }
+  .war-strike-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 16px; }
+  .war-strike { min-width: 0; border: 1px solid var(--border-dim); border-radius: 4px; padding: 12px; }
+  .war-strike h3 { font-size: 14px; overflow-wrap: anywhere; }
+  .war-strike p { font-size: 12px; overflow-wrap: anywhere; }
+  .war-pools { display: flex; gap: 8px; margin-bottom: 14px; }
+  .war-pools [aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(207,174,104,.1); }
+  #war-console { margin-top: 22px; }
+  #war-console .reach-toolbar { align-items: end; }
+  #war-console label { display: grid; gap: 5px; font-size: 12px; min-width: 0; max-width: 100%; }
+  #war-console .reach-select { max-width: 100%; width: 220px; }
+  #war-console progress { width: 140px; accent-color: var(--green); }
+  #war-console [role="status"] { overflow-wrap: anywhere; }
   .chapter-record-overlay { z-index: 64; align-items: center; padding: 20px; }
   #member-modal { z-index: 66; }
   .chapter-record-overlay .overlay-panel { max-width: 760px; }
@@ -936,14 +948,6 @@
   .reach-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold-dim); margin-top: 2px; }
 
   .reach-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
-  .reach-chip {
-    background: transparent; border: 1px solid var(--border-dim); color: var(--green-faint);
-    padding: 4px 10px; cursor: pointer; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
-    display: inline-flex; gap: 6px; align-items: center; transition: all 0.15s;
-  }
-  .reach-chip[aria-pressed="true"] { color: var(--white); border-color: var(--chip-color); background: rgba(255,255,255,0.03); }
-  .reach-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--chip-color); opacity: 0.4; }
-  .reach-chip[aria-pressed="true"] .reach-chip-dot { opacity: 1; box-shadow: 0 0 6px var(--chip-color); }
   .reach-select {
     background: #060a06; border: 1px solid var(--border-dim); color: var(--green);
     font-family: inherit; font-size: 11px; padding: 4px 8px; margin-left: auto;
@@ -956,7 +960,7 @@
     background: radial-gradient(ellipse at 50% 45%, #0b130f 0%, #050806 60%, #020302 100%);
     box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
   }
-  .reach-map-shell { position: relative; min-width: 0; }
+  .reach-map-shell { position: relative; min-width: 0; overflow: hidden; }
   .reach-sector-panel {
     position: absolute; z-index: 5; inset: 0 0 0 auto; width: min(340px, 40%); min-width: 260px;
     display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(79,214,122,.38);
@@ -2167,7 +2171,6 @@ const state = {
   reachBase: null,
   reachView: null,
   reachAdj: new Map(),
-  reachFilters: { statuses: new Set(["deployed", "recruiting", "distributed", "unassigned", "completed", "failed", "lapsed"]), company: "all" },
   reachSuppressClick: false,
   selectedPlanet: null,
   selectedChapter: null,
@@ -2490,36 +2493,23 @@ function oathSealHtml(member) {
   </div>`;
 }
 
-const RENOWN_TIERS = ["Unproven", "Initiated", "Vigilant", "Sworn", "Hallowed", "Eternal"];
+const RENOWN_TIERS = ["Unearned", "I", "II", "III", "IV"];
 const KILL_TEAM_RENOWN_UNLOCKS = {
-  Unproven: [],
-  Initiated: [],
-  Vigilant: ["Cloaks"],
-  Sworn: ["Cloaks", "Iron Halos"],
-  Hallowed: ["Cloaks", "Iron Halos", "Crested helms (except Victrix Guard)"],
-  Eternal: ["Featured in Jericho lore"]
+  Unearned: [], I: ["Capes"], II: ["Capes", "Halos"],
+  III: ["Capes", "Halos", "Crests"], IV: ["Capes", "Halos", "Crests", "Fortress lore eligibility"]
 };
 const KILL_TEAM_RENOWN_GAINS = {
-  Unproven: [],
-  Initiated: [],
-  Vigilant: ["Cloaks"],
-  Sworn: ["Iron Halos"],
-  Hallowed: ["All crested helms (excluding Victrix Guard)"],
-  Eternal: ["Featured in Jericho lore"]
+  Unearned: [], I: ["Capes"], II: ["Halos"], III: ["Crests"], IV: ["Fortress lore eligibility"]
 };
 
 function renownSummaryHtml(directive, kind = "unit") {
-  const completed = Number(directive.completed ?? directive.completions_28d ?? 0);
-  const rep = Number(directive.rep_earned ?? directive.rep_earned_28d ?? 0);
-  const tier = directive.tier || (kind === "killteam" ? "Unproven" : "Unranked");
-  const unlocks = kind === "killteam"
-    ? KILL_TEAM_RENOWN_UNLOCKS[tier] || []
-    : [];
+  const score = Number(directive.score ?? 0);
+  const tier = RENOWN_TIERS.includes(directive.tier) ? directive.tier : "Unearned";
+  const unlocks = KILL_TEAM_RENOWN_UNLOCKS[tier] || [];
   return `<div class="formation-directive-stat" aria-label="${kind === "killteam" ? "Kill Team" : "Unit"} Renown">
     <span>RENOWN: ${renownInfoHtml(kind, tier)}</span>
-    <span>REP: <strong>${Number.isFinite(rep) ? rep.toFixed(1) : "0.0"}</strong></span>
-    <span>STRIKE DIRECTIVES: <strong>${Number.isFinite(completed) ? completed : 0} COMPLETED</strong></span>
-    <span class="renown-unlocks">CURRENTLY UNLOCKED: ${kind === "killteam" && unlocks.length ? escapeHtml(unlocks.join(", ")) : kind === "killteam" ? "No unlocks at this rank" : "No published unlock schedule for this unit type"}</span>
+    <span>28-DAY AVERAGE: <strong>${Number.isFinite(score) ? score.toFixed(2) : "0.00"}</strong></span>
+    <span class="renown-unlocks">${unlocks.length ? escapeHtml(unlocks.join(", ")) : "No current renown unlocks"}</span>
   </div>`;
 }
 
@@ -2532,7 +2522,7 @@ function renownInfoHtml(kind, tier, focusable = true) {
     const unlockText = unlocks.length ? unlocks.join(", ") : "No new unlock";
     return `<span class="renown-tier${unlocked ? " earned" : " future"}${current ? " current" : ""}"><span class="renown-tier-name">${escapeHtml(rank)}</span><span class="renown-tier-unlock">${escapeHtml(unlockText)}</span></span>`;
   }).join("");
-  const scopeNote = kind === "killteam" ? "" : `<span class="renown-scope-note">Published Kill Team reference. Company and formation unlock schedules are not present in the roster source.</span>`;
+  const scopeNote = `<span class="renown-scope-note">28-day averages: I 4 / II 8 / III 28 / IV 56. All formation members count; company command averages its kill teams equally.</span>`;
   return `<span class="renown-info"${focusable ? ` tabindex="0"` : ""} aria-label="${escapeHtml(tier)} Renown; hover or focus for unlock tiers"><strong class="renown-rank">${escapeHtml(tier)}</strong><span class="renown-popover" role="tooltip"><span class="renown-popover-title">Renown unlock tiers</span><span class="renown-ladder">${rows}</span>${scopeNote}</span></span>`;
 }
 
@@ -3064,8 +3054,7 @@ function renderCompany(companyId) {
   const teams = teamList.map(t => {
     const leadName = t.lead ? t.lead.name : "Unassigned";
     const directive = (state.directiveStats && state.directiveStats.killTeams && state.directiveStats.killTeams[t.name]) || {};
-    const renownRep = Number(directive.rep_earned ?? directive.rep_earned_28d ?? 0);
-    const renownCompleted = Number(directive.completed ?? directive.completions_28d ?? 0);
+    const renownAverage = Number(directive.score ?? 0);
     return `
       <button class="killteam-plate" data-nav="killteam" data-company="${companyId}" data-killteam="${t.killTeam}" type="button">
         <span class="killteam-numeral" aria-hidden="true">${t.slot}</span>
@@ -3073,9 +3062,9 @@ function renderCompany(companyId) {
         <span class="killteam-plate-lead">${t.lead ? escapeHtml(killTeamLeadLabel(t.lead)) + " " + escapeHtml(displayName(leadName)) : "No active Watch Sergeant"}</span>
         <span class="killteam-plate-count">${t.count} in team</span>
         <div class="killteam-plate-renown">
-          <span class="killteam-plate-renown-label">RENOWN: ${renownInfoHtml("killteam", directive.tier || "Unproven", false)}</span>
-          <span>${Number.isFinite(renownCompleted) ? renownCompleted : 0} completed &middot; ${Number.isFinite(renownRep) ? renownRep.toFixed(1) : "0.0"} rep</span>
-          ${(KILL_TEAM_RENOWN_UNLOCKS[directive.tier || "Unproven"] || []).length ? `<span class="killteam-plate-unlocks">UNLOCKS: ${escapeHtml((KILL_TEAM_RENOWN_UNLOCKS[directive.tier || "Unproven"] || []).join(", "))}</span>` : ""}
+          <span class="killteam-plate-renown-label">RENOWN: ${renownInfoHtml("killteam", directive.tier || "Unearned", false)}</span>
+          <span>28-day average: ${Number.isFinite(renownAverage) ? renownAverage.toFixed(2) : "0.00"}</span>
+          ${(KILL_TEAM_RENOWN_UNLOCKS[directive.tier || "Unearned"] || []).length ? `<span class="killteam-plate-unlocks">UNLOCKS: ${escapeHtml((KILL_TEAM_RENOWN_UNLOCKS[directive.tier || "Unearned"] || []).join(", "))}</span>` : ""}
         </div>
       </button>`;
   }).join("");
@@ -3566,6 +3555,7 @@ const AAR_MAX_SCREENSHOTS = 10;
 const AAR_MAX_IMAGE_BYTES = 32 * 1024 * 1024;
 const AAR_MAX_TOTAL_IMAGE_BYTES = 32 * 1024 * 1024;
 const aarDraft = {
+  strikeId: "", strikeSuccess: "success",
   mode: "ops_strat", mission: "pve_inferno", difficulty: "@Ruthless", rank: "A", armoryData: "0",
   waves: "10", kia: "0", geneSeed: "unknown", geneCarrier: "", pvpMap: "Cathedrum",
   pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), inductees: new Set(), tags: new Set(), files: [], memberFilter: "",
@@ -3574,7 +3564,52 @@ const aarDraft = {
   submitting: false, reviewing: false, idempotencyKey: ""
 };
 const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
-const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, pendingDeletions: [], pendingEdits: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
+const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, pendingDeletions: [], pendingEdits: [], editRequests: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
+const aarCorrection = { record: "", changes: "", busy: false, status: "" };
+
+function aarCorrectionFormHtml() {
+  return `<section class="aar-section" aria-labelledby="aar-correction-heading"><h3 id="aar-correction-heading">Request an AAR correction</h3>
+    <form id="aar-correction-form" class="aar-fields">
+      <label class="aar-field"><span class="field-label">AAR ID or Discord message link</span><input id="aar-correction-record" class="field-input" value="${escapeHtml(aarCorrection.record)}" maxlength="200" required></label>
+      <label class="aar-field aar-field-wide"><span class="field-label">Requested changes</span><textarea id="aar-correction-changes" class="field-input" rows="3" minlength="8" maxlength="2000" required>${escapeHtml(aarCorrection.changes)}</textarea></label>
+      <button class="btn-dossier-action" type="submit"${aarCorrection.busy ? " disabled" : ""}>${aarCorrection.busy ? "Submitting..." : "Request correction"}</button>
+      <div id="aar-correction-status" class="aar-status" role="status" aria-live="polite">${escapeHtml(aarCorrection.status)}</div>
+    </form></section>`;
+}
+
+function setupAarCorrectionForm() {
+  const form = document.getElementById("aar-correction-form");
+  form?.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (aarCorrection.busy) return;
+    aarCorrection.record = document.getElementById("aar-correction-record").value.trim();
+    aarCorrection.changes = document.getElementById("aar-correction-changes").value.trim();
+    const status = document.getElementById("aar-correction-status");
+    let recordId = aarCorrection.record;
+    if (!/^[0-9]{1,20}$/.test(recordId)) {
+      try {
+        const url = new URL(recordId);
+        const match = /^\/channels\/[0-9]+\/[0-9]+\/([0-9]{1,20})\/?$/.exec(url.pathname);
+        if (url.protocol !== "https:" || url.hostname !== "discord.com" || !match) throw new Error();
+        recordId = match[1];
+      } catch { status.textContent = "Enter an AAR ID or a valid Discord message link."; return; }
+    }
+    if (aarCorrection.changes.length < 8) { status.textContent = "Describe the requested correction in at least 8 characters."; return; }
+    aarCorrection.busy = true;
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      const response = await fetch(apiUrl("/api/aar-edit-requests"), {method: "POST", credentials: "include", headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""}, body: JSON.stringify({record_id: recordId, requested_changes: aarCorrection.changes})});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || result.error || "Correction request failed.");
+      aarCorrection.status = "Correction requested. An authorized AAR editor will review it.";
+      status.textContent = aarCorrection.status;
+      aarCorrection.changes = "";
+      document.getElementById("aar-correction-changes").value = "";
+    } catch (error) { aarCorrection.status = error.message; status.textContent = aarCorrection.status; }
+    finally { aarCorrection.busy = false; submit.disabled = false; }
+  });
+}
 
 async function closeAarPhoneHandoff() {
   const sessionId = aarPhoneHandoff.sessionId;
@@ -3905,6 +3940,8 @@ function renderSubmitAar() {
           <h3 id="aar-details-heading">Operation Details</h3>
           <div class="aar-fields">
             ${aarSelectField("aar-mode", "Report Type", modeOptions, aarDraft.mode, true)}
+            <label class="aar-field"><span class="field-label">Strike ID (optional)</span><input id="aar-strike-id" class="field-input" value="${escapeHtml(aarDraft.strikeId)}" maxlength="35" pattern="GW-[a-f0-9]{32}" autocomplete="off"${managementEdit ? " readonly" : ""}></label>
+            ${aarDraft.strikeId ? aarSelectField("aar-strike-result", "Strike Result", [["success", "Success"], ["failure", "Failure"]], aarDraft.strikeSuccess, true) : ""}
             ${fields}${carrierField}
           </div>
         </section>
@@ -3948,7 +3985,9 @@ function renderSubmitAar() {
           <div id="aar-status" class="aar-status" role="status" aria-live="polite"></div>
         </div>
       </form>` : ""}
+      ${state.auth?.authenticated && state.auth.aar_allowed && !managementEdit ? aarCorrectionFormHtml() : ""}
     </section>`;
+  setupAarCorrectionForm();
 
   const form = document.getElementById("aar-form");
   document.querySelector("[data-aar-edit-cancel]")?.addEventListener("click", () => {
@@ -3968,6 +4007,8 @@ function renderSubmitAar() {
     aarDraft.reviewing = false;
   };
   const readDraftFields = () => {
+    aarDraft.strikeId = document.getElementById("aar-strike-id")?.value.trim() || "";
+    aarDraft.strikeSuccess = document.getElementById("aar-strike-result")?.value || "success";
     aarDraft.brothers = new Set([...form.querySelectorAll("[data-aar-brother]:checked")].map(input => input.value));
     aarDraft.inductees = new Set([...form.querySelectorAll("[data-aar-inductee]:checked")].map(input => input.value).filter(id => aarDraft.brothers.has(id)));
     aarDraft.tags = new Set([...form.querySelectorAll("[data-aar-tag]:checked")].map(input => input.value));
@@ -3983,6 +4024,12 @@ function renderSubmitAar() {
     aarDraft.pvpMode = document.getElementById("aar-pvp-mode")?.value || aarDraft.pvpMode;
     aarDraft.pvpResult = document.getElementById("aar-pvp-result")?.value || aarDraft.pvpResult;
   };
+  document.getElementById("aar-strike-id")?.addEventListener("change", () => {
+    readDraftFields(); invalidateIdempotencyKey(); renderSubmitAar();
+  });
+  document.getElementById("aar-strike-result")?.addEventListener("change", () => {
+    readDraftFields(); invalidateIdempotencyKey();
+  });
   document.getElementById("aar-phone-start")?.addEventListener("click", async () => {
     if (aarPhoneHandoff.busy || aarDraft.submitting) return;
     readDraftFields();
@@ -4132,6 +4179,8 @@ function renderSubmitAar() {
       return;
     }
     const payload = {
+      strike_id: aarDraft.strikeId || null,
+      strike_success: aarDraft.strikeId ? aarDraft.strikeSuccess === "success" : null,
       mode: aarDraft.mode,
       mission: aarDraft.mission,
       difficulty: aarDraft.difficulty,
@@ -4194,10 +4243,12 @@ function renderSubmitAar() {
       aarDraft.reviewing = false;
       renderSubmitAar();
       setAarStatus(
-        result.processing_pending
+        result.review_pending
+          ? "Evidence is awaiting independent review. Rewards have not been applied."
+          : result.processing_pending
           ? "The Discord receipt is posted. Archive processing will retry automatically."
           : "The report is recorded in the Watch archive.",
-        result.processing_pending ? "" : "success"
+        result.processing_pending || result.review_pending ? "" : "success"
       );
       const receiptUrl = String(result.receipt_url || "");
       if (receiptUrl.startsWith("https://discord.com/channels/")) {
@@ -4222,6 +4273,8 @@ function beginAarManagementEdit(detail) {
   if (!submission || !detail.id) return;
   aarDraft.files.forEach(revokeAarPreview);
   aarDraft.managementRecordId = String(detail.id);
+  aarDraft.strikeId = submission.strike_id || "";
+  aarDraft.strikeSuccess = submission.strike_success === false ? "failure" : "success";
   aarDraft.mode = submission.mode || "ops_strat";
   aarDraft.mission = submission.mission || "pve_inferno";
   aarDraft.difficulty = submission.difficulty || AAR_SUBMISSION_MODES[aarDraft.mode]?.difficulty || "@Ruthless";
@@ -4263,6 +4316,8 @@ async function loadAarManagement() {
     aarManager.hasMore = result.has_more === true;
     aarManager.pendingDeletions = Array.isArray(result.pending_deletions) ? result.pending_deletions : [];
     aarManager.pendingEdits = Array.isArray(result.pending_edits) ? result.pending_edits : [];
+    aarManager.editRequests = Array.isArray(result.edit_requests) ? result.edit_requests : [];
+    aarManager.editRequestCount = Number(result.edit_request_count) || aarManager.editRequests.length;
     aarManager.reconciliationReviews = Array.isArray(result.reconciliation_reviews) ? result.reconciliation_reviews : [];
     aarManager.status = "ready";
   } catch (error) {
@@ -4300,6 +4355,7 @@ async function openAarManagementRecord(recordId) {
 
 function renderAarManagement() {
   const app = document.getElementById("app");
+  if (state.auth?.aar_management?.can_edit !== true) { app.innerHTML = ""; return; }
   const detail = aarManager.detail;
   const deleteRequest = detail?.delete_request;
   const deleteControl = deleteRequest?.status
@@ -4325,6 +4381,13 @@ function renderAarManagement() {
   const pendingDeletionRows = aarManager.pendingDeletions.map(item => `<article class="aar-section aar-management-entry">
     <div><strong>Deletion ${escapeHtml(item.status.replaceAll("_", " "))} · AAR ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.reason || "No reason recorded")}</p></div>
     ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-recover-delete-confirm="${escapeHtml(item.id)}">Resume Forgemaster confirmation</button>` : `<span class="aar-upload-hint">Forgemaster action required</span>`}
+  </article>`).join("");
+  const editRequestRows = (aarManager.editRequests || []).map(item => `<article class="aar-management-entry">
+    <div><strong>AAR ${escapeHtml(item.record_id)} / ${escapeHtml(item.requester_name || item.requester_id)}</strong><p class="aar-upload-hint">${escapeHtml(item.requested_at ? new Date(item.requested_at).toLocaleString() : "")}</p><p style="white-space:pre-wrap;overflow-wrap:anywhere">${escapeHtml(item.requested_changes)}</p></div>
+    ${item.editable ? `<button class="btn-dossier-action" type="button" data-aar-request-open="${escapeHtml(item.record_id)}">Open AAR</button>` : `<span class="aar-upload-hint">Original report requires archive staff correction.</span>`}
+    ${String(item.receipt_url || "").startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(item.receipt_url)}" target="_blank" rel="noopener noreferrer">Original AAR</a>` : ""}
+    <label class="aar-field"><span class="field-label">Editor note</span><textarea class="field-input" data-aar-request-note="${escapeHtml(item.request_id)}" rows="2" maxlength="500"></textarea></label>
+    <div class="aar-management-entry-actions"><button class="btn-dossier-action" type="button" data-aar-request-decision="resolve" data-aar-request-id="${escapeHtml(item.request_id)}">Mark corrected</button><button class="btn-dossier-action" type="button" data-aar-request-decision="reject" data-aar-request-id="${escapeHtml(item.request_id)}">Decline</button></div>
   </article>`).join("");
   const pendingEditRows = aarManager.pendingEdits.map(item => `<article class="aar-section aar-management-entry">
     <div><strong>Edit pending · ${escapeHtml(item.mission || "AAR")} · ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.status.replaceAll("_", " "))}</p></div>
@@ -4363,6 +4426,7 @@ function renderAarManagement() {
     ${aarManager.selectedId ? `<nav aria-label="AAR archive"><button type="button" class="btn-dossier-action" data-aar-manage-back><span aria-hidden="true">&larr;</span> Back to Manage AARs</button></nav>` : ""}
     <header class="aar-heading"><div class="blood-overline">&gt; ARCHIVE CONTROL // STAFF ACCESS</div><h2>Manage AARs</h2><p class="aar-description">Search Strategium-submitted reports in the Watch archive.</p>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
     ${aarManager.selectedId ? "" : `<label class="aar-field aar-field-wide"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission, participant, or submitter ID"></label>`}
+    <section class="aar-section" aria-label="AAR edit requests"><h3>Edit Requests (${Number(aarManager.editRequestCount) || (aarManager.editRequests || []).length})</h3><div class="aar-management-list">${editRequestRows || `<p class="aar-empty">No pending member correction requests.</p>`}</div></section>
     ${pendingDeletionRows ? `<section class="aar-section"><h3>Pending Deletions</h3><div class="aar-management-list">${pendingDeletionRows}</div></section>` : ""}
     ${pendingEditRows ? `<section class="aar-section"><h3>Pending Edits</h3><div class="aar-management-list">${pendingEditRows}</div></section>` : ""}
     ${reconciliationReviewRows ? `<section class="aar-section"><h3>Award Reconciliation Review</h3><div class="aar-management-list">${reconciliationReviewRows}</div></section>` : ""}
@@ -4378,6 +4442,23 @@ function renderAarManagement() {
   });
   document.querySelectorAll("[data-aar-manage-open]").forEach(button => button.addEventListener("click", () => {
     void openAarManagementRecord(button.dataset.aarManageOpen);
+  }));
+  document.querySelectorAll("[data-aar-request-open]").forEach(button => button.addEventListener("click", () => {
+    void openAarManagementRecord(button.dataset.aarRequestOpen);
+  }));
+  document.querySelectorAll("[data-aar-request-decision]").forEach(button => button.addEventListener("click", async () => {
+    const identity = button.dataset.aarRequestId;
+    const note = [...document.querySelectorAll("[data-aar-request-note]")].find(input => input.dataset.aarRequestNote === identity)?.value.trim() || "";
+    const status = document.getElementById("aar-management-status");
+    if (note.length < 4) { status.textContent = "Enter an editor note of at least 4 characters."; return; }
+    button.disabled = true;
+    try {
+      const response = await fetch(apiUrl(`/api/aar-management/edit-requests/${identity}/${button.dataset.aarRequestDecision}`), {method: "POST", credentials: "include", headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""}, body: JSON.stringify({note})});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || result.error || "Edit-request update failed.");
+      aarManager.notice = result.status === "resolved" ? "Correction request marked corrected." : "Correction request declined.";
+      await loadAarManagement();
+    } catch (error) { status.textContent = error.message; button.disabled = false; }
   }));
   document.querySelector("[data-aar-manage-back]")?.addEventListener("click", () => {
     aarManager.selectedId = "";
@@ -4487,7 +4568,7 @@ function updateStatusBadge() {
   const slateCount = document.getElementById("slate-count");
   if (slateCount) {
     if (state.page === "reach") {
-      slateCount.textContent = "ACTIVE SECTOR DEPLOYMENTS: " + activeReachDirectives().length;
+      slateCount.textContent = "LOCKED STRIKES: " + (warView.data?.summary?.locked || 0);
       slateCount.style.display = "";
       return;
     }
@@ -4835,7 +4916,8 @@ function renderMemberModalContent(m, isEditing = false) {
     <div class="modal-row"><span>Chapter of Origin</span><span>${chapter ? `<button class="modal-link" type="button" data-chapter-link="${escapeHtml(chapter.name)}">${escapeHtml(chapter.name)} &rsaquo;</button>` : escapeHtml(m.chapter || "Unrecorded")}</span></div>
     ${locationRows(m)}
     <div class="modal-row"><span>AAR Points</span><span>${escapeHtml(Number.isFinite(Number(m.aarPoints ?? m.stats?.aar_points)) ? Number(m.aarPoints ?? m.stats.aar_points) : "Unrecorded")}</span></div>
-    <div class="modal-row"><span>Strike Directives</span><span>${escapeHtml(Number.isFinite(Number(m.strikeDirectives)) ? `${m.strikeDirectives} completed` : (Number.isFinite(Number(m.stats?.strike_directives)) ? `${m.stats.strike_directives} completed` : "0 completed"))}</span></div>
+    <div class="modal-row"><span>Strikes</span><span>${escapeHtml(Number.isFinite(Number(m.strikeDirectives)) ? `${m.strikeDirectives} completed` : "0 completed")}</span></div>
+    <div class="modal-row"><span>Lifetime Laurels</span><span>${escapeHtml(m.strikeLaurel || "Unearned")}</span></div>
     <div class="modal-row"><span>Years given to the Long Vigil</span><span class="service-years-value">${escapeHtml(serviceMetrics(m).vigilYears === null ? "Unrecorded" : `${serviceMetrics(m).vigilYears.toFixed(1)} years`)}</span></div>
     <div class="modal-row"><span>Joined the Long Vigil</span><span>${escapeHtml(watchEntryLabel(m))}</span></div>
     ${statsHtml}
@@ -4923,13 +5005,6 @@ const REACH_STATUS = {
   failed: { label: "Failed", color: "#b86a60", rank: 5, active: false },
   lapsed: { label: "Lapsed", color: "#7d857d", rank: 6, active: false }
 };
-const REACH_FILTER_CHIPS = [
-  { key: "deployed", label: "Deployed", statuses: ["deployed"] },
-  { key: "recruiting", label: "Recruiting", statuses: ["recruiting"] },
-  { key: "distributed", label: "Distributed", statuses: ["distributed"] },
-  { key: "unassigned", label: "Unassigned", statuses: ["unassigned"] },
-  { key: "history", label: "Last 7 days", statuses: ["completed", "failed", "lapsed"] }
-];
 const WORLD_STYLES = {
   dead_world: { color: "#7b837c", r: 3.6 },
   agri_world: { color: "#6fbf5a", r: 5 },
@@ -5234,7 +5309,171 @@ async function loadReach() {
     state.geography = null;
     state.geographyStatus = "error";
   }
+  await loadWar();
 }
+
+const warView = { data: null, error: "", busy: false, planet: "", subsector: "", pool: "vanilla" };
+
+async function loadWar() {
+  if (!state.auth.authenticated) { warView.data = null; return; }
+  try {
+    const response = await fetch(apiUrl(`/api/war?planet=${encodeURIComponent(warView.planet)}`), { credentials: "include", cache: "no-store" });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.error || "Campaign relay unavailable");
+    warView.data = result;
+    warView.error = "";
+    for (const sector of state.geography?.sectors || []) {
+      const campaign = result.campaigns[sector.id];
+      sector.status = campaign?.status === "contested" ? "critical" : campaign?.status || "secure";
+    }
+  } catch (error) { warView.data = null; warView.error = error.message; }
+}
+
+function warConsoleHtml() {
+  const war = warView.data;
+  if (!state.auth.authenticated) return `<div class="reach-toolbar">Sign in to access the Galactic War.</div>`;
+  if (!war) return `<div class="reach-toolbar" role="status">${escapeHtml(warView.error || "Campaign relay pending")}</div>`;
+  const sectorId = warView.subsector || state.selectedSector || state.geography?.sectors[0]?.id || "";
+  const campaign = war.campaigns[sectorId];
+  const roles = new Set(war.actor.roles);
+  const master = roles.has("Watch Master");
+  const commander = master || roles.has("Watch Captain") || roles.has("Watch Lieutenant");
+  const canInvade = master || roles.has("Forgemaster");
+  const company = war.actor.company_id;
+  const teams = war.kill_teams.filter(team => master || team.company_id === company);
+  const systems = (state.geography?.systems || []).filter(system => system.sectorId === sectorId);
+  const planets = war.planets.filter(planet => planet.subsector_id === sectorId);
+  const select = (name, label, options) => `<label>${label}<select class="reach-select" data-war-field="${name}" aria-label="${label}">${options}</select></label>`;
+  const option = (value, label, selected = false) => `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
+  const button = (action, label, extra = "") => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy ? " disabled" : ""}>${label}</button>`;
+  const commitments = Object.entries(war.commitments).filter(([, target]) => target === sectorId);
+  const pool = warView.pool === "omega" ? "omega" : "vanilla";
+  const board = (war.boards[warView.planet] || []).filter(offer => (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === pool);
+  const staff = war.actor.can_review || master || roles.has("Forgemaster");
+  const canParticipate = war.actor.watch_brother === true && war.actor.active !== false;
+  const reviewPanel = staff ? `<section aria-label="Strike evidence review"><h3 class="tier-label">Evidence review</h3>
+    ${(war.reviews || []).map(review => `<div class="reach-toolbar"><span>${escapeHtml(review.mission)} / AAR ${escapeHtml(review.aar_id)} / ${escapeHtml(review.reason)}</span>
+      ${review.receipt_url?.startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(review.receipt_url)}" target="_blank" rel="noopener noreferrer">Evidence receipt</a>` : ""}
+      ${review.status === "pending" && !review.participants.includes(war.actor.id) ? `<label>Review reason<input class="reach-select" data-war-review-reason="${escapeHtml(review.strike_id)}" maxlength="500"></label>${button("review", "Approve", `data-strike="${escapeHtml(review.strike_id)}" data-decision="approve" `)}${button("review", "Reject", `data-strike="${escapeHtml(review.strike_id)}" data-decision="reject" `)}` : `<span>${review.status === "approved" ? "Approved / archive processing" : "Independent reviewer required"}</span>`}
+    </div>`).join("") || `<p>No reports awaiting review.</p>`}
+    <h3 class="tier-label">Strike credit corrections</h3><div class="reach-toolbar"><label>Result<select class="reach-select" data-war-reversal>${(war.recent_results || []).filter(result => !result.reversed && !result.participants.includes(war.actor.id)).map(result => option(result.strike_id, `${result.mission} / AAR ${result.aar_id}`)).join("")}</select></label><label>Reversal reason<input class="reach-select" data-war-reversal-reason maxlength="500"></label>${button("reverse", "Reverse strike credit")}</div>
+  </section>` : "";
+  return `<section id="war-console" aria-label="Galactic War command">
+    <div class="reach-toolbar">
+      ${select("subsector_id", "Subsector", (state.geography?.sectors || []).map(sector => option(sector.id, sector.name, sector.id === sectorId)).join(""))}
+      ${campaign ? `<span>${campaign.resolution_pending ? "Awaiting on-time reports" : escapeHtml(titleCase(campaign.status))} / Tyranids / ${Number(campaign.balance).toFixed(2)}%</span><progress max="100" value="${Number(campaign.balance)}" aria-label="Deathwatch balance of power"></progress><span>${escapeHtml(new Date(campaign.deadline).toLocaleString())}</span>` : `<span>Secure</span>`}
+      ${canInvade && campaign?.status !== "contested" ? button("invade", "Declare Tyranid invasion") : ""}
+    </div>
+    <div class="reach-toolbar">
+      ${commitments.map(([identity]) => `<span class="status-tag">Company ${escapeHtml(COMPANY_NAMES[identity] || identity)}</span>`).join("") || "No companies committed"}
+      ${commander ? select("company_id", "Company", Object.entries(COMPANY_NAMES).filter(([identity]) => master || identity === company).map(([identity, name]) => option(identity, name)).join("")) + button("commit", roles.has("Watch Lieutenant") && !master && !roles.has("Watch Captain") ? "Request commitment" : "Commit company") : ""}
+    </div>
+    ${(war.proposals || []).map(proposal => `<div class="reach-toolbar"><span>Company ${escapeHtml(COMPANY_NAMES[proposal.company_id])}: ${escapeHtml(state.geography?.sectors.find(sector => sector.id === proposal.subsector_id)?.name || proposal.subsector_id)}</span>${master || roles.has("Watch Captain") ? button("approve", "Approve", `data-proposal="${escapeHtml(proposal.id)}" `) + button("reject", "Reject", `data-proposal="${escapeHtml(proposal.id)}" `) : "Pending approval"}</div>`).join("")}
+    ${commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant") ? `<div class="reach-toolbar">
+      ${select("kill_team_id", "Kill team", teams.filter(team => commander || team.id === war.actor.kill_team_id).map(team => option(team.id, team.name)).join(""))}
+      ${select("system_id", "System", systems.map(system => option(system.id, system.name)).join(""))}
+      <label>Cover reason <input class="reach-select" data-war-field="reason" maxlength="300" aria-label="Cover reason"></label>
+      ${button("assign", "Assign system")}
+    </div>` : ""}
+    <div class="reach-toolbar">${select("planet_id", "Planet", option("", "Select planet", !warView.planet) + planets.map(planet => option(planet.id, `${planet.name}${planet.terrain_provisional ? " [provisional terrain]" : ""}`, planet.id === warView.planet)).join(""))}<span>Vanilla maps / ${war.content.objectives} briefing types</span></div>
+    <div class="war-pools" role="group" aria-label="Strike format">
+      <button class="btn-dossier-action" type="button" data-war-pool="vanilla" aria-pressed="${pool === "vanilla"}">Vanilla</button>
+      <button class="btn-dossier-action" type="button" data-war-pool="omega" aria-pressed="${pool === "omega"}">Omega</button>
+    </div>
+    ${!canParticipate ? `<p class="aar-upload-hint">The Watch Brother role and active membership are required for strike signup.</p>` : ""}
+    <div class="war-strike-grid">${board.map(offer => `<article class="war-strike"><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p><p>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${escapeHtml(offer.briefing)}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
+      <ul>${offer.participants.map(identity => `<li>${escapeHtml(war.participant_names?.[identity] || identity)}${offer.specialist_id === identity ? " (required specialist)" : ""}</li>`).join("")}</ul>
+      ${offer.attempt_id && ["locked", "deployed"].includes(offer.status) ? `<p>Strike ID: <code>${escapeHtml(offer.attempt_id)}</code></p>` : ""}<div class="tools">
+      ${["available", "recruiting"].includes(offer.status) && (canParticipate || offer.participants.includes(war.actor.id)) ? button(offer.participants.includes(war.actor.id) ? "leave" : "join", offer.participants.includes(war.actor.id) ? "Withdraw" : "Join strike", `data-strike="${escapeHtml(offer.id)}" `) : ""}
+      ${["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", "Submit AAR", `data-strike="${escapeHtml(offer.id)}" `) : ""}
+    </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("")}</div>
+    ${reviewPanel}
+    <div role="status" aria-live="polite">${escapeHtml(warView.error)}</div>
+  </section>`;
+}
+
+document.addEventListener("change", async event => {
+  const field = event.target.closest("[data-war-field]");
+  if (!field) return;
+  if (field.dataset.warField === "subsector_id") {
+    warView.subsector = field.value;
+    warView.planet = "";
+    await loadWar(); renderReach();
+  } else if (field.dataset.warField === "planet_id") {
+    warView.planet = field.value;
+    await loadWar(); renderReach();
+  }
+});
+
+document.addEventListener("click", async event => {
+  const poolButton = event.target.closest("[data-war-pool]");
+  if (poolButton?.dataset.warPool && ["vanilla", "omega"].includes(poolButton.dataset.warPool)) {
+    warView.pool = poolButton.dataset.warPool;
+    renderReach();
+    return;
+  }
+  const button = event.target.closest("[data-war-action]");
+  if (!button || warView.busy || !warView.data) return;
+  if (button.dataset.warAction === "report") {
+    const offer = (warView.data.boards[warView.planet] || []).find(item => item.id === button.dataset.strike);
+    if (!offer?.attempt_id) return;
+    aarDraft.strikeId = offer.attempt_id;
+    aarDraft.mode = offer.aar_mode || (offer.capacity === 5 ? "omega" : "ops_strat");
+    aarDraft.mission = offer.aar_mission_value || aarDraft.mission;
+    aarDraft.difficulty = offer.aar_difficulty || aarDraft.difficulty;
+    aarDraft.brothers = new Set(offer.participants);
+    offer.participants.forEach(identity => aarDraft.memberDirectory.set(identity, { id: identity, name: warView.data.participant_names?.[identity] || identity }));
+    aarDraft.tags = new Set();
+    aarDraft.inductees = new Set();
+    aarDraft.managementRecordId = "";
+    aarDraft.existingScreenshots = [];
+    aarDraft.strikeSuccess = "success";
+    aarDraft.idempotencyKey = "";
+    aarDraft.reviewing = false;
+    await setPage("submit-aar", true);
+    return;
+  }
+  const payload = { action: button.dataset.warAction, version: warView.data.version, planet_id: warView.planet };
+  document.querySelectorAll("[data-war-field]").forEach(field => { payload[field.dataset.warField] = field.value; });
+  if (button.dataset.strike) payload.strike_id = button.dataset.strike;
+  if (button.dataset.proposal) payload.proposal_id = button.dataset.proposal;
+  if (payload.action === "review") {
+    payload.decision = button.dataset.decision;
+    payload.reason = [...document.querySelectorAll("[data-war-review-reason]")].find(input => input.dataset.warReviewReason === payload.strike_id)?.value.trim() || "";
+  } else if (payload.action === "reverse") {
+    payload.strike_id = document.querySelector("[data-war-reversal]")?.value || "";
+    payload.reason = document.querySelector("[data-war-reversal-reason]")?.value.trim() || "";
+  }
+  if (["review", "reverse"].includes(payload.action) && !payload.reason) {
+    warView.error = "Enter a reason for the review or credit correction.";
+    const status = document.querySelector("#war-console [role='status']");
+    if (status) status.textContent = warView.error;
+    return;
+  }
+  if (payload.action === "cancel") {
+    payload.reason = [...document.querySelectorAll("[data-war-cancel-reason]")].find(input => input.dataset.warCancelReason === payload.strike_id)?.value.trim() || "";
+    if (!payload.reason) {
+      warView.error = "Enter a cancellation reason.";
+      const status = document.querySelector("#war-console [role='status']");
+      if (status) status.textContent = warView.error;
+      return;
+    }
+  }
+  warView.busy = true;
+  button.disabled = true;
+  try {
+    const response = await fetch(apiUrl("/api/war"), { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || "" }, body: JSON.stringify(payload) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.error || "Campaign action failed");
+    warView.data = result;
+    warView.error = "";
+    for (const sector of state.geography?.sectors || []) {
+      const campaign = result.campaigns[sector.id];
+      sector.status = campaign?.status === "contested" ? "critical" : campaign?.status || "secure";
+    }
+  } catch (error) { warView.error = error.message; }
+  finally { warView.busy = false; renderReach(); updateStatusBadge(); }
+});
 
 async function refreshReach() {
   if (state.page !== "reach" || document.visibilityState !== "visible") return;
@@ -5244,16 +5483,8 @@ async function refreshReach() {
   updateStatusBadge();
 }
 
-function activeReachDirectives() {
-  return ((state.reach && state.reach.directives) || []).filter(d => REACH_STATUS[d.status] && REACH_STATUS[d.status].active);
-}
-
 function visibleReachDirectives() {
-  const { statuses, company } = state.reachFilters;
-  return ((state.reach && state.reach.directives) || []).filter(d =>
-    REACH_STATUS[d.status] && statuses.has(d.status) &&
-    (company === "all" || String(d.company) === company)
-  );
+  return ((state.reach && state.reach.directives) || []).filter(d => REACH_STATUS[d.status]);
 }
 
 function sortDirectives(list) {
@@ -5270,15 +5501,6 @@ function deployedBrotherIds(list) {
 function assignedLabel(d) {
   if (!d.company) return "Awaiting distribution";
   return `Company ${COMPANY_NAMES[d.company]}${d.killTeam ? " \u00b7 " + d.killTeam : ""}`;
-}
-
-function toggleReachFilter(key) {
-  const chip = REACH_FILTER_CHIPS.find(c => c.key === key);
-  if (!chip) return;
-  const statuses = state.reachFilters.statuses;
-  const enable = !chip.statuses.every(s => statuses.has(s));
-  chip.statuses.forEach(s => enable ? statuses.add(s) : statuses.delete(s));
-  renderReach();
 }
 
 function reachBounds(nodes) {
@@ -6083,6 +6305,24 @@ function setupGeographyCanvas() {
       context.globalAlpha = alpha;
       context.drawImage(image, topLeft.x, topLeft.y, REACH_ART.width * pixel, REACH_ART.height * pixel);
     });
+    context.save();
+    context.globalAlpha = alpha;
+    context.font = "bold 11px monospace";
+    context.textAlign = "center";
+    geography.sectors.forEach(sector => {
+      const companies = Object.entries(warView.data?.commitments || {}).filter(([, target]) => target === sector.id);
+      const point = worldToScreen(sector.label[0], sector.label[1], camera);
+      companies.forEach(([company], index) => {
+        const left = point.x + (index - (companies.length - 1) / 2) * 26;
+        context.fillStyle = "#07130c";
+        context.strokeStyle = "#cfae68";
+        context.lineWidth = 1.5;
+        context.beginPath(); context.rect(left - 11, point.y - 9, 22, 18); context.fill(); context.stroke();
+        context.fillStyle = "#cfae68";
+        context.fillText(`C${company}`, left, point.y + 4);
+      });
+    });
+    context.restore();
     context.globalAlpha = 1;
   }
 
@@ -7008,6 +7248,12 @@ function updateGeographySectorPanel() {
   shell.classList.toggle("has-sector-panel", open);
   panel.setAttribute("aria-hidden", String(!open));
   panel.innerHTML = open ? geographySectorPanelHtml(sectorId, state.selectedSystem) : "";
+  if (open && warView.subsector !== sectorId) {
+    warView.subsector = sectorId;
+    warView.planet = "";
+    const console = document.getElementById("war-console");
+    if (console) console.outerHTML = warConsoleHtml();
+  }
 }
 
 function renderReach() {
@@ -7030,10 +7276,6 @@ function renderReach() {
   const reach = state.reach || { nodes: [], edges: [], directives: [], rep: 0 };
   if (!geographyLive) state.reachBase = reachBounds(reach.nodes);
   const directives = visibleReachDirectives();
-  const active = activeReachDirectives();
-  const contested = new Set(active.map(d => d.node)).size;
-  const rep = Number(reach.rep) || 0;
-  const { statuses, company } = state.reachFilters;
   const selectedSector = state.geography && state.geography.sectors.find(sector => sector.id === state.selectedSector);
   const selectedSystem = state.geography && state.geography.systems.find(system => system.id === state.selectedSystem);
   const mapHeading = state.reachMapLevel === "system" ? selectedSystem?.name || "System"
@@ -7042,45 +7284,14 @@ function renderReach() {
     : state.reachMapLevel === "sector" ? "System-level tactical chart" : "Sector-level command chart";
   const parentLabel = state.reachMapLevel === "system" ? `Return to ${selectedSector?.name || "sector"}` : "Return to Reach sectors";
 
-  const chips = REACH_FILTER_CHIPS.map(chip => {
-    const pressed = chip.statuses.every(s => statuses.has(s));
-    const color = REACH_STATUS[chip.statuses[0]].color;
-    return `<button class="reach-chip" type="button" data-reach-filter="${chip.key}" aria-pressed="${pressed}" style="--chip-color:${color}"><span class="reach-chip-dot"></span>${chip.label}</button>`;
-  }).join("");
-  const companyOptions = [`<option value="all">All companies</option>`]
-    .concat(Object.entries(COMPANY_NAMES).map(([id, name]) => `<option value="${id}" ${company === id ? "selected" : ""}>Company ${name}</option>`))
-    .join("");
-
-  const legend = Object.entries(REACH_STATUS).filter(([, s]) => s.active)
-    .map(([, s]) => `<div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:${s.color}"></span>${s.label}</div>`)
-    .join("");
-
-  const deployments = sortDirectives(directives.filter(d => REACH_STATUS[d.status].active));
-  const rows = deployments.map(d => {
-    const s = REACH_STATUS[d.status];
-    return `
-      <tr class="reach-row" data-planet="${escapeHtml(d.node)}" tabindex="0">
-        <td class="roster-name">${escapeHtml(d.code)}${d.name ? ` &middot; ${escapeHtml(d.name)}` : ""}</td>
-        <td>${escapeHtml(d.node)}</td>
-        <td><span class="status-tag" style="--status-color:${s.color}">${s.label}</span></td>
-        <td class="roster-rank">${escapeHtml(assignedLabel(d))}</td>
-        <td>${(d.participants || []).length}</td>
-        <td class="roster-chapter">${escapeHtml(relativeTime(d.deadline) || "\u2014")}</td>
-      </tr>`;
-  }).join("");
-
   app.innerHTML = `
     <div class="reach-summary">
-      <div class="reach-stat"><div class="reach-stat-value">${active.length}</div><div class="reach-stat-label">Active Directives</div></div>
-      <div class="reach-stat"><div class="reach-stat-value">${deployedBrotherIds(active).size}</div><div class="reach-stat-label">Brothers in the Field</div></div>
-      <div class="reach-stat"><div class="reach-stat-value">${contested}</div><div class="reach-stat-label">Contested Worlds</div></div>
-      <div class="reach-stat"><div class="reach-stat-value">${rep >= 0 ? "+" : ""}${rep.toFixed(2)}</div><div class="reach-stat-label">Ordo Xenos Standing</div></div>
+      <div class="reach-stat"><div class="reach-stat-value">${Object.values(warView.data?.campaigns || {}).filter(campaign => campaign.status === "contested").length}</div><div class="reach-stat-label">Contested Subsectors</div></div>
+      <div class="reach-stat"><div class="reach-stat-value">${Object.keys(warView.data?.commitments || {}).length}</div><div class="reach-stat-label">Companies Committed</div></div>
+      <div class="reach-stat"><div class="reach-stat-value">${Object.keys(warView.data?.assignments || {}).length}</div><div class="reach-stat-label">Kill Teams Assigned</div></div>
+      <div class="reach-stat"><div class="reach-stat-value">14</div><div class="reach-stat-label">Days Per Campaign</div></div>
     </div>
-    <div class="reach-toolbar">
-      ${chips}
-      <select class="reach-select" data-reach-company aria-label="Filter by company">${companyOptions}</select>
-    </div>
-    <div class="reach-map-shell">
+    <div class="reach-map-shell${selectedSector ? " has-sector-panel" : ""}">
       <div class="reach-viewport" id="reach-viewport">
         ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Galactic sector chart with the Jericho Reach at its center"></canvas>` : reachSvg(reach, directives)}
         ${geographyLive ? `<div class="reach-map-level"><strong>Galactic Map</strong>Sector chart</div><div id="reach-canvas-status" class="reach-canvas-status">29 sectors / Secure</div><div id="reach-canvas-tooltip" class="reach-canvas-tooltip" hidden></div>` : ""}
@@ -7090,11 +7301,10 @@ function renderReach() {
           <button class="icon-btn" type="button" data-reach-zoom="reset" aria-label="Reset view">&#8634;</button>
         </div>
         <div class="reach-legend" aria-hidden="true">
-          ${legend}
           <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#4fd67a"></span>Secure</div>
-          <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#cf934b"></span>Critical</div>
+          <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#cf934b"></span>Contested</div>
           <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#bd4d3f"></span>Lost</div>
-          <div class="reach-legend-item"><span style="color:var(--gold)">&#9876;</span>Brothers deployed</div>
+          <div class="reach-legend-item"><span style="color:var(--gold)">C1–C5</span>Company commitments</div>
         </div>
         <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))}` : ""}</div>
         <div class="reach-tooltip" id="reach-tooltip" hidden></div>
@@ -7103,18 +7313,14 @@ function renderReach() {
         ${geographyLive && selectedSector ? geographySectorPanelHtml(selectedSector.id, state.selectedSystem) : ""}
       </aside>
     </div>
+    ${warConsoleHtml()}
     ${geographyLive ? `<details class="reach-desktop-index"><summary>Sector navigator</summary>${mobileGeographyHtml()}</details>` : ""}
     ${geographyLive ? mobileGeographyHtml() : ""}
-    <div class="tier-label" style="margin-top:26px">Active Deployments (${deployments.length})</div>
-    <table class="roster-table reach-table">
-      <thead><tr><th>Directive</th><th>World</th><th>Status</th><th>Assigned</th><th>Brothers</th><th>Deadline</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="6" class="roster-empty">No active directives match the current filters.</td></tr>`}</tbody>
-    </table>
     ${terminalTransmissionHtml("JERICHO_REACH_OPERATIONS", "ACCESSING ASTROPATHIC OPERATIONS LEDGER...", [
       { label: "Location", value: "The Jericho Reach, Ultima Segmentum" },
       { label: "Requesting Authority", value: "Ordo Xenos Inquisitorial Seal // VERIFIED" },
-      { label: "Active Directives", value: `${active.length} // ${deployedBrotherIds(active).size} brothers in the field` },
-      { label: "Ordo Xenos Standing", value: `${rep >= 0 ? "+" : ""}${rep.toFixed(2)}` },
+      { label: "Campaign Authority", value: "Watch Master / Forge Master" },
+      { label: "Resolution", value: "50% Deathwatch balance at the 14-day deadline" },
       { label: "Standing Orders", value: "Track deployments across the Reach; contain, identify, and purge confirmed xenos threats." },
       { label: "Record Status", value: "LIVE // ASTROPATHIC RELAY VERIFIED", tone: "active" }
     ])}
@@ -7714,13 +7920,6 @@ function wireEvents() {
     ribbon.setAttribute("aria-expanded", String(isOpen));
     clampRibbonTip(e);
   });
-  document.body.addEventListener("change", (e) => {
-    const select = e.target.closest("[data-reach-company]");
-    if (select) {
-      state.reachFilters.company = select.value;
-      renderReach();
-    }
-  });
   document.body.addEventListener("click", (e) => {
     const atlasHome = e.target.closest("[data-atlas-home]");
     if (atlasHome) {
@@ -7820,11 +8019,6 @@ function wireEvents() {
     const sectorSystem = e.target.closest("[data-sector-system]");
     if (sectorSystem) {
       showSystemLevel(sectorSystem.dataset.sectorSystem);
-      return;
-    }
-    const filterBtn = e.target.closest("[data-reach-filter]");
-    if (filterBtn) {
-      toggleReachFilter(filterBtn.dataset.reachFilter);
       return;
     }
     const mobileSystem = e.target.closest("[data-mobile-system]");

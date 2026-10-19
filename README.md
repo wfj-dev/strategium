@@ -2,6 +2,39 @@
 
 A single-page org chart web app for the Watch Fortress Jericho roster. The current build includes the embedded frontend and a small backend for signed bot snapshots, searchable member dossiers, company views, specialist formations, Discord OAuth, and user-owned backstory editing.
 
+## Galactic War
+
+The Galactic Map now uses the bot's replacement Galactic War service: shared company
+commitments, KT system assignments, approval/cover controls and separate four-strike
+Vanilla and Omega boards per playable planet (eight total). The format switch preserves
+each pool independently; both currently use vanilla maps. Map signup and automatic roster locking use authenticated `/api/war`
+requests. The existing signed AAR bridge also carries these requests, so no campaign
+database or bot credentials are exposed to the browser.
+
+Strike participation requires the actual Watch Brother role, even for higher ranks
+and specialists. The bot verifies the role ID at signup and rechecks the full roster
+before locking; the interface hides signup controls when that permission is absent.
+
+There are no Ready, Deploy or coordinator controls. Once all slots are filled, the
+roster locks automatically; a recorded cancellation or failure releases it. Normal
+AARs accept an optional locked strike ID and success/failure result. Submit AAR from
+the map prefills the actual vanilla operation, difficulty and signed-up players. Renown
+displays four rolling tiers at 4/8/28/56 credited completions per formation member;
+Captain/LT scores average their company's KTs equally. Personal lifetime laurels are
+separate. Legacy Ordo Xenos standing is no longer displayed.
+
+This is an implementation branch, not a live migration. The bot's `GALACTIC_WAR.md`
+documents configuration, specialist requirement probabilities and remaining rollout gates.
+Atlas objectives are thematic briefings for supported vanilla three-player operations
+and existing five-player Omega, not custom in-game interactions. Each generated offer
+independently has a 25% specialist requirement chance; only specialist tracks can gate
+it. Equerry combinations qualify for intermediate titles. The war reference includes
+artwork-derived neighbors and provisional gameplay terrain, visibly marked for review.
+It does not require certified custom maps. Staff have independent evidence approval,
+rejection and audited strike-credit reversal controls; on-time reports have a bounded
+24-hour processing grace at campaign closure. Existing AAR records and cosmetic roles
+are retained, and no live migration is performed by this branch.
+
 ## Getting Started
 
 Open `jericho-strategium.html` directly in a browser.
@@ -54,6 +87,16 @@ The **Submit AARs** channel at `/submit-aar` provides authenticated guild member
 At `/manage-aars`, current High Command and Watch Techmarines can search and edit Strategium-submitted AARs, including replacing evidence; unchanged screenshots are retained. If the Discord receipt updates but archive processing fails, the pending edit appears in the manager and can be resumed after a refresh. Every operation rechecks current guild roles in the private bot bridge. Editors can request deletion with a reason, and a Forgemaster must confirm the permanent removal of both the canonical record and Discord receipt. The bot rebuilds affected challenge progress and computed stats without replaying announcements, revokes only challenge roles with recorded bot-award provenance, and flags ambiguous/manual grants for Forgemaster review. Forgemasters can acknowledge completed award reviews to clear them from the queue. A minimal deletion audit entry and mutation recovery state are retained.
 
 Run `./setup-secrets.sh` to provision the shared `STRATEGIUM_BOT_AAR_SHARED_SECRET` in both local `.env` files. The site forwards uploads to `STRATEGIUM_BOT_AAR_INTAKE_URL` (default `http://127.0.0.1:8080/v1/aar/submissions`) with a timestamped HMAC; the browser never receives the secret. The sibling `/v1/aar/access` route verifies current guild membership and returns the guild display name. Remote HTTPS targets must be explicitly listed in `STRATEGIUM_BOT_AAR_ALLOWED_HOSTS` as comma-separated hostnames. Enable the bot route explicitly with `web_submission.enabled: true` in the bot configuration. Keep the bot bridge private and do not expose `/v1/aar/*` through a public reverse proxy. The existing staff-only `/submit_aar` slash command and its test mode are unchanged.
+
+### Member Correction Requests
+
+The Submit AAR page includes a correction-request form for an AAR ID or Discord
+receipt link and requested changes. A member may request changes only to an AAR they
+submitted or participated in. This queues a request without changing archive data.
+Existing authorized editors see it under **Manage AARs > Edit Requests**, apply the
+correction through the existing editor, then mark it corrected or decline with a note.
+The queue and decision endpoints remain staff-only; submitting a request grants no
+edit access. Existing strike-link, evidence and credit-reversal protections remain.
 
 ## Rank Guide
 

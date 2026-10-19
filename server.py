@@ -363,6 +363,10 @@ def _aar_management_request(
     signature = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
     if action == "list":
         path = "/management/list"
+    elif action == "request-edit":
+        path = "/edit-requests"
+    elif re.fullmatch(r"edit-requests/[a-f0-9]{24}/(?:resolve|reject)", action):
+        path = f"/management/{action}"
     elif action == "records":
         path = f"/management/records/{record_id}"
     else:
@@ -384,6 +388,35 @@ def _aar_management_request(
         except (UnicodeDecodeError, json.JSONDecodeError):
             result = {"error": "aar_management_failed"}
         return error.code, result if isinstance(result, dict) else {"error": "aar_management_failed"}
+    except (OSError, ValueError, urllib.error.URLError):
+        return None
+
+
+def _war_request(user_id: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]] | None:
+    intake = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
+    secret = _bot_aar_shared_secret()
+    if not secret or not intake:
+        return None
+    body = _json_bytes(payload)
+    timestamp = str(int(time.time()))
+    signed = f"{timestamp}\nwar-{user_id}\n{user_id}\n{hashlib.sha256(body).hexdigest()}".encode()
+    signature = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+    request = urllib.request.Request(
+        intake.removesuffix("/submissions") + "/war", data=body, method="POST",
+        headers={"Content-Type": "application/json", "X-Strategium-User-ID": user_id,
+                 "X-Strategium-AAR-Timestamp": timestamp, "X-Strategium-AAR-Signature": signature},
+    )
+    try:
+        opener = urllib.request.build_opener(_NoRedirectHandler)
+        with opener.open(request, timeout=15) as response:
+            payload = json.loads(response.read(1024 * 1024))
+            return response.status, payload
+    except urllib.error.HTTPError as error:
+        try:
+            payload = json.loads(error.read(16384))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            payload = {"error": "war_request_failed"}
+        return error.code, payload
     except (OSError, ValueError, urllib.error.URLError):
         return None
 
@@ -944,6 +977,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             with _LOCK:
                 reach = _load_json(REACH_PATH, {})
             self._send(HTTPStatus.OK, reach if isinstance(reach, dict) else {}, {"Cache-Control": "no-cache"})
+        elif parsed.path == "/api/war":
+            self._war_action(urllib.parse.parse_qs(parsed.query))
         elif parsed.path == "/api/geography":
             try:
                 self._send(HTTPStatus.OK, _geography_bytes(), {"Cache-Control": "no-cache"})
@@ -1029,6 +1064,9 @@ class StrategiumHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urllib.parse.urlparse(self.path).path
+        if path == "/api/war":
+            self._war_action()
+            return
         if path == "/api/aar-evidence/session":
             self._create_evidence_session()
             return
@@ -1041,12 +1079,49 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if path == "/api/aar-submissions":
             self._forward_aar_submission()
             return
+        if path == "/api/aar-edit-requests":
+            self._post_aar_management_action("", "request-edit")
+            return
+        edit_request_match = re.fullmatch(r"/api/aar-management/edit-requests/([a-f0-9]{24})/(resolve|reject)", path)
+        if edit_request_match:
+            identity, decision = edit_request_match.groups()
+            self._post_aar_management_action("", f"edit-requests/{identity}/{decision}")
+            return
         management_match = re.fullmatch(r"/api/aar-management/records/([0-9]{1,20})/(delete-request|delete-confirm|edit-resume|reviews/[a-f0-9]{24}/acknowledge)", path)
         if management_match:
             self._post_aar_management_action(*management_match.groups())
             return
         else:
             self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+
+    def _war_action(self, query: dict[str, list[str]] | None = None) -> None:
+        user = self._cookie_user()
+        if not user:
+            self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+            return
+        if query is None:
+            if not _origin_matches(self.headers.get("Origin", ""), ALLOWED_ORIGIN) or not self._csrf_valid(user):
+                self._send(HTTPStatus.FORBIDDEN, {"error": "csrf_failed"})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if not 0 < length <= 65536:
+                    raise ValueError("Invalid request size")
+                self.connection.settimeout(15)
+                _body, payload = self._read_json()
+                if not isinstance(payload, dict):
+                    raise ValueError("A JSON object is required")
+            except (ValueError, OSError):
+                self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_war_request"})
+                return
+        else:
+            payload = {"action": "snapshot", "planet_id": (query.get("planet") or [""])[0][:80]}
+        response = _war_request(str(user["id"]), payload)
+        if response is None:
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "war_unavailable"})
+            return
+        status, result = response
+        self._send(status, result, {"Cache-Control": "no-store"})
 
     def _create_evidence_session(self) -> None:
         user = self._cookie_user()
@@ -1577,13 +1652,15 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         capability = "can_delete" if action == "delete-confirm" or action.startswith("reviews/") else "can_edit"
         access = _aar_access(str(user["id"]))
         management = access.get("aar_management")
-        if not access.get("allowed") or not isinstance(management, dict) or management.get(capability) is not True:
+        if not access.get("allowed") or action != "request-edit" and (not isinstance(management, dict) or management.get(capability) is not True):
             self._send(HTTPStatus.FORBIDDEN, {"error": "aar_management_denied"})
             return
         if not self.headers.get("Content-Type", "").lower().startswith("application/json"):
             self._send(HTTPStatus.BAD_REQUEST, {"error": "json_required"})
             return
         try:
+            if not 0 < int(self.headers.get("Content-Length", "0")) <= 8192:
+                raise ValueError("Invalid management request size")
             _, payload = self._read_json()
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as error:
             self._send(HTTPStatus.BAD_REQUEST, {"error": str(error)})
