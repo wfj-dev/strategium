@@ -1555,7 +1555,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return
         search = (query.get("q") or [""])[0].strip()
         queue_kind = (query.get("queue_kind") or ["all"])[0]
-        if queue_kind not in {"all", "edit", "delete", "recovery"}:
+        if queue_kind not in {"all", "requests", "edit", "delete", "recovery"}:
             self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_queue_kind"})
             return
         if len(search) > 64:

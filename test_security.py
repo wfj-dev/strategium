@@ -1777,6 +1777,32 @@ vm.runInContext(html.slice(start, end), context);
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for deletion review rendering")
+def test_deletion_confirmation_is_clear_and_above_report_preview():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const app={innerHTML:''};
+const context={state:{auth:{aar_management:{can_edit:true,can_delete:true}}},
+ aarManager:{detail:{id:'123',delete_request:{status:'requested',reason:'Duplicate report'},review:{kind:'delete',status:'requested'}},selectedId:'123',reviewId:'token',reviewType:'delete',view:'requests',status:'detail',records:[],editRequests:[],pendingDeletions:[],pendingEdits:[],reconciliationReviews:[],queueCounts:{},queueHistory:[]},
+ document:{getElementById:id=>id==='app'?app:null,querySelector:()=>null,querySelectorAll:()=>[]},
+ escapeHtml:value=>String(value??''),aarReviewHref:()=>'/manage-aars?aar=123',aarReportPreviewHtml:()=>'<h3>Mission evidence</h3>',aarDeletionDeclineHtml:()=>'<button>Decline deletion</button>',AAR_PVE_MISSIONS:[]};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function aarSelectedReviewHtml('),html.indexOf('function updateStatusBadge()')),context);
+context.renderAarManagement();
+assert.match(app.innerHTML,/>Confirm delete<\/button>/);
+assert(app.innerHTML.indexOf('data-aar-manage-delete-confirm')<app.innerHTML.indexOf('Mission evidence'));
+assert.match(app.innerHTML,/Edits &amp; deletions/);
+assert.doesNotMatch(app.innerHTML,/Processing issues|>Recovery</);
+context.state.auth.aar_management.can_delete=false;
+context.renderAarManagement();
+assert.doesNotMatch(app.innerHTML,/data-aar-manage-delete-confirm/);
+assert.match(app.innerHTML,/not authorized as Forgemaster/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the acting-sergeant regression")
 def test_kill_team_officers_are_shown_as_acting_sergeants():
     source = r"""
@@ -1926,7 +1952,7 @@ vm.runInContext(html.slice(start, end), context);
     context.scheduleAarGuildMemberSearch('Reserve Name');
     await timerCallback();
     assert.equal(requestedUrl, '/api/aar-members?q=Reserve%20Name');
-    assert.deepEqual({ ...context.aarDraft.memberDirectory.get('99') }, { id: '99', name: 'Brother Reserve' });
+    assert.deepEqual({ ...context.aarDraft.memberDirectory.get('99') }, { id: '99', name: 'Brother Reserve', fromGuildSearch: true });
     assert.equal(context.aarDraft.memberSearchStatus, 'results');
     assert.equal(context.aarDraft.memberSearchHasMore, true);
     assert.ok(renderCount >= 2);
@@ -2044,6 +2070,38 @@ event.clipboardData.items = [{ kind: 'string', type: 'text/plain' }];
 handler(event);
 assert.equal(imported.length, 12);
 assert.equal(prevented, 3);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for signed-in AAR labels")
+def test_aar_signed_in_participant_keeps_guild_name_with_missing_or_stale_roster():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('  const userId = String(state.auth?.user?.id',html.indexOf('function renderSubmitAar()'));
+const end=html.indexOf('  const memberSearchStatus =',start);
+const context={state:{auth:{user:{id:'42',name:'Forge Master Jules'}},dataStatus:'live',members:[]},
+ aarDraft:{brothers:new Set(['42']),inductees:new Set(),memberDirectory:new Map(),memberFilter:''},
+ managementEdit:false,RANK_LABELS:{watch_brother:'Watch Brother',forgemaster:'Forge Master'},displayName:()=> 'Jules',escapeHtml:value=>String(value)};
+vm.createContext(context);
+vm.runInContext('function labels(){'+html.slice(start,end)+';return memberOptions;}',context);
+for(const rank of [null,'watch_brother','forgemaster']){
+ context.state.members=rank?[{id:'42',name:'Stale Jules',rank}]:[];
+ const labels=context.labels();
+ assert.match(labels,/>Forge Master Jules<\/span>/);
+ assert.doesNotMatch(labels,/Watch Brother/);
+}
+context.state.members=[{id:'43',name:'Watch Brother Oldname',rank:'watch_brother'}];
+context.aarDraft.memberDirectory.set('43',{id:'43',name:'Forge Master Newname',fromGuildSearch:true});
+for(const query of ['newname','forge master']){
+ context.aarDraft.memberFilter=query;
+ const labels=context.labels();
+ assert.match(labels,/value="43"/);
+ assert.match(labels,/Forge Master Newname/);
+ assert.doesNotMatch(labels,/Oldname/);
+}
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr

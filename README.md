@@ -114,7 +114,7 @@ the canonical AAR, receipt and awards remain unchanged until staff approval. Exi
 screenshots and evidence hashes are retained; replacement evidence remains a staff edit.
 
 Techmarines and High Command review current/proposed fields under
-**Manage AARs > Requests**, then approve or decline with a note. A compact request
+**Manage AARs > Edits & deletions**, then approve or decline with a note. A compact request
 list opens the complete report, participants and screenshot evidence on the website,
 alongside the exact proposed edit or deletion reason and its decision controls.
 Each preview has a same-site permalink, such as `/manage-aars?aar=123`, with exact
@@ -126,10 +126,16 @@ the existing audited receipt/archive update and recovery flow. A proposal based 
 an outdated record is rejected rather than silently overwriting newer changes.
 Members cannot access the staff queue or directly apply their proposed changes.
 
-Review items have All/Edits/Deletions/Recovery filters applied before pagination,
+Member reviews have Edits-and-deletions/Edit/Deletion filters applied before pagination,
 with up to ten items per page and a byte-bounded response. Archive search/pagination
 remains independent under the Archive view. Closed reviews have no active decision
 controls; partially applied edits and deletions show their recovery state.
+
+The normal review queue contains only member edits and deletion requests. Automatic
+follow-up work from interrupted archive saves or award reconciliation appears
+separately under **Unfinished updates**, only when such work exists. It is not a
+member request. The signed-in participant in Submit AAR uses the same guild display
+name as the login badge, even when the published roster has older rank information.
 
 Submitters and participants may also request deletion of their website AAR with a
 reason. Only a Forgemaster can confirm deletion. Neither editing nor deletion is

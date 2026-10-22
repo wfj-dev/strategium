@@ -3630,7 +3630,7 @@ const aarDraft = {
   submitting: false, reviewing: false, idempotencyKey: ""
 };
 const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
-const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, queueOffset: 0, queueHistory: [], queueTotal: 0, queueNextOffset: 0, queueHasMore: false, queueCounts: {}, view: "requests", queueKind: "all", reviewType: "", reviewId: "", detailSequence: 0, pendingDeletions: [], pendingEdits: [], editRequests: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
+const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, queueOffset: 0, queueHistory: [], queueTotal: 0, queueNextOffset: 0, queueHasMore: false, queueCounts: {}, view: "requests", queueKind: "requests", reviewType: "", reviewId: "", detailSequence: 0, pendingDeletions: [], pendingEdits: [], editRequests: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
 const aarCorrection = { record: "", changes: "", busy: false, status: "" };
 
 function aarCorrectionFormHtml() {
@@ -3778,7 +3778,7 @@ function scheduleAarGuildMemberSearch(query) {
       if (sequence !== aarDraft.memberSearchSequence || !["submit-aar", "manage-aars"].includes(state.page)) return;
       for (const member of result.members || []) {
         if (!member || !/^\d{1,20}$/.test(String(member.id || "")) || typeof member.name !== "string") continue;
-        aarDraft.memberDirectory.set(String(member.id), { id: String(member.id), name: member.name });
+        aarDraft.memberDirectory.set(String(member.id), { id: String(member.id), name: member.name, fromGuildSearch: true });
       }
       aarDraft.memberSearchStatus = result.members?.length ? "results" : "empty";
       aarDraft.memberSearchHasMore = result.has_more === true;
@@ -3902,8 +3902,11 @@ function renderSubmitAar() {
   const rosterMembers = state.dataStatus === "live" ? (state.members || []).filter(member => member && member.id && member.name) : [];
   const availableMembers = new Map(aarDraft.memberDirectory);
   rosterMembers.forEach(member => availableMembers.set(String(member.id), member));
+  aarDraft.memberDirectory.forEach((member, identity) => {
+    if (member.fromGuildSearch) availableMembers.set(identity, {...availableMembers.get(identity), ...member, rank: ""});
+  });
   if (userId && state.auth?.user?.name) {
-    availableMembers.set(userId, { id: userId, name: state.auth.user.name, rank: "Watch Brother" });
+    availableMembers.set(userId, { ...availableMembers.get(userId), id: userId, name: state.auth.user.name });
   }
   const members = [...availableMembers.values()];
   const selectedMembers = [...aarDraft.brothers].map(id => availableMembers.get(id)).filter(Boolean);
@@ -3915,14 +3918,14 @@ function renderSubmitAar() {
     const id = String(member.id);
     const hasSearch = memberQuery.length >= 2;
     return aarDraft.brothers.has(id) || (hasSearch
-      ? displayName(member.name).toLocaleLowerCase().includes(memberQuery)
+      ? member.name.toLocaleLowerCase().includes(memberQuery) || displayName(member.name).toLocaleLowerCase().includes(memberQuery)
       : recentTeammateIds.has(id));
   });
   const memberOptions = pickerMembers.map(member => {
     const id = String(member.id);
-    const rank = RANK_LABELS[member.rank] || member.rank || "Guild Member";
+    const rank = RANK_LABELS[member.rank] || member.rank || "";
     const isRecent = recentTeammateIds.has(id) && !aarDraft.brothers.has(id);
-    const label = `${rank} · ${displayName(member.name)}${isRecent ? " · Recent" : ""}`;
+    const label = `${id === userId ? state.auth.user.name : rank ? `${rank} · ${displayName(member.name)}` : member.name}${isRecent ? " · Recent" : ""}`;
     return `<label class="aar-member"><input type="checkbox" data-aar-brother value="${escapeHtml(id)}"${aarDraft.brothers.has(id) ? " checked" : ""}><span>${escapeHtml(label)}</span></label>`;
   }).join("");
   const memberSearchStatus = aarDraft.memberSearchStatus === "loading"
@@ -4597,7 +4600,7 @@ function aarReportPreviewHtml(detail) {
 function aarSelectedReviewHtml(detail, deleteControl) {
   const review = detail.review;
   if (!review) return `${!detail.delete_request && !detail.record_removed ? `<button type="button" class="btn-dossier-action" data-aar-manage-edit="${escapeHtml(detail.id)}">Edit report</button>` : ""}${deleteControl}`;
-  const heading = review.kind === "edit" ? "Proposed edit" : review.kind === "delete" ? "Deletion request" : "Archive recovery";
+  const heading = review.kind === "edit" ? "Proposed edit" : review.kind === "delete" ? "Deletion request" : review.kind === "award" ? "Award reconciliation" : "Incomplete archive update";
   const info = `<h3>${heading}</h3><p class="aar-upload-hint">${escapeHtml(review.requester_name || review.requester_id || review.request_actor_id || "Staff")} / ${escapeHtml(review.status || "")}${review.requested_at ? ` / ${escapeHtml(new Date(review.requested_at).toLocaleString())}` : ""}</p>`;
   if (review.kind === "delete") return ["cancelled", "complete"].includes(review.status) ? `${info}<p>${escapeHtml(review.decline_reason || "This deletion request is closed.")}</p>` : `${info}${deleteControl}`;
   if (review.kind === "award") return `${info}<p>${escapeHtml(review.challenge || "Challenge award")} / ${escapeHtml(review.user_id || "")}</p>${review.status === "complete" ? `<p>Award review acknowledged.</p>` : state.auth.aar_management?.can_delete === true ? `<button class="btn-dossier-action" type="button" data-aar-review-ack="${escapeHtml(review.review_id)}" data-aar-review-record="${escapeHtml(detail.id)}">Acknowledge award review</button>` : `<p class="aar-empty">Forgemaster review required.</p>`}`;
@@ -4613,22 +4616,24 @@ function renderAarManagement() {
   const deleteRequest = detail?.delete_request;
   const deleteControl = deleteRequest?.status
     ? `<section class="aar-review-actions">${detail.review?.kind === "delete" ? "" : "<h3>Deletion request</h3>"}<p class="aar-upload-hint">${escapeHtml(deleteRequest.status.replaceAll("_", " "))}${deleteRequest.reason ? ` · ${escapeHtml(deleteRequest.reason)}` : ""}</p>
-      ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-destructive" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}" data-aar-delete-reason="${escapeHtml(deleteRequest.reason || "No reason recorded")}">${deleteRequest.status === "requested" ? "Delete AAR" : "Resume deletion"}</button>` : `<p class="aar-upload-hint">Only a Forgemaster can confirm deletion.</p>`}${deleteRequest.status === "requested" ? aarDeletionDeclineHtml(detail.id) : ""}</section>`
+      ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-destructive" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}" data-aar-delete-reason="${escapeHtml(deleteRequest.reason || "No reason recorded")}">${deleteRequest.status === "requested" ? "Confirm delete" : "Finish deletion"}</button>` : `<p class="aar-status" role="status">Deletion confirmation unavailable: this account is not authorized as Forgemaster.</p>`}${deleteRequest.status === "requested" ? aarDeletionDeclineHtml(detail.id) : ""}</section>`
     : detail
     ? `<section class="aar-section"><h3>${state.auth.aar_management?.can_delete === true ? "Delete AAR" : "Request deletion"}</h3><label class="aar-field aar-field-wide"><span class="field-label">Deletion reason</span><textarea id="aar-delete-reason" class="field-input" rows="3" minlength="8" maxlength="400" placeholder="Explain why this report must be removed"></textarea></label><button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-request="${escapeHtml(detail.id)}">${state.auth.aar_management?.can_delete === true ? "Delete permanently..." : "Request deletion"}</button></section>`
     : "";
   const requests = [
     ...aarManager.editRequests.map(item => ({kind: "edit", id: item.record_id, review: item.request_id, label: "Edit request", title: AAR_PVE_MISSIONS.find(([value]) => value === item.submission?.mission)?.[1] || `AAR ${item.record_id}`, text: item.requester_name || item.requester_id})),
     ...aarManager.pendingDeletions.map(item => ({kind: "delete", id: item.id, review: item.request_token || `delete-${item.id}`, label: "Deletion request", title: item.mission || `AAR ${item.id}`, text: item.reason})),
-    ...aarManager.pendingEdits.map(item => ({kind: "recovery", id: item.id, review: item.request_id, label: "Recovery", title: item.mission || `AAR ${item.id}`, text: item.status})),
+    ...aarManager.pendingEdits.map(item => ({kind: "recovery", id: item.id, review: item.request_id, label: "Incomplete archive update", title: item.mission || `AAR ${item.id}`, text: item.status === "receipt_updated" ? "Report updated; archive save unfinished" : "Report saved; award reconciliation unfinished"})),
     ...aarManager.reconciliationReviews.map(item => ({kind: "award", id: item.record_id, review: item.review_id, label: "Award review", title: item.challenge || "Challenge award", text: `AAR ${item.record_id}`}))
   ];
   const archive = aarManager.records.map(item => ({kind: "", id: item.id, review: "", label: item.difficulty || "AAR", title: item.mission || `AAR ${item.id}`, text: (item.brother_names || []).join(", ")}));
-  const rows = (aarManager.view === "archive" ? archive : requests).map(item => `<a class="aar-review-item" href="${escapeHtml(aarReviewHref(item.id, item.kind, item.review))}" data-aar-review-open="${escapeHtml(item.id)}" data-review-type="${escapeHtml(item.kind)}" data-review-id="${escapeHtml(item.review)}" aria-current="${item.id === aarManager.selectedId && item.review === aarManager.reviewId}"><span class="aar-review-kind">${escapeHtml(item.label)}</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text || "")}</span><span>Open AAR ${escapeHtml(item.id)} &rarr;</span></a>`).join("");
-  const preview = aarManager.status === "loading-detail" ? `<p class="aar-empty" role="status">Loading AAR preview...</p>` : aarManager.status === "detail-error" ? `<p class="aar-empty" role="alert">${escapeHtml(aarManager.error)}</p>` : detail ? `${aarReportPreviewHtml(detail)}${aarSelectedReviewHtml(detail, deleteControl)}` : `<p class="aar-empty">Select a request or archive report.</p>`;
+  const visibleRequests = requests.filter(item => aarManager.view === "maintenance" ? ["recovery", "award"].includes(item.kind) : ["edit", "delete"].includes(item.kind));
+  const rows = (aarManager.view === "archive" ? archive : visibleRequests).map(item => `<a class="aar-review-item" href="${escapeHtml(aarReviewHref(item.id, item.kind, item.review))}" data-aar-review-open="${escapeHtml(item.id)}" data-review-type="${escapeHtml(item.kind)}" data-review-id="${escapeHtml(item.review)}" aria-current="${item.id === aarManager.selectedId && item.review === aarManager.reviewId}"><span class="aar-review-kind">${escapeHtml(item.label)}</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text || "")}</span><span>Open AAR ${escapeHtml(item.id)} &rarr;</span></a>`).join("");
+  const preview = aarManager.status === "loading-detail" ? `<p class="aar-empty" role="status">Loading AAR preview...</p>` : aarManager.status === "detail-error" ? `<p class="aar-empty" role="alert">${escapeHtml(aarManager.error)}</p>` : detail ? `${detail.delete_request || detail.review?.kind === "delete" ? aarSelectedReviewHtml(detail, deleteControl) : ""}${aarReportPreviewHtml(detail)}${!detail.delete_request && detail.review?.kind !== "delete" ? aarSelectedReviewHtml(detail, deleteControl) : ""}` : `<p class="aar-empty">Select an edit, deletion, or archive report.</p>`;
   app.innerHTML = `<section class="aar-room" aria-label="Manage submitted AARs"><header class="aar-heading"><h2>Manage AARs</h2>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
-    <div class="aar-review-workspace${aarManager.selectedId ? " has-preview" : ""}"><aside class="aar-review-sidebar"><div class="war-pools" role="tablist" aria-label="AAR views"><button class="btn-dossier-action" role="tab" data-aar-view="requests" aria-selected="${aarManager.view !== "archive"}">Requests</button><button class="btn-dossier-action" role="tab" data-aar-view="archive" aria-selected="${aarManager.view === "archive"}">Archive</button></div>
-    ${aarManager.view === "archive" ? `<label class="aar-field"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission or participant"></label>` : `<label class="aar-field"><span class="field-label">Request type</span><select id="aar-review-filter" class="field-input">${[["all", "All requests"], ["edit", "Edits"], ["delete", "Deletions"], ["recovery", "Recovery"]].map(([key, label]) => `<option value="${key}"${aarManager.queueKind === key ? " selected" : ""}>${label} (${Number(aarManager.queueCounts[key]) || 0})</option>`).join("")}</select></label>`}
+    <div class="aar-review-workspace${aarManager.selectedId ? " has-preview" : ""}"><aside class="aar-review-sidebar"><div class="war-pools" role="tablist" aria-label="AAR views"><button class="btn-dossier-action" role="tab" data-aar-view="requests" aria-selected="${aarManager.view === "requests"}">Edits &amp; deletions</button><button class="btn-dossier-action" role="tab" data-aar-view="archive" aria-selected="${aarManager.view === "archive"}">Archive</button></div>
+    ${Number(aarManager.queueCounts.recovery) > 0 ? `<button class="btn-dossier-action" type="button" data-aar-view="maintenance">Unfinished updates (${Number(aarManager.queueCounts.recovery)})</button>` : ""}
+    ${aarManager.view === "archive" ? `<label class="aar-field"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission or participant"></label>` : aarManager.view === "maintenance" ? `<h3>Unfinished archive and award updates</h3>` : `<label class="aar-field"><span class="field-label">Show</span><select id="aar-review-filter" class="field-input">${[["requests", "Edits and deletions"], ["edit", "Member edits"], ["delete", "Deletion requests"]].map(([key, label]) => `<option value="${key}"${aarManager.queueKind === key ? " selected" : ""}>${label} (${Number(aarManager.queueCounts[key]) || 0})</option>`).join("")}</select></label>`}
     <div class="aar-review-list">${aarManager.status === "error" ? `<p class="aar-empty">${escapeHtml(aarManager.error)}</p>` : rows || `<p class="aar-empty">${aarManager.status === "loading" ? "Loading..." : "No matching entries."}</p>`}</div>
     ${aarManager.view !== "archive" ? `<nav class="aar-submit-row" aria-label="Review queue pages"><button class="btn-dossier-action" type="button" data-aar-queue-page="previous"${aarManager.queueHistory.length ? "" : " disabled"}>&larr; Previous</button><span class="aar-upload-hint">${aarManager.queueTotal ? `${aarManager.queueOffset + 1}-${aarManager.queueNextOffset} of ${aarManager.queueTotal}` : "0 requests"}</span><button class="btn-dossier-action" type="button" data-aar-queue-page="next"${aarManager.queueHasMore ? "" : " disabled"}>Next &rarr;</button></nav>` : `<nav class="aar-submit-row" aria-label="Archive pages"><button class="btn-dossier-action" type="button" data-aar-manage-page="previous"${aarManager.offset <= 0 ? " disabled" : ""}>&larr; Previous</button><span class="aar-upload-hint">${aarManager.total} reports</span><button class="btn-dossier-action" type="button" data-aar-manage-page="next"${aarManager.hasMore ? "" : " disabled"}>Next &rarr;</button></nav>`}</aside>
     <section class="aar-review-preview" aria-label="Website AAR preview">${aarManager.selectedId ? `<nav aria-label="AAR archive"><button type="button" class="btn-dossier-action" data-aar-manage-back><span aria-hidden="true">&larr;</span> Back to Manage AARs</button><a class="btn-dossier-action" href="${escapeHtml(aarReviewHref(aarManager.selectedId, aarManager.reviewType, aarManager.reviewId))}">AAR permalink</a></nav>` : ""}${preview}<div id="aar-management-status" class="aar-status" role="status" aria-live="polite"></div></section></div>
@@ -4640,7 +4645,10 @@ function renderAarManagement() {
   }));
   document.querySelectorAll("[data-aar-view]").forEach(button => button.addEventListener("click", () => {
     aarManager.view = button.dataset.aarView;
-    renderAarManagement();
+    if (aarManager.view === "archive") { renderAarManagement(); return; }
+    aarManager.queueKind = aarManager.view === "maintenance" ? "recovery" : "requests";
+    aarManager.queueOffset = 0; aarManager.queueHistory = [];
+    void loadAarManagement();
   }));
   document.getElementById("aar-review-filter")?.addEventListener("change", event => {
     aarManager.queueKind = event.target.value;
