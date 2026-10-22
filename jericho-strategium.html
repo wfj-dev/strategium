@@ -1003,6 +1003,7 @@
   .reach-sector-panel-body > details { margin-top: 18px; }
   .reach-sector-panel-body > details > summary { cursor: pointer; color: var(--green-dim); font-size: 11px; padding: 8px 0; }
   .reach-mobile-index { display: none; }
+  .reach-mobile-toolbar, .reach-mobile-map-back { display: none; }
   .reach-sector-system { display: block; width: 100%; margin: 0 0 6px; padding: 10px; border: 1px solid var(--border-dim); border-left: 2px solid var(--green-faint); background: rgba(79,214,122,.025); color: var(--green-dim); text-align: left; cursor: pointer; }
   .reach-sector-system:hover, .reach-sector-system[aria-pressed="true"] { border-color: var(--gold-dim); border-left-color: var(--gold); background: rgba(207,174,104,.055); }
   .reach-sector-system-name { display: block; color: var(--white); font: 600 12px 'Cinzel', serif; overflow-wrap: anywhere; }
@@ -1447,14 +1448,34 @@
     .site-nav a { flex: 1 1 calc(33.333% - 4px); text-align: center; }
     .slate-corner.tl { top: 9px; left: 18px; right: 18px; overflow: hidden; text-overflow: ellipsis; }
     .slate-corner.tr { top: 25px; left: 18px; right: auto; }
-    .reach-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .reach-viewport { display: none; }
+  }
+  @media (max-width: 600px), (max-width: 900px) and (pointer: coarse) {
+    .reach-page .page { padding: 12px 10px 24px; }
+    .reach-page .site-nav { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; gap: 6px; padding-bottom: 4px; }
+    .reach-page .site-nav a { flex: 0 0 auto; min-height: 44px; display: inline-flex; align-items: center; padding: 8px 10px; white-space: nowrap; }
+    .reach-page .slate-navigation { margin: 14px 0; }
+    .reach-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .reach-stat { padding: 9px 6px; }
+    .reach-stat-value { font-size: 20px; }
+    .reach-stat-label { font-size: 10px; letter-spacing: 0; overflow-wrap: anywhere; }
+    .reach-viewport { display: block; width: 100%; aspect-ratio: auto; height: min(70vw, 55svh, 420px); min-height: 180px; }
+    .reach-controls .icon-btn { width: 44px; height: 44px; min-width: 44px; }
+    .reach-controls { top: auto; bottom: 10px; right: 10px; display: flex; flex-direction: row; gap: 6px; }
+    .reach-canvas-tooltip { display: none; }
+    .reach-mobile-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; margin-bottom: 10px; }
+    .reach-mobile-toolbar label { display: grid; gap: 5px; min-width: 0; color: var(--green-dim); font-size: 10px; }
+    .reach-mobile-toolbar select { width: 100%; min-width: 0; min-height: 44px; margin: 0; font-size: 12px; }
+    .reach-mobile-toolbar button, .reach-mobile-map-back { min-height: 44px; }
+    .reach-mobile-map-back { display: inline-flex; align-items: center; }
+    .reach-sector-panel .btn-dossier-action, .reach-sector-panel .reach-select, .reach-sector-system, .war-world-select { min-height: 44px; }
+    .reach-sector-panel-head { padding: 12px; }
+    .reach-sector-panel-body { padding: 12px; }
     .reach-sector-panel { display: none; position: static; width: 100%; min-width: 0; transform: none; box-shadow: none; }
     .reach-map-shell.has-sector-panel .reach-sector-panel { display: flex; }
     .reach-sector-panel-body { overflow: visible; }
     .reach-desktop-index { display: none; }
     .reach-mobile-index { display: block; margin-bottom: 14px; }
-    .reach-mobile-index > summary { padding: 12px 0; color: var(--green); cursor: pointer; font-size: 11px; }
+    .reach-mobile-index > summary { min-height: 44px; padding: 12px 0; color: var(--green); cursor: pointer; font-size: 11px; }
     .reach-mobile-nav { display: block; margin-top: 8px; }
     .reach-legend, .reach-hint { display: none; }
     .reach-select { margin-left: 0; }
@@ -3547,6 +3568,7 @@ function renderRecordOfBlood() {
 }
 
 function render(originPct, direction) {
+  document.body.classList.toggle("reach-page", state.page === "reach");
   document.body.classList.toggle("blood-page", state.page === "blood");
   document.body.classList.toggle("rank-guide-page", state.page === "rank-guide");
   document.body.classList.toggle("submit-aar-page", state.page === "submit-aar");
@@ -5482,6 +5504,10 @@ function updateSiteNav() {
     if (active) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
+  if (state.page === "reach" && window.matchMedia("(max-width: 600px), (max-width: 900px) and (pointer: coarse)").matches) {
+    const link = document.querySelector('.site-nav [data-page="reach"]');
+    if (link) link.parentElement.scrollLeft = link.offsetLeft - link.parentElement.clientWidth / 2 + link.clientWidth / 2;
+  }
 }
 
 async function setPage(page, push, originEl = null) {
@@ -5699,6 +5725,12 @@ function refreshWarConsole() {
 }
 
 document.addEventListener("change", async event => {
+  const mobileSector = event.target.closest("[data-mobile-sector-select]");
+  if (mobileSector?.dataset.mobileSectorSelect !== undefined) {
+    if (mobileSector.value) showSectorLevel(mobileSector.value);
+    else showReachLevel();
+    return;
+  }
   const field = event.target.closest("[data-war-field]");
   if (!field || warView.busy) return;
   if (field.dataset.warField === "subsector_id") {
@@ -5716,6 +5748,14 @@ document.addEventListener("change", async event => {
 });
 
 document.addEventListener("click", async event => {
+  if (event.target.closest("[data-mobile-map-focus]")?.dataset.mobileMapFocus !== undefined) {
+    document.getElementById("reach-viewport")?.scrollIntoView({behavior: "smooth", block: "start"});
+    return;
+  }
+  if (event.target.closest("[data-mobile-details]")?.dataset.mobileDetails !== undefined) {
+    document.getElementById("reach-sector-panel")?.scrollIntoView({behavior: "smooth", block: "start"});
+    return;
+  }
   if (event.target.closest("[data-war-retry]")?.dataset.warRetry !== undefined) { await loadWar(); refreshWarConsole(); return; }
   const worldButton = event.target.closest("[data-war-planet]");
   if (worldButton?.dataset.warPlanet && !warView.busy) {
@@ -6263,6 +6303,9 @@ function setupGeographyCanvas() {
   let deviceScale = 1;
   let pointerId = null;
   let previousPointer = null;
+  const activePointers = new Map();
+  let pinchGesture = null;
+  let multiPointerGesture = false;
   let dragDistance = 0;
   let animationFrame = 0;
   let zoomAnchor = null;
@@ -7252,7 +7295,6 @@ function setupGeographyCanvas() {
       drawStarfield();
       drawArt(camera, ratio);
     }
-    if (state.selectedSector && camera.targetZoom <= camera.baseZoom * 1.05) clearSectorSelection();
     if (hoveredTarget?.kind === "body") {
       const system = systemsById.get(hoveredTarget.systemId);
       const position = bodyPosition(system, hoveredTarget.body, timestamp);
@@ -7403,20 +7445,54 @@ function setupGeographyCanvas() {
     zoomAnchor = { worldX: world.x, worldY: world.y, screenX: point.x, screenY: point.y };
   }, { passive: false });
 
+  function pinchPoints() {
+    const points = [...activePointers.values()].slice(0, 2).map(localPoint);
+    return {distance: Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y), x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2};
+  }
+
+  function startPinch() {
+    const points = pinchPoints();
+    const camera = state.reachCanvasCamera;
+    const world = screenToWorld(points.x, points.y);
+    pinchGesture = {distance: Math.max(1, points.distance), zoom: camera.zoom, worldX: world.x, worldY: world.y};
+    multiPointerGesture = true;
+    zoomAnchor = null;
+    dragDistance = Infinity;
+  }
+
   canvas.addEventListener("pointerdown", event => {
     if (event.button !== 0) return;
+    const camera = state.reachCanvasCamera;
+    camera.targetX = camera.x;
+    camera.targetY = camera.y;
+    camera.targetZoom = camera.zoom;
+    activePointers.set(event.pointerId, {clientX: event.clientX, clientY: event.clientY});
+    canvas.setPointerCapture(event.pointerId);
+    if (activePointers.size >= 2) { startPinch(); return; }
     pointerId = event.pointerId;
     zoomAnchor = null;
     previousPointer = { x: event.clientX, y: event.clientY };
     dragDistance = 0;
-    canvas.setPointerCapture(pointerId);
     viewport.classList.add("dragging");
     if (tooltip) tooltip.hidden = true;
   });
 
   canvas.addEventListener("pointermove", event => {
+    if (activePointers.has(event.pointerId)) activePointers.set(event.pointerId, {clientX: event.clientX, clientY: event.clientY});
+    if (activePointers.size >= 2) {
+      const points = pinchPoints();
+      const camera = state.reachCanvasCamera;
+      if (!pinchGesture) startPinch();
+      const zoom = canvasClamp(pinchGesture.zoom * points.distance / pinchGesture.distance, camera.baseZoom, camera.baseZoom * 120);
+      if (zoom < camera.zoom) clearSectorSelection();
+      const center = clampToArt(pinchGesture.worldX - (points.x - width / 2) / zoom, pinchGesture.worldY - (points.y - height / 2) / zoom, zoom);
+      camera.zoom = camera.targetZoom = zoom;
+      camera.x = camera.targetX = center.x;
+      camera.y = camera.targetY = center.y;
+      return;
+    }
     if (event.pointerId !== pointerId || !previousPointer) {
-      updateCanvasHover(event);
+      if (event.pointerType !== "touch") updateCanvasHover(event);
       return;
     }
     const dx = event.clientX - previousPointer.x;
@@ -7430,13 +7506,30 @@ function setupGeographyCanvas() {
     camera.targetY = camera.y;
   });
 
-  function finishPointer(event) {
+  function finishPointer(event, cancelled = false) {
+    if (!activePointers.has(event.pointerId)) return;
+    activePointers.delete(event.pointerId);
+    if (multiPointerGesture) {
+      pinchGesture = null;
+      if (activePointers.size) {
+        const [identity, point] = activePointers.entries().next().value;
+        pointerId = identity;
+        previousPointer = {x: point.clientX, y: point.clientY};
+        if (activePointers.size >= 2) startPinch();
+        return;
+      }
+      multiPointerGesture = false;
+      pointerId = null;
+      previousPointer = null;
+      viewport.classList.remove("dragging");
+      return;
+    }
     if (event.pointerId !== pointerId) return;
     const clickPoint = localPoint(event);
     pointerId = null;
     previousPointer = null;
     viewport.classList.remove("dragging");
-    if (dragDistance > 7) return;
+    if (cancelled || dragDistance > 7) return;
     const camera = state.reachCanvasCamera;
     const ratio = camera.zoom / camera.baseZoom;
     const world = screenToWorld(clickPoint.x, clickPoint.y);
@@ -7475,7 +7568,8 @@ function setupGeographyCanvas() {
   }
 
   canvas.addEventListener("pointerup", finishPointer);
-  canvas.addEventListener("pointercancel", finishPointer);
+  canvas.addEventListener("pointercancel", event => finishPointer(event, true));
+  canvas.addEventListener("lostpointercapture", event => finishPointer(event, true));
   canvas.addEventListener("pointerleave", () => {
     if (pointerId !== null) return;
     hoveredTarget = null;
@@ -7496,6 +7590,7 @@ function setupGeographyCanvas() {
       zoomAnchor = null;
       state.selectedSystem = null;
       state.selectedSector = null;
+      updateGeographySectorPanel();
       camera.targetX = bounds.x + bounds.w / 2;
       camera.targetY = bounds.y + bounds.h / 2;
       camera.targetZoom = camera.baseZoom;
@@ -7573,6 +7668,7 @@ function geographySectorPanelHtml(sectorId, selectedSystemId) {
         <div class="reach-sector-panel-meta">${escapeHtml(sector.status === "critical" ? "Contested" : titleCase(sector.status))} · ${selectedSystem ? "Planetary system" : "Charted systems and worlds"}</div>
       </div>
       <div class="reach-sector-panel-actions">
+        <button class="reach-sector-panel-back reach-mobile-map-back" type="button" data-mobile-map-focus>&uarr; Map</button>
         ${selectedSystem ? `<button class="reach-sector-panel-back" type="button" data-sector-panel-back>Sector systems</button>` : ""}
         <button class="reach-sector-panel-close" type="button" data-sector-panel-close aria-label="Close sector panel" title="Close sector panel">&times;</button>
       </div>
@@ -7590,6 +7686,10 @@ function updateGeographySectorPanel() {
   const open = Boolean(sectorId && state.geography?.sectors.some(sector => sector.id === sectorId));
   shell.classList.toggle("has-sector-panel", open);
   panel.setAttribute("aria-hidden", String(!open));
+  const mobileSector = document.querySelector("[data-mobile-sector-select]");
+  if (mobileSector) mobileSector.value = sectorId || "";
+  const detailsButton = document.querySelector("[data-mobile-details]");
+  if (detailsButton) detailsButton.disabled = !open;
   if (open && warView.subsector !== sectorId) {
     warView.subsector = sectorId;
     warView.planet = "";
@@ -7633,7 +7733,7 @@ function renderReach() {
       <div class="reach-stat"><div class="reach-stat-value">${Object.keys(warView.data?.assignments || {}).length}</div><div class="reach-stat-label">Kill Teams Assigned</div></div>
       <div class="reach-stat"><div class="reach-stat-value">14</div><div class="reach-stat-label">Days Per Campaign</div></div>
     </div>
-    ${geographyLive ? `<details class="reach-mobile-index"${selectedSector ? "" : " open"}><summary>Choose subsector</summary>${mobileGeographyHtml()}</details>` : ""}
+    ${geographyLive ? `<div class="reach-mobile-toolbar"><label>Sector<select class="reach-select" data-mobile-sector-select aria-label="Choose map sector"><option value="">All sectors</option>${state.geography.sectors.map(sector => `<option value="${escapeHtml(sector.id)}"${sector.id === state.selectedSector ? " selected" : ""}>${escapeHtml(sector.name)}</option>`).join("")}</select></label><button class="btn-dossier-action" type="button" data-mobile-details${selectedSector ? "" : " disabled"}>Details &darr;</button></div><details class="reach-mobile-index"><summary>Sector directory</summary>${mobileGeographyHtml()}</details>` : ""}
     <div class="reach-map-shell${selectedSector ? " has-sector-panel" : ""}">
       <div class="reach-viewport" id="reach-viewport">
         ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Galactic sector chart with the Jericho Reach at its center"></canvas>` : reachSvg(reach, directives)}
@@ -7807,7 +7907,9 @@ function nearestGeographySystem(point, sectorId) {
 function geographyPanelFocusWidth() {
   const canvas = document.getElementById("reach-canvas");
   const mapWidth = canvas?.getBoundingClientRect().width || 0;
-  return state.selectedSector && mapWidth ? Math.max(260, Math.min(340, mapWidth * .4)) : 0;
+  const panel = document.getElementById("reach-sector-panel");
+  if (!state.selectedSector || !mapWidth || !panel || getComputedStyle(panel).position !== "absolute") return 0;
+  return Math.min(panel.getBoundingClientRect().width, mapWidth * .8);
 }
 
 function focusGeographySectorCamera(sectorId) {

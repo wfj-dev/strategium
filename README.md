@@ -23,6 +23,15 @@ theme. Changing selections or refreshing campaign data keeps the map canvas moun
 Campaign polling continues while controls are focused; form values, text selection
 and keyboard focus are preserved when the console updates.
 
+Phones and small touch screens use the actual interactive chart, with one-finger
+dragging, two-finger pinch zoom, and tap selection. A native sector picker and
+collapsible directory provide alternatives to tapping small regions. Map/Details
+controls jump between the chart and its inline sector/system/strike panel. Zoom
+controls have 44px touch targets; the chart remains full-width with bounded height
+in portrait and landscape. Touching the chart stops camera interpolation, cancelled
+gestures do not select, and rotating the device preserves the mounted canvas and
+selected mission pool. Desktop keeps its side-panel layout.
+
 Strike participation requires the actual Watch Brother role, even for higher ranks
 and specialists. The bot verifies the role ID at signup and rechecks the full roster
 before locking; the interface hides signup controls when that permission is absent.

@@ -1541,6 +1541,46 @@ context.init().then(()=>assert.deepEqual(calls,['geography','auth','war','render
     assert result.returncode == 0, result.stderr
 
 
+def test_mobile_reach_keeps_chart_and_touch_navigation_visible():
+    page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
+    assert "(max-width: 900px) and (pointer: coarse)" in page
+    assert ".reach-viewport { display: block; width: 100%; aspect-ratio: auto;" in page
+    assert ".reach-viewport { display: none; }" not in page
+    assert "data-mobile-sector-select" in page
+    assert "data-mobile-map-focus" in page
+    assert "data-mobile-details" in page
+    assert '<details class="reach-mobile-index"><summary>Sector directory</summary>' in page
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for mobile map gestures")
+def test_canvas_pinch_is_anchored_and_cancelled_gestures_do_not_select():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const handlers={},selections=[];
+const context={activePointers:new Map(),pinchGesture:null,multiPointerGesture:false,pointerId:null,previousPointer:null,dragDistance:0,zoomAnchor:null,
+ width:400,height:300,state:{reachCanvasCamera:{x:0,y:0,targetX:0,targetY:0,zoom:1,targetZoom:1,baseZoom:1}},
+ canvas:{addEventListener:(name,handler)=>{handlers[name]=handler;},setPointerCapture:()=>{}},viewport:{classList:{add:()=>{},remove:()=>{}}},tooltip:null,
+ localPoint:event=>({x:event.clientX,y:event.clientY}),screenToWorld:(x,y)=>({x:context.state.reachCanvasCamera.x+(x-200)/context.state.reachCanvasCamera.zoom,y:context.state.reachCanvasCamera.y+(y-150)/context.state.reachCanvasCamera.zoom}),
+ canvasClamp:(value,min,max)=>Math.min(max,Math.max(min,value)),clampToArt:(x,y)=>({x,y}),clearSectorSelection:()=>{},updateCanvasHover:()=>{},
+ geography:{systems:[]},BODY_HOVER_RATIO:10,SYSTEM_HOVER_RATIO:10,geographySectorAt:()=>({id:'alpha'}),showSectorLevel:identity=>selections.push(identity)};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('  function pinchPoints()'),html.indexOf('  canvas.addEventListener("pointerleave"',html.indexOf('  function pinchPoints()'))),context);
+const event=(identity,x,y)=>({pointerId:identity,clientX:x,clientY:y,button:0,pointerType:'touch'});
+handlers.pointerdown(event(1,100,150));handlers.pointerdown(event(2,200,150));
+handlers.pointermove(event(2,300,150));
+assert.equal(context.state.reachCanvasCamera.zoom,2);
+assert.equal(context.state.reachCanvasCamera.targetZoom,2);
+assert.equal(context.state.reachCanvasCamera.x,-50);
+handlers.pointerup(event(2,300,150));handlers.pointermove(event(1,110,150));handlers.pointerup(event(1,110,150));
+assert.equal(context.activePointers.size,0);assert.deepEqual(selections,[]);
+handlers.pointerdown(event(3,150,150));handlers.pointercancel(event(3,150,150));assert.deepEqual(selections,[]);
+handlers.pointerdown(event(4,150,150));handlers.pointerup(event(4,150,150));assert.deepEqual(selections,['alpha']);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for campaign request ordering")
 def test_war_selection_ignores_late_responses():
     source = r"""
@@ -2308,7 +2348,8 @@ const state = {
 const context = {
     state,
     SECTOR_FOCUS_MAX_ZOOM_RATIO: 3.5,
-    document: { getElementById: () => ({ getBoundingClientRect: () => ({ width: 1000, height: 500 }) }) }
+    getComputedStyle: () => ({position: context.panelPosition}), panelPosition:'absolute',
+    document: { getElementById: identity => ({ getBoundingClientRect: () => ({ width: identity === 'reach-sector-panel' ? 340 : 1000, height: 500 }) }) }
 };
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
@@ -2329,6 +2370,13 @@ camera = state.reachCanvasCamera;
 centerScreen = (100 - camera.targetX) * camera.targetZoom + 500;
 assert.ok(Math.abs(centerScreen - 330) < 1e-9);
 assert.ok(camera.targetZoom <= camera.baseZoom * 120);
+context.panelPosition='static';
+assert.equal(context.geographyPanelFocusWidth(),0);
+context.focusGeographySectorCamera('sector_02');
+camera=state.reachCanvasCamera;
+assert.ok(Math.abs((500-camera.targetX)*camera.targetZoom+500-500)<1e-9);
+context.focusGeographySystemCamera('system_01');
+assert.equal(camera.targetX,100);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
