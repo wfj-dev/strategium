@@ -12,8 +12,12 @@ requests. The existing signed AAR bridge also carries these requests, so no camp
 database or bot credentials are exposed to the browser.
 
 Select a subsector to open its campaign panel alongside the desktop map, or use
-the collapsible subsector navigator on phones. The panel contains command actions,
-planet selection, Vanilla/Omega pools and strike cards. Counts describe the selected
+the collapsible subsector navigator on phones. Authenticated campaign permissions
+load before the first map render. Role actions and systems are visible immediately;
+selecting a star or world keeps the same panel and selected-sector context rather
+than opening a separate modal. System worlds use the existing map imagery, and a
+selected world shows its description, Vanilla/Omega pools and strike roster. Company
+command forms and moderation controls expand only when needed. Counts describe the selected
 planet's current pool, while cards distinguish the game mission from its briefing
 theme. Changing selections or refreshing campaign data keeps the map canvas mounted.
 Campaign polling continues while controls are focused; form values, text selection
@@ -98,8 +102,8 @@ Run `./setup-secrets.sh` to provision the shared `STRATEGIUM_BOT_AAR_SHARED_SECR
 
 Forgemasters can delete from the record detail with a reason and final confirmation;
 the interface records the request and confirms it through the same audited endpoints.
-Interrupted deletions remain resumable under Pending Deletions, with the original
-Discord receipt link retained. Other editors have request-only deletion controls.
+Interrupted deletions remain resumable in the review workspace, with the original
+Discord receipt URL retained in the audit. Other editors have request-only deletion controls.
 
 ### Member AAR Edits
 
@@ -110,13 +114,22 @@ the canonical AAR, receipt and awards remain unchanged until staff approval. Exi
 screenshots and evidence hashes are retained; replacement evidence remains a staff edit.
 
 Techmarines and High Command review current/proposed fields under
-**Manage AARs > Edit Requests**, then approve or decline with a note. Approval uses
+**Manage AARs > Requests**, then approve or decline with a note. A compact request
+list opens the complete report, participants and screenshot evidence on the website,
+alongside the exact proposed edit or deletion reason and its decision controls.
+Each preview has a same-site permalink, such as `/manage-aars?aar=123`, with exact
+review identity in its query parameters. Browser reload and Back/Forward preserve
+the selected review. Screenshot buttons open a full-size viewer without leaving
+the website. The mobile workspace switches from the list to the selected preview.
+Approval uses
 the existing audited receipt/archive update and recovery flow. A proposal based on
 an outdated record is rejected rather than silently overwriting newer changes.
 Members cannot access the staff queue or directly apply their proposed changes.
 
-Review items use separate Previous/Next request controls, with up to ten items per
-page and a byte-bounded response. Archive search/pagination remains independent.
+Review items have All/Edits/Deletions/Recovery filters applied before pagination,
+with up to ten items per page and a byte-bounded response. Archive search/pagination
+remains independent under the Archive view. Closed reviews have no active decision
+controls; partially applied edits and deletions show their recovery state.
 
 Submitters and participants may also request deletion of their website AAR with a
 reason. Only a Forgemaster can confirm deletion. Neither editing nor deletion is

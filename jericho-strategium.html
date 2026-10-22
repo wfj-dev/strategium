@@ -417,6 +417,11 @@
     width: 50%; min-width: 0; height: 92px; padding: 10px 9px 11px; align-self: center;
   }
   .map-top .plate-name { font-size: 16px; }
+  @media (min-width: 761px) and (max-width: 1024px) {
+    .map-company-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .map-company-row .company-slot { grid-column: auto; grid-row: auto; }
+    .map-connectors { display: none; }
+  }
   @media (max-width: 760px) {
     .fortress-map { display: block; max-width: none; }
     .map-connectors { display: none; }
@@ -516,7 +521,7 @@
     display: flex; align-items: center; gap: 8px;
   }
   .company-plate-captain { font-size: 12.5px; color: var(--green); }
-  .company-plate-name { min-width: 0; overflow-wrap: anywhere; }
+  .company-plate-name { min-width: 0; white-space: nowrap; font-size: 11px; letter-spacing: 0; }
   .company-plate-count { font-size: 10.5px; color: var(--green-faint); }
 
   .company-sigil {
@@ -664,6 +669,18 @@
   .war-board-status { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 14px; color: var(--green-dim); font-size: 11px; }
   .war-strike-grid { grid-template-columns: minmax(0, 1fr); }
   .war-pools > button { flex: 1; }
+  .war-command-tools, .war-review-tools { margin: 10px 0; border-bottom: 1px solid var(--border-dim); }
+  .war-command-tools > summary, .war-review-tools > summary { padding: 10px 0; color: var(--green); cursor: pointer; font-size: 11px; }
+  .war-system-directory { margin: 14px 0; }
+  .war-system-directory h3 { color: var(--gold); font-size: 12px; }
+  .war-system-worlds { display: grid; gap: 6px; padding: 8px 0 12px; }
+  .war-world-select { display: flex; align-items: center; gap: 9px; min-width: 0; width: 100%; padding: 7px 0; border: 0; background: transparent; color: var(--green); text-align: left; cursor: pointer; font: inherit; font-size: 11px; }
+  .war-world-select span { overflow-wrap: anywhere; }
+  .war-world-select[aria-pressed="true"] { color: var(--gold); }
+  .war-planet-overview { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: 1px solid var(--border-dim); }
+  .war-planet-overview > .map-body-icon { width: 72px; height: 72px; flex: 0 0 72px; object-fit: contain; }
+  .war-planet-overview h3 { margin: 0 0 6px; color: var(--gold); font-size: 15px; }
+  .war-planet-overview p { margin: 0; color: var(--green-dim); font-size: 11px; line-height: 1.6; }
   .chapter-record-overlay { z-index: 64; align-items: center; padding: 20px; }
   #member-modal { z-index: 66; }
   .chapter-record-overlay .overlay-panel { max-width: 760px; }
@@ -979,6 +996,8 @@
   .reach-sector-panel-meta { margin-top: 5px; color: var(--green-dim); font-size: 9px; line-height: 1.4; }
   .reach-sector-panel-close { flex: 0 0 32px; width: 32px; height: 32px; padding: 0; border: 1px solid var(--border-dim); background: transparent; color: var(--green); cursor: pointer; font: inherit; }
   .reach-sector-panel-close:hover { border-color: var(--gold); color: var(--gold); }
+  .reach-sector-panel-actions { display: flex; align-items: flex-start; gap: 6px; }
+  .reach-sector-panel-back { padding: 7px 8px; border: 1px solid var(--border-dim); background: transparent; color: var(--green); font: inherit; font-size: 10px; cursor: pointer; }
   .reach-sector-panel-list { min-height: 0; padding: 8px; overflow: auto; overscroll-behavior: contain; }
   .reach-sector-panel-body { min-height: 0; padding: 14px; overflow: auto; overscroll-behavior: contain; }
   .reach-sector-panel-body > details { margin-top: 18px; }
@@ -1277,6 +1296,35 @@
   .aar-edit-request { display: grid; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-dim); }
   .aar-edit-request-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
   .aar-deletion-request { display: grid; gap: 12px; }
+  .aar-review-workspace { display: grid; grid-template-columns: minmax(240px, .8fr) minmax(0, 1.7fr); gap: 24px; align-items: start; }
+  .aar-review-sidebar { min-width: 0; }
+  .aar-review-sidebar [role="tab"][aria-selected="true"] { background: rgba(207,174,104,.12); border-color: var(--gold); color: var(--gold); }
+  .aar-review-list { display: grid; }
+  .aar-review-item { display: grid; gap: 6px; padding: 14px 10px; border-bottom: 1px solid var(--border-dim); border-left: 2px solid transparent; color: var(--green-dim); text-decoration: none; overflow-wrap: anywhere; font-size: 11px; }
+  .aar-review-item strong { color: var(--white); font-size: 12px; }
+  .aar-review-item:hover, .aar-review-item[aria-current="true"] { border-left-color: var(--gold); background: rgba(207,174,104,.05); }
+  .aar-review-kind { color: var(--gold); font-size: 10px; text-transform: uppercase; }
+  .aar-review-preview { min-width: 0; padding-left: 24px; border-left: 1px solid var(--border-dim); }
+  .aar-review-preview h3 { color: var(--gold); font-size: 18px; margin: 16px 0 10px; }
+  .aar-report-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; margin: 18px 0; }
+  .aar-report-fields dt { color: var(--green-dim); font-size: 10px; margin-bottom: 5px; }
+  .aar-report-fields dd { margin: 0; color: var(--white); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .aar-review-evidence { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .aar-review-evidence button { min-width: 0; border: 1px solid var(--border-dim); background: #050705; color: var(--green); cursor: pointer; }
+  .aar-review-evidence img { display: block; width: 100%; height: 130px; object-fit: contain; }
+  .aar-review-evidence span { display: block; padding: 6px; font-size: 10px; overflow-wrap: anywhere; }
+  .aar-review-actions { display: grid; gap: 12px; padding: 16px 0; border-top: 1px solid var(--border-dim); background: #060c08; }
+  .aar-review-actions textarea.field-input { min-height: 72px; height: 80px; }
+  .btn-destructive { border: 1px solid var(--red); background: #702a2a; color: #fff; }
+  .aar-evidence-viewer { max-width: min(1100px, 95vw); max-height: 94vh; padding: 12px; border: 1px solid var(--green-dim); background: #050705; color: var(--white); }
+  .aar-evidence-viewer::backdrop { background: rgba(0,0,0,.85); }
+  .aar-evidence-viewer img { display: block; max-width: 100%; max-height: 78vh; object-fit: contain; }
+  @media (max-width: 760px) {
+    .aar-review-workspace { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .aar-review-workspace.has-preview .aar-review-sidebar { display: none; }
+    .aar-review-preview { padding-left: 0; border-left: 0; }
+    .aar-report-fields { grid-template-columns: minmax(0, 1fr); }
+  }
   .aar-proposal-change { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 8px 0; border-top: 1px solid var(--border-dim); font-size: 11px; overflow-wrap: anywhere; }
   .aar-proposal-change strong { grid-column: 1 / -1; color: var(--gold); }
   .aar-management-entry-actions { flex-wrap: wrap; }
@@ -3582,7 +3630,7 @@ const aarDraft = {
   submitting: false, reviewing: false, idempotencyKey: ""
 };
 const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
-const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, queueOffset: 0, queueHistory: [], queueTotal: 0, queueNextOffset: 0, queueHasMore: false, pendingDeletions: [], pendingEdits: [], editRequests: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
+const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, queueOffset: 0, queueHistory: [], queueTotal: 0, queueNextOffset: 0, queueHasMore: false, queueCounts: {}, view: "requests", queueKind: "all", reviewType: "", reviewId: "", detailSequence: 0, pendingDeletions: [], pendingEdits: [], editRequests: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
 const aarCorrection = { record: "", changes: "", busy: false, status: "" };
 
 function aarCorrectionFormHtml() {
@@ -4378,7 +4426,7 @@ async function loadAarManagement() {
   aarManager.status = "loading";
   renderAarManagement();
   try {
-    const params = new URLSearchParams({ q: aarManager.query, offset: String(aarManager.offset), queue_offset: String(aarManager.queueOffset) });
+    const params = new URLSearchParams({ q: aarManager.query, offset: String(aarManager.offset), queue_offset: String(aarManager.queueOffset), queue_kind: aarManager.queueKind });
     const response = await fetch(apiUrl(`/api/aar-management?${params}`), { credentials: "include", cache: "no-store" });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.message || "AAR archive is unavailable.");
@@ -4387,6 +4435,7 @@ async function loadAarManagement() {
     aarManager.hasMore = result.has_more === true;
     aarManager.pendingDeletions = Array.isArray(result.pending_deletions) ? result.pending_deletions : [];
     aarManager.queueTotal = Number(result.queue_total) || 0;
+    aarManager.queueCounts = result.queue_counts || {};
     aarManager.queueNextOffset = Number(result.queue_next_offset) || 0;
     aarManager.queueHasMore = result.queue_has_more === true;
     if (aarManager.queueOffset > 0 && !aarManager.queueHasMore && aarManager.queueNextOffset === aarManager.queueOffset) {
@@ -4410,23 +4459,45 @@ async function loadAarManagement() {
   renderAarManagement();
 }
 
-async function openAarManagementRecord(recordId) {
+function aarReviewHref(recordId, reviewType = "", reviewId = "") {
+  const params = new URLSearchParams({aar: String(recordId)});
+  if (reviewType && reviewId) { params.set("review_type", reviewType); params.set("review_id", reviewId); }
+  return `/manage-aars?${params}`;
+}
+
+async function loadAarReviewLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const identity = params.get("aar") || "";
+  if (/^[0-9]{1,20}$/.test(identity)) {
+    await openAarManagementRecord(identity, params.get("review_type") || "", params.get("review_id") || "");
+  } else {
+    aarManager.selectedId = ""; aarManager.detail = null; aarManager.reviewType = ""; aarManager.reviewId = "";
+    renderAarManagement();
+  }
+}
+
+async function openAarManagementRecord(recordId, reviewType = "", reviewId = "", push = false) {
   aarManager.selectedId = String(recordId);
+  aarManager.reviewType = reviewType;
+  aarManager.reviewId = reviewId;
+  const sequence = aarManager.detailSequence = (aarManager.detailSequence || 0) + 1;
+  if (push) history.pushState({page: "manage-aars"}, "", aarReviewHref(recordId, reviewType, reviewId));
   const selectedId = aarManager.selectedId;
   aarManager.detail = null;
   aarManager.status = "loading-detail";
   renderAarManagement();
   try {
-    const response = await fetch(apiUrl(`/api/aar-management/records/${encodeURIComponent(aarManager.selectedId)}`), {
+    const query = reviewType && reviewId ? `?${new URLSearchParams({review_type: reviewType, review_id: reviewId})}` : "";
+    const response = await fetch(apiUrl(`/api/aar-management/records/${encodeURIComponent(aarManager.selectedId)}${query}`), {
       credentials: "include", cache: "no-store"
     });
     const result = await response.json().catch(() => ({}));
-    if (aarManager.selectedId !== selectedId) return;
+    if (aarManager.selectedId !== selectedId || aarManager.detailSequence !== sequence) return;
     if (!response.ok) throw new Error(result.message || result.error || "AAR could not be loaded.");
     aarManager.detail = result;
     aarManager.status = "detail";
   } catch (error) {
-    if (aarManager.selectedId !== selectedId) return;
+    if (aarManager.selectedId !== selectedId || aarManager.detailSequence !== sequence) return;
     aarManager.status = "detail-error";
     aarManager.error = error.message || "AAR could not be loaded.";
   }
@@ -4502,91 +4573,88 @@ function aarDeletionDeclineHtml(recordId) {
   return `<label class="aar-field"><span class="field-label">Reason to decline deletion</span><textarea class="field-input" data-aar-delete-decline-note="${escapeHtml(recordId)}" rows="2" minlength="8" maxlength="400"></textarea></label><button type="button" class="btn-dossier-action" data-aar-manage-delete-reject="${escapeHtml(recordId)}">Decline deletion</button>`;
 }
 
+function aarReportPreviewHtml(detail) {
+  if (detail.record_removed) return `<h3>AAR ${escapeHtml(detail.id)}</h3><p class="aar-empty">The archive record has been removed. The deletion audit and recovery status are retained below.</p>`;
+  const report = detail.submission || {};
+  const mode = AAR_SUBMISSION_MODES[report.mode];
+  const mission = (mode?.missions || AAR_PVE_MISSIONS).find(([value]) => value === report.mission)?.[1] || report.mission || "AAR";
+  const name = identity => detail.brothers?.find(member => String(member.id) === String(identity))?.name || state.members?.find(member => String(member.id) === String(identity))?.name || String(identity || "None");
+  const fields = [
+    ["Report type", mode?.label || report.mode], ["Difficulty / Rank", `${report.difficulty || ""} / ${report.rank || ""}`],
+    ["Operation date", detail.timestamp ? new Date(detail.timestamp).toLocaleString() : "Unavailable"],
+    ["Submitted by", detail.submitter_name || name(detail.submitter_id)],
+    ["Participants", (report.brother_ids || []).map(name).join(", ")],
+    ["Inductees", (report.inductee_ids || []).map(name).join(", ")],
+    ["Armory Data", report.armory_data], ["Gene-Seed", report.gene_seed_status === "carried" ? `Carried by ${name(report.gene_seed_carrier_id)}` : report.gene_seed_status],
+    ["Mission tags", (report.tags || []).map(tag => AAR_SUBMISSION_TAGS.find(([key]) => key === tag)?.[1] || tag).join(", ")],
+    ...(mode?.waves ? [["Waves", report.waves]] : []), ...(mode?.kia ? [["Killed in Action", report.kia]] : []),
+    ...(mode?.pvp ? [["Map", report.pvp_map], ["Game mode", report.pvp_game_mode], ["Result", report.pvp_result]] : []),
+    ...(report.strike_id ? [["Strike ID", report.strike_id], ["Strike result", report.strike_success ? "Success" : "Failure"]] : [])
+  ];
+  return `<h3>${escapeHtml(mission)}</h3><span class="aar-upload-hint">AAR ${escapeHtml(detail.id)}</span><dl class="aar-report-fields">${fields.filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl><h4>Mission evidence</h4><div class="aar-review-evidence">${(detail.screenshots || []).map((image, index) => String(image.url || "").startsWith("https://") ? `<button type="button" data-aar-evidence="${index}" title="Open full-size screenshot"><img src="${escapeHtml(image.url)}" alt="Mission screenshot ${index + 1}"><span>${escapeHtml(image.filename || `Screenshot ${index + 1}`)}</span></button>` : "").join("") || `<p class="aar-empty">No screenshot preview is available.</p>`}</div>`;
+}
+
+function aarSelectedReviewHtml(detail, deleteControl) {
+  const review = detail.review;
+  if (!review) return `${!detail.delete_request && !detail.record_removed ? `<button type="button" class="btn-dossier-action" data-aar-manage-edit="${escapeHtml(detail.id)}">Edit report</button>` : ""}${deleteControl}`;
+  const heading = review.kind === "edit" ? "Proposed edit" : review.kind === "delete" ? "Deletion request" : "Archive recovery";
+  const info = `<h3>${heading}</h3><p class="aar-upload-hint">${escapeHtml(review.requester_name || review.requester_id || review.request_actor_id || "Staff")} / ${escapeHtml(review.status || "")}${review.requested_at ? ` / ${escapeHtml(new Date(review.requested_at).toLocaleString())}` : ""}</p>`;
+  if (review.kind === "delete") return ["cancelled", "complete"].includes(review.status) ? `${info}<p>${escapeHtml(review.decline_reason || "This deletion request is closed.")}</p>` : `${info}${deleteControl}`;
+  if (review.kind === "award") return `${info}<p>${escapeHtml(review.challenge || "Challenge award")} / ${escapeHtml(review.user_id || "")}</p>${review.status === "complete" ? `<p>Award review acknowledged.</p>` : state.auth.aar_management?.can_delete === true ? `<button class="btn-dossier-action" type="button" data-aar-review-ack="${escapeHtml(review.review_id)}" data-aar-review-record="${escapeHtml(detail.id)}">Acknowledge award review</button>` : `<p class="aar-empty">Forgemaster review required.</p>`}`;
+  if (review.kind === "recovery" || review.processing_request_id) return `${info}${["receipt_updated", "archive_saved"].includes(review.processing_status || review.status) ? `<button type="button" class="btn-dossier-action" data-aar-resume-edit="${escapeHtml(detail.id)}" data-aar-edit-request="${escapeHtml(review.processing_request_id || review.request_id)}">Resume archive update</button>` : `<p class="aar-empty">${review.status === "complete" ? "Archive update complete." : "The receipt update is processing."}</p>`}`;
+  if (review.status !== "pending") return `${info}<p>${escapeHtml(review.editor_note || "This request is closed.")}</p>`;
+  return `${info}<div aria-label="Proposed report changes">${review.submission ? aarEditProposalChangesHtml(review) : escapeHtml(review.requested_changes || "")}</div><div class="aar-review-actions"><label class="aar-field"><span class="field-label">Review note</span><textarea class="field-input" data-aar-request-note="${escapeHtml(review.request_id)}" rows="2" maxlength="500"></textarea></label><div class="aar-management-entry-actions"><button class="btn-primary" type="button" data-aar-request-decision="${review.submission ? "approve" : "resolve"}" data-aar-request-id="${escapeHtml(review.request_id)}">${review.submission ? "Approve edit" : "Mark corrected"}</button><button class="btn-dossier-action" type="button" data-aar-request-decision="reject" data-aar-request-id="${escapeHtml(review.request_id)}">Decline edit</button></div></div>`;
+}
+
 function renderAarManagement() {
   const app = document.getElementById("app");
   if (state.auth?.aar_management?.can_edit !== true) { app.innerHTML = ""; return; }
   const detail = aarManager.detail;
   const deleteRequest = detail?.delete_request;
   const deleteControl = deleteRequest?.status
-    ? `<section class="aar-section"><h3>Deletion Request</h3><p class="aar-upload-hint">${escapeHtml(deleteRequest.status.replaceAll("_", " "))}${deleteRequest.reason ? ` · ${escapeHtml(deleteRequest.reason)}` : ""}</p>
-        ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}" data-aar-delete-reason="${escapeHtml(deleteRequest.reason || "No reason recorded")}">Confirm permanent deletion</button>` : `<p class="aar-upload-hint">Awaiting Forgemaster confirmation.</p>`}${deleteRequest.status === "requested" ? aarDeletionDeclineHtml(detail.id) : ""}</section>`
+    ? `<section class="aar-review-actions">${detail.review?.kind === "delete" ? "" : "<h3>Deletion request</h3>"}<p class="aar-upload-hint">${escapeHtml(deleteRequest.status.replaceAll("_", " "))}${deleteRequest.reason ? ` · ${escapeHtml(deleteRequest.reason)}` : ""}</p>
+      ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-destructive" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}" data-aar-delete-reason="${escapeHtml(deleteRequest.reason || "No reason recorded")}">${deleteRequest.status === "requested" ? "Delete AAR" : "Resume deletion"}</button>` : `<p class="aar-upload-hint">Only a Forgemaster can confirm deletion.</p>`}${deleteRequest.status === "requested" ? aarDeletionDeclineHtml(detail.id) : ""}</section>`
     : detail
     ? `<section class="aar-section"><h3>${state.auth.aar_management?.can_delete === true ? "Delete AAR" : "Request deletion"}</h3><label class="aar-field aar-field-wide"><span class="field-label">Deletion reason</span><textarea id="aar-delete-reason" class="field-input" rows="3" minlength="8" maxlength="400" placeholder="Explain why this report must be removed"></textarea></label><button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-request="${escapeHtml(detail.id)}">${state.auth.aar_management?.can_delete === true ? "Delete permanently..." : "Request deletion"}</button></section>`
     : "";
-  const rows = aarManager.records.map(record => {
-    const participants = (record.brother_names || []).map(name => escapeHtml(name)).join(", ");
-    const date = record.timestamp ? new Date(record.timestamp).toLocaleString() : "Unknown date";
-    const receipt = String(record.receipt_url || "");
-    const receiptLink = receipt.startsWith("https://discord.com/channels/")
-      ? `<a href="${escapeHtml(receipt)}" target="_blank" rel="noopener noreferrer">Discord receipt</a>` : "";
-    return `<article class="aar-section aar-management-entry">
-      <button class="aar-management-open" type="button" data-aar-manage-open="${escapeHtml(record.id)}"${record.editable ? "" : " disabled"}>
-        <strong>${escapeHtml(record.mission || "AAR")} · ${escapeHtml(record.difficulty || "")}</strong>
-        <span>${escapeHtml(date)} · ${escapeHtml(participants || "Participants unavailable")}</span>
-      </button>
-      <div class="aar-management-entry-actions">${receiptLink}<span>${record.editable ? "Editable" : "Submission data unavailable"}</span></div>
-    </article>`;
-  }).join("");
-  const pendingDeletionRows = aarManager.pendingDeletions.map(item => `<article class="aar-section aar-deletion-request">
-    <div><strong>Deletion ${escapeHtml(item.status.replaceAll("_", " "))} · AAR ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.reason || "No reason recorded")}</p></div>
-    <div class="aar-management-entry-actions">${String(item.receipt_url || "").startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(item.receipt_url)}" target="_blank" rel="noopener noreferrer">Original AAR</a>` : ""}
-    ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-recover-delete-confirm="${escapeHtml(item.id)}" data-aar-delete-reason="${escapeHtml(item.reason || "No reason recorded")}">Resume deletion</button>` : `<span class="aar-upload-hint">Forgemaster action required</span>`}</div>
-    ${item.status === "requested" ? aarDeletionDeclineHtml(item.id) : ""}
-  </article>`).join("");
-  const editRequestRows = (aarManager.editRequests || []).map(item => `<article class="aar-edit-request">
-    <div><strong>AAR ${escapeHtml(item.record_id)} / ${escapeHtml(item.requester_name || item.requester_id)}</strong><p class="aar-upload-hint">${escapeHtml(item.requested_at ? new Date(item.requested_at).toLocaleString() : "")}</p><p class="aar-edit-request-copy">${escapeHtml(item.requested_changes)}</p></div>
-    ${item.submission ? aarEditProposalChangesHtml(item) : ""}
-    ${item.editable ? `<button class="btn-dossier-action" type="button" data-aar-request-open="${escapeHtml(item.record_id)}">Open AAR</button>` : `<span class="aar-upload-hint">Original report requires archive staff correction.</span>`}
-    ${String(item.receipt_url || "").startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(item.receipt_url)}" target="_blank" rel="noopener noreferrer">Original AAR</a>` : ""}
-    <label class="aar-field"><span class="field-label">Editor note</span><textarea class="field-input" data-aar-request-note="${escapeHtml(item.request_id)}" rows="2" maxlength="500"></textarea></label>
-    <div class="aar-management-entry-actions"><button class="btn-dossier-action" type="button" data-aar-request-decision="${item.submission ? "approve" : "resolve"}" data-aar-request-id="${escapeHtml(item.request_id)}">${item.submission ? "Approve edit" : "Mark corrected"}</button><button class="btn-dossier-action" type="button" data-aar-request-decision="reject" data-aar-request-id="${escapeHtml(item.request_id)}">Decline</button></div>
-  </article>`).join("");
-  const pendingEditRows = aarManager.pendingEdits.map(item => `<article class="aar-section aar-management-entry">
-    <div><strong>Edit pending · ${escapeHtml(item.mission || "AAR")} · ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.status.replaceAll("_", " "))}</p></div>
-    <button type="button" class="btn-dossier-action" data-aar-resume-edit="${escapeHtml(item.id)}" data-aar-edit-request="${escapeHtml(item.request_id)}">Resume archive update</button>
-  </article>`).join("");
-  const reconciliationReviewRows = state.auth.aar_management?.can_delete === true
-    ? aarManager.reconciliationReviews.map(item => `<article class="aar-section aar-management-entry"><div><strong>${escapeHtml(item.challenge || "Challenge award")}</strong><p class="aar-upload-hint">AAR ${escapeHtml(item.record_id)} · Brother ${escapeHtml(item.user_id)} · ${escapeHtml(item.operation)}</p></div><button type="button" class="btn-dossier-action" data-aar-review-ack="${escapeHtml(item.review_id)}" data-aar-review-record="${escapeHtml(item.record_id)}">Acknowledge review</button></article>`).join("")
-    : aarManager.reconciliationReviews.length
-    ? `<p class="aar-empty">${aarManager.reconciliationReviews.length} award case${aarManager.reconciliationReviews.length === 1 ? "" : "s"} need Forgemaster review.</p>`
-    : "";
-  const body = aarManager.selectedId
-    ? aarManager.status === "loading-detail"
-      ? `<p class="aar-empty">Loading archive entry…</p>`
-      : aarManager.status === "detail-error"
-      ? `<p class="aar-empty" data-tone="error">${escapeHtml(aarManager.error || "AAR could not be loaded.")}</p>`
-      : detail
-      ? `<section class="aar-section">
-          <h3>${escapeHtml(AAR_SUBMISSION_MODES[detail.submission?.mode]?.label || "AAR")} · ${escapeHtml(detail.submission?.mission || detail.id)}</h3>
-          <div class="aar-fields">
-            <div class="aar-field"><span class="field-label">Difficulty / Rank</span><div>${escapeHtml(detail.submission?.difficulty || "")} · ${escapeHtml(detail.submission?.rank || "")}</div></div>
-            <div class="aar-field"><span class="field-label">Participants</span><div>${escapeHtml((detail.brothers || []).map(member => member.name).join(", ") || "Unavailable")}</div></div>
-            <div class="aar-field"><span class="field-label">Evidence</span><div>${(detail.screenshots || []).length} screenshots</div></div>
-          </div>
-          ${(detail.screenshots || []).map((image, index) => String(image.url || "").startsWith("https://") ? `<div class="aar-image"><img src="${escapeHtml(image.url)}" alt="Mission screenshot ${index + 1}"><span class="aar-image-name">${escapeHtml(image.filename || `Screenshot ${index + 1}`)}</span></div>` : "").join("")}
-          ${String(detail.receipt_url || "").startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(detail.receipt_url)}" target="_blank" rel="noopener noreferrer">Open Discord receipt</a>` : ""}
-          ${deleteRequest?.status ? "" : `<button type="button" class="btn-primary" data-aar-manage-edit="${escapeHtml(detail.id)}">Edit report</button>`}
-          ${deleteControl}
-        </section>`
-      : `<p class="aar-empty">No archive entry selected.</p>`
-    : aarManager.status === "loading"
-    ? `<p class="aar-empty">Querying the Watch archive…</p>`
-    : aarManager.status === "error"
-    ? `<p class="aar-empty" data-tone="error">${escapeHtml(aarManager.error || "AAR archive is unavailable.")}</p>`
-    : rows || `<p class="aar-empty">${aarManager.query ? "No AARs match this search." : "No Strategium-submitted AARs are in the archive."}</p>`;
-  app.innerHTML = `<section class="aar-room" aria-label="Manage submitted AARs">
-    ${aarManager.selectedId ? `<nav aria-label="AAR archive"><button type="button" class="btn-dossier-action" data-aar-manage-back><span aria-hidden="true">&larr;</span> Back to Manage AARs</button></nav>` : ""}
-    <header class="aar-heading"><div class="blood-overline">&gt; ARCHIVE CONTROL // STAFF ACCESS</div><h2>Manage AARs</h2><p class="aar-description">Search Strategium-submitted reports in the Watch archive.</p>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
-    ${aarManager.selectedId ? "" : `<label class="aar-field aar-field-wide"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission, participant, or submitter ID"></label>`}
-    ${!aarManager.selectedId ? `<section class="aar-section" aria-label="AAR edit requests"><h3>Edit Requests (${Number(aarManager.editRequestCount) || (aarManager.editRequests || []).length})</h3><div class="aar-management-list">${editRequestRows || `<p class="aar-empty">${aarManager.editRequestCount ? "Member edit requests are on another review page." : "No pending member correction requests."}</p>`}</div></section>
-    ${pendingDeletionRows ? `<section class="aar-section"><h3>Pending Deletions</h3><div class="aar-management-list">${pendingDeletionRows}</div></section>` : ""}
-    ${pendingEditRows ? `<section class="aar-section"><h3>Pending Edits</h3><div class="aar-management-list">${pendingEditRows}</div></section>` : ""}
-    ${reconciliationReviewRows ? `<section class="aar-section"><h3>Award Reconciliation Review</h3><div class="aar-management-list">${reconciliationReviewRows}</div></section>` : ""}` : ""}
-    ${!aarManager.selectedId && aarManager.queueTotal > 0 ? `<nav class="aar-submit-row" aria-label="Review queue pages"><button class="btn-dossier-action" type="button" data-aar-queue-page="previous"${aarManager.queueHistory.length ? "" : " disabled"}>Previous requests</button><span class="aar-upload-hint">${aarManager.queueOffset + 1}-${aarManager.queueNextOffset} of ${aarManager.queueTotal} review items</span><button class="btn-dossier-action" type="button" data-aar-queue-page="next"${aarManager.queueHasMore ? "" : " disabled"}>Next requests</button></nav>` : ""}
-    <div class="aar-management-list">${body}</div>
-    ${!aarManager.selectedId && aarManager.status === "ready" ? `<div class="aar-submit-row"><button type="button" class="btn-dossier-action" data-aar-manage-page="previous"${aarManager.offset <= 0 ? " disabled" : ""}>Previous</button><span class="aar-upload-hint">${aarManager.total ? `${aarManager.offset + 1}–${Math.min(aarManager.offset + aarManager.records.length, aarManager.total)} of ${aarManager.total}` : "0 records"}</span><button type="button" class="btn-dossier-action" data-aar-manage-page="next"${aarManager.hasMore ? "" : " disabled"}>Next</button></div>` : ""}
-    <div id="aar-management-status" class="aar-status" role="status" aria-live="polite"></div>
-  </section>`;
+  const requests = [
+    ...aarManager.editRequests.map(item => ({kind: "edit", id: item.record_id, review: item.request_id, label: "Edit request", title: AAR_PVE_MISSIONS.find(([value]) => value === item.submission?.mission)?.[1] || `AAR ${item.record_id}`, text: item.requester_name || item.requester_id})),
+    ...aarManager.pendingDeletions.map(item => ({kind: "delete", id: item.id, review: item.request_token || `delete-${item.id}`, label: "Deletion request", title: item.mission || `AAR ${item.id}`, text: item.reason})),
+    ...aarManager.pendingEdits.map(item => ({kind: "recovery", id: item.id, review: item.request_id, label: "Recovery", title: item.mission || `AAR ${item.id}`, text: item.status})),
+    ...aarManager.reconciliationReviews.map(item => ({kind: "award", id: item.record_id, review: item.review_id, label: "Award review", title: item.challenge || "Challenge award", text: `AAR ${item.record_id}`}))
+  ];
+  const archive = aarManager.records.map(item => ({kind: "", id: item.id, review: "", label: item.difficulty || "AAR", title: item.mission || `AAR ${item.id}`, text: (item.brother_names || []).join(", ")}));
+  const rows = (aarManager.view === "archive" ? archive : requests).map(item => `<a class="aar-review-item" href="${escapeHtml(aarReviewHref(item.id, item.kind, item.review))}" data-aar-review-open="${escapeHtml(item.id)}" data-review-type="${escapeHtml(item.kind)}" data-review-id="${escapeHtml(item.review)}" aria-current="${item.id === aarManager.selectedId && item.review === aarManager.reviewId}"><span class="aar-review-kind">${escapeHtml(item.label)}</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text || "")}</span><span>Open AAR ${escapeHtml(item.id)} &rarr;</span></a>`).join("");
+  const preview = aarManager.status === "loading-detail" ? `<p class="aar-empty" role="status">Loading AAR preview...</p>` : aarManager.status === "detail-error" ? `<p class="aar-empty" role="alert">${escapeHtml(aarManager.error)}</p>` : detail ? `${aarReportPreviewHtml(detail)}${aarSelectedReviewHtml(detail, deleteControl)}` : `<p class="aar-empty">Select a request or archive report.</p>`;
+  app.innerHTML = `<section class="aar-room" aria-label="Manage submitted AARs"><header class="aar-heading"><h2>Manage AARs</h2>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
+    <div class="aar-review-workspace${aarManager.selectedId ? " has-preview" : ""}"><aside class="aar-review-sidebar"><div class="war-pools" role="tablist" aria-label="AAR views"><button class="btn-dossier-action" role="tab" data-aar-view="requests" aria-selected="${aarManager.view !== "archive"}">Requests</button><button class="btn-dossier-action" role="tab" data-aar-view="archive" aria-selected="${aarManager.view === "archive"}">Archive</button></div>
+    ${aarManager.view === "archive" ? `<label class="aar-field"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission or participant"></label>` : `<label class="aar-field"><span class="field-label">Request type</span><select id="aar-review-filter" class="field-input">${[["all", "All requests"], ["edit", "Edits"], ["delete", "Deletions"], ["recovery", "Recovery"]].map(([key, label]) => `<option value="${key}"${aarManager.queueKind === key ? " selected" : ""}>${label} (${Number(aarManager.queueCounts[key]) || 0})</option>`).join("")}</select></label>`}
+    <div class="aar-review-list">${aarManager.status === "error" ? `<p class="aar-empty">${escapeHtml(aarManager.error)}</p>` : rows || `<p class="aar-empty">${aarManager.status === "loading" ? "Loading..." : "No matching entries."}</p>`}</div>
+    ${aarManager.view !== "archive" ? `<nav class="aar-submit-row" aria-label="Review queue pages"><button class="btn-dossier-action" type="button" data-aar-queue-page="previous"${aarManager.queueHistory.length ? "" : " disabled"}>&larr; Previous</button><span class="aar-upload-hint">${aarManager.queueTotal ? `${aarManager.queueOffset + 1}-${aarManager.queueNextOffset} of ${aarManager.queueTotal}` : "0 requests"}</span><button class="btn-dossier-action" type="button" data-aar-queue-page="next"${aarManager.queueHasMore ? "" : " disabled"}>Next &rarr;</button></nav>` : `<nav class="aar-submit-row" aria-label="Archive pages"><button class="btn-dossier-action" type="button" data-aar-manage-page="previous"${aarManager.offset <= 0 ? " disabled" : ""}>&larr; Previous</button><span class="aar-upload-hint">${aarManager.total} reports</span><button class="btn-dossier-action" type="button" data-aar-manage-page="next"${aarManager.hasMore ? "" : " disabled"}>Next &rarr;</button></nav>`}</aside>
+    <section class="aar-review-preview" aria-label="Website AAR preview">${aarManager.selectedId ? `<nav aria-label="AAR archive"><button type="button" class="btn-dossier-action" data-aar-manage-back><span aria-hidden="true">&larr;</span> Back to Manage AARs</button><a class="btn-dossier-action" href="${escapeHtml(aarReviewHref(aarManager.selectedId, aarManager.reviewType, aarManager.reviewId))}">AAR permalink</a></nav>` : ""}${preview}<div id="aar-management-status" class="aar-status" role="status" aria-live="polite"></div></section></div>
+    <dialog id="aar-evidence-viewer" class="aar-evidence-viewer"><button class="icon-btn" type="button" data-aar-evidence-close aria-label="Close screenshot">&times;</button><img alt="Full-size AAR evidence"></dialog></section>`;
+  document.querySelectorAll("[data-aar-review-open]").forEach(link => link.addEventListener("click", event => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    void openAarManagementRecord(link.dataset.aarReviewOpen, link.dataset.reviewType, link.dataset.reviewId, true);
+  }));
+  document.querySelectorAll("[data-aar-view]").forEach(button => button.addEventListener("click", () => {
+    aarManager.view = button.dataset.aarView;
+    renderAarManagement();
+  }));
+  document.getElementById("aar-review-filter")?.addEventListener("change", event => {
+    aarManager.queueKind = event.target.value;
+    aarManager.queueOffset = 0; aarManager.queueHistory = [];
+    void loadAarManagement();
+  });
+  document.querySelectorAll("[data-aar-evidence]").forEach(button => button.addEventListener("click", () => {
+    const image = aarManager.detail?.screenshots?.[Number(button.dataset.aarEvidence)];
+    if (!String(image?.url || "").startsWith("https://")) return;
+    const dialog = document.getElementById("aar-evidence-viewer");
+    dialog.querySelector("img").src = image.url;
+    dialog.showModal();
+  }));
+  document.querySelector("[data-aar-evidence-close]")?.addEventListener("click", () => document.getElementById("aar-evidence-viewer").close());
   document.getElementById("aar-management-search")?.addEventListener("input", event => {
     aarManager.query = event.target.value;
     aarManager.offset = 0;
@@ -4607,11 +4675,12 @@ function renderAarManagement() {
     button.disabled = true;
     try {
       if (button.dataset.aarRequestDecision === "approve") {
-        const item = aarManager.editRequests.find(proposal => proposal.request_id === identity);
+        const item = aarManager.detail?.review?.request_id === identity ? aarManager.detail.review : aarManager.editRequests.find(proposal => proposal.request_id === identity);
         if (!item?.submission) throw new Error("This proposal is unavailable. Reload the archive.");
         const result = await approveAarEditProposal(item, note);
         aarManager.notice = result.processing_pending ? "Edit approval is processing. Resume its pending archive update if needed." : "Proposed edit approved; the AAR and Discord receipt are synchronized.";
         await loadAarManagement();
+        await openAarManagementRecord(item.record_id, "edit", identity);
         return;
       }
       const response = await fetch(apiUrl(`/api/aar-management/edit-requests/${identity}/${button.dataset.aarRequestDecision}`), {method: "POST", credentials: "include", headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""}, body: JSON.stringify({note})});
@@ -4619,12 +4688,15 @@ function renderAarManagement() {
       if (!response.ok) throw new Error(result.message || result.error || "Edit-request update failed.");
       aarManager.notice = result.status === "resolved" ? "Correction request marked corrected." : "Correction request declined.";
       await loadAarManagement();
+      if (aarManager.selectedId) await openAarManagementRecord(aarManager.selectedId, "edit", identity);
     } catch (error) { status.textContent = error.message; button.disabled = false; }
   }));
   document.querySelector("[data-aar-manage-back]")?.addEventListener("click", () => {
     aarManager.selectedId = "";
     aarManager.detail = null;
+    aarManager.reviewType = ""; aarManager.reviewId = "";
     aarManager.status = "ready";
+    history.pushState({page: "manage-aars"}, "", "/manage-aars");
     renderAarManagement();
   });
   document.querySelector("[data-aar-manage-edit]")?.addEventListener("click", () => {
@@ -4679,7 +4751,7 @@ function renderAarManagement() {
       if (!response.ok) throw new Error(result.message || result.error || "Deletion could not be declined.");
       aarManager.notice = "Deletion declined. The AAR is retained and unlocked for editing.";
       await loadAarManagement();
-      if (aarManager.selectedId === recordId) await openAarManagementRecord(recordId);
+      if (aarManager.selectedId === recordId) await openAarManagementRecord(recordId, aarManager.reviewType, aarManager.reviewId);
     } catch (error) { status.textContent = error.message; button.disabled = false; }
   }));
   document.querySelectorAll("[data-aar-resume-edit]").forEach(button => button.addEventListener("click", async event => {
@@ -4695,6 +4767,7 @@ function renderAarManagement() {
       if (!response.ok) throw new Error(result.message || result.error || "AAR update could not be resumed.");
       aarManager.notice = result.processing_pending ? "The edit remains pending; resume again after the bridge is available." : "AAR archive and award reconciliation resumed successfully.";
       await loadAarManagement();
+      if (aarManager.selectedId === recordId) await openAarManagementRecord(recordId, aarManager.reviewType, aarManager.reviewId);
     } catch (error) {
       const status = document.getElementById("aar-management-status");
       if (status) status.textContent = error.message || "AAR update could not be resumed.";
@@ -4713,6 +4786,7 @@ function renderAarManagement() {
       if (!response.ok) throw new Error(result.message || result.error || "Review acknowledgement failed.");
       aarManager.notice = "Award review acknowledged and removed from the pending queue.";
       await loadAarManagement();
+      if (aarManager.selectedId === recordId) await openAarManagementRecord(recordId, aarManager.reviewType, aarManager.reviewId);
     } catch (error) {
       const status = document.getElementById("aar-management-status");
       if (status) status.textContent = error.message || "Review acknowledgement failed.";
@@ -5406,6 +5480,7 @@ async function setPage(page, push, originEl = null) {
   if (page === "submit-aar" && !state.auth.aar_allowed) return;
   if (page === "manage-aars" && state.auth.aar_management?.can_edit !== true) return;
   if (page === state.page) {
+    if (page === "manage-aars") await loadAarReviewLocation();
     if (page === "fortress" && push) navigate("strategium", {}, null, "out");
     return;
   }
@@ -5423,7 +5498,7 @@ async function setPage(page, push, originEl = null) {
   }
   if (page === "reach" && state.reachStatus === "idle") await loadReach();
   if (page === "blood" && state.chapterLore === null) await loadChapterLore();
-  if (page === "manage-aars") await loadAarManagement();
+  if (page === "manage-aars") { await loadAarManagement(); await loadAarReviewLocation(); }
   render(null, "out");
   if (page === "blood") checkBloodAudio();
   window.scrollTo({ top: 0, behavior: "instant" });
@@ -5505,9 +5580,9 @@ async function loadWar() {
 
 function warConsoleHtml() {
   const war = warView.data;
-  if (!state.auth.authenticated) return `<section id="war-console"><p>Sign in to access the Galactic War.</p></section>`;
-  if (!war) return `<section id="war-console" role="status">${escapeHtml(warView.error || "Campaign relay pending")}</section>`;
   const sectorId = warView.subsector || state.selectedSector || state.geography?.sectors[0]?.id || "";
+  if (!state.auth.authenticated) return `<section id="war-console"><p>Sign in to access the Galactic War.</p>${geographySystemDirectoryHtml(sectorId)}</section>`;
+  if (!war) return `<section id="war-console"><p role="status">${escapeHtml(warView.error || "Loading campaign permissions...")}</p><button class="btn-dossier-action" type="button" data-war-retry>Retry campaign connection</button>${geographySystemDirectoryHtml(sectorId)}</section>`;
   const campaign = war.campaigns[sectorId];
   const roles = new Set(war.actor.roles);
   const master = roles.has("Watch Master");
@@ -5525,6 +5600,7 @@ function warConsoleHtml() {
   const board = (war.boards[warView.planet] || []).filter(offer => (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === pool);
   const staff = war.actor.can_review || master || roles.has("Forgemaster");
   const canParticipate = war.actor.watch_brother === true && war.actor.active !== false;
+  const selectedPlanet = (state.geography?.bodies || []).find(body => body.id === warView.planet);
   const reviewPanel = staff ? `<section aria-label="Strike evidence review"><h3 class="tier-label">Evidence review</h3>
     ${(war.reviews || []).map(review => `<div class="reach-toolbar"><span>${escapeHtml(review.mission)} / AAR ${escapeHtml(review.aar_id)} / ${escapeHtml(review.reason)}</span>
       ${review.receipt_url?.startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(review.receipt_url)}" target="_blank" rel="noopener noreferrer">Evidence receipt</a>` : ""}
@@ -5538,6 +5614,7 @@ function warConsoleHtml() {
       ${campaign ? `<span>${campaign.resolution_pending ? "Awaiting on-time reports" : escapeHtml(titleCase(campaign.status))} / Tyranids / ${Number(campaign.balance).toFixed(2)}%</span><progress max="100" value="${Number(campaign.balance)}" aria-label="Deathwatch balance of power"></progress><span>${escapeHtml(new Date(campaign.deadline).toLocaleString())}</span>` : `<span>Secure</span>`}
       ${canInvade && campaign?.status !== "contested" ? button("invade", "Declare Tyranid invasion") : ""}
     </div>
+    ${commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant") ? `<details class="war-command-tools"><summary>Company command and system assignment</summary>` : ""}
     <div class="reach-toolbar">
       ${commitments.map(([identity]) => `<span class="status-tag">Company ${escapeHtml(COMPANY_NAMES[identity] || identity)}</span>`).join("") || "No companies committed"}
       ${commander ? select("company_id", "Company", Object.entries(COMPANY_NAMES).filter(([identity]) => master || identity === company).map(([identity, name]) => option(identity, name)).join("")) + button("commit", roles.has("Watch Lieutenant") && !master && !roles.has("Watch Captain") ? "Request commitment" : "Commit company") : ""}
@@ -5549,7 +5626,10 @@ function warConsoleHtml() {
       <label>Cover reason <input class="reach-select" data-war-field="reason" maxlength="300" aria-label="Cover reason"></label>
       ${button("assign", "Assign system")}
     </div>` : ""}
+    ${commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant") ? "</details>" : ""}
+    ${geographySystemDirectoryHtml(sectorId)}
     <div class="reach-toolbar">${select("planet_id", "Planet", option("", "Select planet", !warView.planet) + planets.map(planet => option(planet.id, `${planet.name}${planet.terrain_provisional ? " [provisional terrain]" : ""}`, planet.id === warView.planet)).join(""))}</div>
+    ${selectedPlanet ? `<div class="war-planet-overview">${geographyBodyIcon(selectedPlanet)}<div><h3>${escapeHtml(selectedPlanet.name)}</h3><p>${escapeHtml(titleCase(selectedPlanet.kind))}${selectedPlanet.battleEligible ? " / Battle eligible" : ""}${selectedPlanet.description ? `<br>${escapeHtml(selectedPlanet.description)}` : ""}</p></div></div>` : ""}
     <div class="war-pools" role="group" aria-label="Strike format">
       <button class="btn-dossier-action" type="button" data-war-pool="vanilla" aria-pressed="${pool === "vanilla"}"${warView.busy ? " disabled" : ""}>Vanilla</button>
       <button class="btn-dossier-action" type="button" data-war-pool="omega" aria-pressed="${pool === "omega"}"${warView.busy ? " disabled" : ""}>Omega</button>
@@ -5562,7 +5642,7 @@ function warConsoleHtml() {
       ${["available", "recruiting"].includes(offer.status) && (canParticipate || offer.participants.includes(war.actor.id)) ? button(offer.participants.includes(war.actor.id) ? "leave" : "join", offer.participants.includes(war.actor.id) ? "Withdraw" : "Join strike", `data-strike="${escapeHtml(offer.id)}" `) : ""}
       ${["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", "Submit AAR", `data-strike="${escapeHtml(offer.id)}" `) : ""}
     </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("") || (warView.planet ? `<p class="aar-empty">No strikes on this board.</p>` : "")}</div>
-    ${reviewPanel}
+    ${reviewPanel ? `<details class="war-review-tools"><summary>Evidence review and credit corrections</summary>${reviewPanel}</details>` : ""}
     <div role="status" aria-live="polite">${escapeHtml(warView.error)}</div>
   </section>`;
 }
@@ -5587,6 +5667,7 @@ function refreshWarConsole() {
   const controls = [...(document.getElementById("war-console")?.querySelectorAll?.("input, textarea, select") || [])];
   drafts.forEach(draft => {
     if (!draft.attribute) return;
+    if (draft.attribute === "data-war-field" && ["subsector_id", "planet_id"].includes(draft.identity[0])) return;
     const control = controls.find(element => attributes.every((name, index) => element.getAttribute(name) === draft.identity[index]));
     if (!control || (control.tagName === "SELECT" && ![...control.options].some(option => option.value === draft.value))) return;
     control.value = draft.value;
@@ -5618,6 +5699,8 @@ document.addEventListener("change", async event => {
     showSectorLevel(field.value);
     await loadWar(); refreshWarConsole();
   } else if (field.dataset.warField === "planet_id") {
+    const world = state.geography?.bodies?.find(body => body.id === field.value);
+    if (world && state.selectedSystem !== world.systemId) showSystemLevel(world.systemId);
     warView.planet = field.value;
     refreshWarConsole();
     await loadWar(); refreshWarConsole();
@@ -5625,6 +5708,17 @@ document.addEventListener("change", async event => {
 });
 
 document.addEventListener("click", async event => {
+  if (event.target.closest("[data-war-retry]")?.dataset.warRetry !== undefined) { await loadWar(); refreshWarConsole(); return; }
+  const worldButton = event.target.closest("[data-war-planet]");
+  if (worldButton?.dataset.warPlanet && !warView.busy) {
+    warView.planet = worldButton.dataset.warPlanet;
+    refreshWarConsole();
+    await loadWar(); refreshWarConsole();
+    return;
+  }
+  if (event.target.closest("[data-war-clear-planet]")?.dataset.warClearPlanet !== undefined) {
+    warView.planet = ""; refreshWarConsole(); return;
+  }
   const poolButton = event.target.closest("[data-war-pool]");
   if (poolButton?.dataset.warPool && ["vanilla", "omega"].includes(poolButton.dataset.warPool)) {
     if (warView.busy) return;
@@ -7348,8 +7442,11 @@ function setupGeographyCanvas() {
         if (!nearestBody || distance < nearestBody.distance) nearestBody = { body, distance };
       }));
       if (nearestBody && nearestBody.distance < 18) {
-        state.selectedSector = null;
-        openGeographySystem(nearestBody.body.systemId);
+        showSystemLevel(nearestBody.body.systemId);
+        if (warView.data?.planets.some(planet => planet.id === nearestBody.body.id)) {
+          warView.planet = nearestBody.body.id;
+          void loadWar().then(refreshWarConsole);
+        }
         return;
       }
     }
@@ -7359,9 +7456,7 @@ function setupGeographyCanvas() {
     }, null);
     if (ratio >= SYSTEM_HOVER_RATIO && nearestSystem && nearestSystem.distance < 22) {
       zoomAnchor = null;
-      state.selectedSystem = nearestSystem.system.id;
-      state.selectedSector = null;
-      openGeographySystem(nearestSystem.system.id);
+      showSystemLevel(nearestSystem.system.id);
       return;
     }
     const sector = geographySectorAt(world);
@@ -7432,12 +7527,17 @@ function mobileGeographyHtml() {
   </section>`;
 }
 
-function geographySectorPanelHtml(sectorId, selectedSystemId) {
+function geographySystemDirectoryHtml(sectorId) {
   const sector = state.geography?.sectors.find(item => item.id === sectorId);
   if (!sector) return "";
   const systems = state.geography.systems.filter(system => system.sectorId === sector.id).sort((a, b) => a.name.localeCompare(b.name));
-  const selectedSystem = systems.find(system => system.id === selectedSystemId);
-  const systemCards = systems.map(system => {
+  const selectedSystem = systems.find(system => system.id === state.selectedSystem);
+  if (selectedSystem && warView.planet) {
+    const star = state.geography.bodies.find(body => body.systemId === selectedSystem.id && body.kind === "star");
+    const routes = state.geography.routes.filter(route => route.sourceSystemId === selectedSystem.id || route.targetSystemId === selectedSystem.id);
+    return `<section class="war-system-directory"><h3>${escapeHtml(selectedSystem.name)}</h3><p class="aar-upload-hint">${star?.stellarClass ? `Class ${escapeHtml(star.stellarClass)} star / ` : ""}${routes.length} charted warp routes</p><button class="btn-dossier-action" type="button" data-war-clear-planet>&larr; System worlds</button></section>`;
+  }
+  const systemCards = (selectedSystem ? [selectedSystem] : systems).map(system => {
     const bodies = state.geography.bodies.filter(body => body.systemId === system.id);
     const star = bodies.find(body => body.kind === "star");
     const worlds = bodies.filter(body => body.kind !== "star").sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name));
@@ -7445,9 +7545,19 @@ function geographySectorPanelHtml(sectorId, selectedSystemId) {
     return `<button class="reach-sector-system" type="button" data-sector-system="${escapeHtml(system.id)}" aria-pressed="${selected}">
       <span class="reach-sector-system-name">${escapeHtml(system.name)}</span>
       <span class="reach-sector-system-meta">${worlds.length} worlds${star?.stellarClass ? ` · Class ${escapeHtml(star.stellarClass)} star` : ""} · Select to focus</span>
-      ${selected ? `<span class="reach-sector-system-worlds">${worlds.map(world => `<span>${escapeHtml(world.name)} · ${escapeHtml(titleCase(world.kind))}</span>`).join("")}</span>` : ""}
-    </button>`;
+    </button>${selected ? `<div class="war-system-worlds">${worlds.map(world => {
+      const playable = warView.data?.planets.some(planet => planet.id === world.id);
+      return playable ? `<button class="war-world-select" type="button" data-war-planet="${escapeHtml(world.id)}" aria-pressed="${world.id === warView.planet}">${geographyBodyIcon(world)}<span>${escapeHtml(world.name)} / ${escapeHtml(titleCase(world.kind))}</span></button>` : `<div class="war-world-select">${geographyBodyIcon(world)}<span>${escapeHtml(world.name)} / ${escapeHtml(titleCase(world.kind))}</span></div>`;
+    }).join("")}<span class="aar-upload-hint">${state.geography.routes.filter(route => route.sourceSystemId === system.id || route.targetSystemId === system.id).length} charted warp routes</span></div>` : ""}`;
   }).join("");
+  return `<section class="war-system-directory" aria-label="Systems in ${escapeHtml(sector.name)}"><h3>Systems and worlds (${systems.length})</h3>${systemCards || `<p class="aar-empty">No charted systems in this sector.</p>`}</section>`;
+}
+
+function geographySectorPanelHtml(sectorId, selectedSystemId) {
+  const sector = state.geography?.sectors.find(item => item.id === sectorId);
+  if (!sector) return "";
+  const systems = state.geography.systems.filter(system => system.sectorId === sector.id);
+  const selectedSystem = systems.find(system => system.id === selectedSystemId);
   return `<div class="reach-sector-panel-head">
       <div>
         <div class="reach-sector-panel-kicker">${selectedSystem ? "Selected system" : `Sector ${String(sector.number).padStart(2, "0")} // ${systems.length} systems`}</div>
@@ -7461,9 +7571,6 @@ function geographySectorPanelHtml(sectorId, selectedSystemId) {
     </div>
     <div class="reach-sector-panel-body">
       ${warConsoleHtml()}
-      <details><summary>Systems and worlds (${systems.length})</summary><div class="reach-sector-panel-list" aria-label="Systems in ${escapeHtml(sector.name)}">
-        ${systemCards || `<div class="reach-sector-empty">No charted systems in this sector.</div>`}
-      </div></details>
     </div>`;
 }
 
@@ -7480,6 +7587,7 @@ function updateGeographySectorPanel() {
     warView.planet = "";
   }
   panel.innerHTML = open ? geographySectorPanelHtml(sectorId, state.selectedSystem) : "";
+  if (open && state.auth.authenticated && !warView.data && !warView.error) void loadWar().then(refreshWarConsole);
 }
 
 function renderReach() {
@@ -8249,7 +8357,7 @@ function wireEvents() {
     }
     const mobileSystem = e.target.closest("[data-mobile-system]");
     if (mobileSystem) {
-      openGeographySystem(mobileSystem.dataset.mobileSystem);
+      showSystemLevel(mobileSystem.dataset.mobileSystem);
       return;
     }
     const levelBtn = e.target.closest("[data-reach-level]");
@@ -8490,11 +8598,12 @@ async function init() {
     state.page === "blood" ? loadChapterLore() : null
   ]);
   await loadAuth();
+  if (state.page === "reach" && state.auth.authenticated) await loadWar();
   if (state.page === "fortress" && state.view === "landing" && !bootSeen()) {
     document.body.classList.add("atlas-booting");
   }
   render();
-  if (state.page === "manage-aars" && state.auth.aar_management?.can_edit === true) await loadAarManagement();
+  if (state.page === "manage-aars" && state.auth.aar_management?.can_edit === true) { await loadAarManagement(); await loadAarReviewLocation(); }
   if (state.page === "fortress" && window.location.protocol.startsWith("http")) {
     history.replaceState({ page: "fortress", view: "landing" }, "", "/");
   }

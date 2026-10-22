@@ -276,6 +276,18 @@ def test_management_proxy_reads_bounded_complete_responses(monkeypatch):
     assert server._aar_management_request("42", "list", {}) is None
 
 
+def test_staff_preview_proxy_binds_review_to_selected_record(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "_aar_access", lambda user: {"allowed": True, "aar_management": {"can_edit": True, "can_delete": False}})
+    captured = []
+    monkeypatch.setattr(server, "_aar_management_request", lambda *args: captured.append(args) or (200, {"id": "123", "review": {"status": "pending"}}))
+    cookie = _session_value({"id": "42", "name": "Reviewer", "csrf": "csrf-token"})
+    path = local_site + "/api/aar-management/records/123?review_type=edit&review_id=" + "a" * 24
+    with urllib.request.urlopen(urllib.request.Request(path, headers={"Cookie": f"strategium_session={cookie}"})) as response:
+        assert response.status == 200
+    assert captured == [("42", "records", {"review_type": "edit", "review_id": "a" * 24}, "123")]
+
+
 def test_staff_deletion_decline_requires_csrf_and_editor_access(local_site, monkeypatch):
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
     monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
@@ -1441,7 +1453,7 @@ const offer = {id: 'offer', attempt_id: 'GW-' + 'a'.repeat(32), name: 'Psychic H
 const context = {
     state: {auth: {authenticated: true}, selectedSector: 'alpha', geography: {sectors: [{id:'alpha',name:'Alpha'}],systems: []}},
     warView: {busy: false, error: '', planet: 'world', subsector: 'alpha', pool: 'omega', data: {version: 1, actor: {id: '42', roles: ['Watch Captain'], company_id: '1'}, campaigns: {}, commitments: {}, kill_teams: [], proposals: [], planets: [{id: 'world', name:'World',subsector_id:'alpha'}], boards: {world: [offer, {...offer,id:'vanilla-offer',name:'Vanilla only',aar_mode:'ops_strat',pool:'vanilla',capacity:3}]}, content: {objectives:29}, participant_names: {'42':'Captain','43':'Librarian'}}},
-    COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? ''), titleCase: value=>value,
+    COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? ''), titleCase: value=>value, geographySystemDirectoryHtml:()=>'',
     aarDraft: {memberDirectory:new Map(), managementRecordId:'old', idempotencyKey:'old', reviewing:true},
     document: {addEventListener:(name,callback)=>{handlers[name]=callback;},getElementById:()=>consoleElement,querySelectorAll:()=>[]},
     setPage:async (...args)=>navigation.push(args), renderReach:()=>{throw new Error('Canvas must stay mounted');},
@@ -1468,6 +1480,13 @@ assert.match(context.warConsoleHtml(),/data-war-action="review"/);
 assert.match(context.warConsoleHtml(),/data-war-action="reverse"/);
 assert.match(context.warConsoleHtml(),/Settled strike to reverse/);
 context.warView.data.actor.can_review=false;
+for(const [role,invade,commit] of [['Forgemaster',true,false],['Watch Master',true,true],['Watch Captain',false,true],['Watch Lieutenant',false,true],['Watch Sergeant',false,false],['Watch Brother',false,false]]){
+    context.warView.data.actor.roles=[role];
+    const controls=context.warConsoleHtml();
+    assert.equal(controls.includes('data-war-action="invade"'),invade,role);
+    assert.equal(controls.includes('data-war-action="commit"'),commit,role);
+}
+context.warView.data.actor.roles=['Watch Captain'];
 (async()=>{
     await handlers.click({target:{closest:()=>({dataset:{warPool:'vanilla'}})}});
     assert.equal(context.warView.pool,'vanilla');
@@ -1501,6 +1520,25 @@ context.warView.data.actor.can_review=false;
 """
         result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for authenticated map initialization")
+def test_first_reach_render_loads_roles_after_authentication():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const calls=[];
+const context={state:{auth:{authenticated:false}},wireEvents:()=>{},pageFromLocation:()=> 'reach',
+ loadSavedSettings:async()=>{},loadData:async()=>{},loadSiteConfig:async()=>{},
+ loadReach:async()=>{calls.push('geography');},loadAuth:async()=>{calls.push('auth');context.state.auth.authenticated=true;},
+ loadWar:async()=>{assert(context.state.auth.authenticated);calls.push('war');},
+ render:()=>{assert(calls.includes('war'));calls.push('render');},runCogitatorBoot:()=>{},refreshReach:()=>{},setInterval:()=>{},REACH_REFRESH_MS:30000};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('async function init()'),html.lastIndexOf('init();')),context);
+context.init().then(()=>assert.deepEqual(calls,['geography','auth','war','render'])).catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for campaign request ordering")
@@ -1708,13 +1746,13 @@ new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 assert.match(html, /aarManager.selectedId \? `<nav[^\n]*data-aar-manage-back[^\n]*Back to Manage AARs/);
 assert.equal((html.match(/data-aar-manage-back>/g) || []).length, 1);
 const navigation = html.indexOf('data-aar-manage-back>');
-assert(navigation < html.indexOf('${pendingDeletionRows ?'));
+assert(navigation < html.indexOf('${preview}<div id="aar-management-status"'));
 const start = html.indexOf('async function openAarManagementRecord(');
 const end = html.indexOf('function renderAarManagement()', start);
 let finishFetch;
 const context = {
     aarManager: { selectedId: '', detail: null, status: 'ready', query: 'Inferno', offset: 25 },
-    renderAarManagement: () => {}, apiUrl: path => path,
+    renderAarManagement: () => {}, apiUrl: path => path, history:{pushState:()=>{}},
     fetch: () => new Promise(resolve => { finishFetch = resolve; })
 };
 vm.createContext(context);
@@ -1829,14 +1867,17 @@ def test_unit_detail_headers_and_overview_symbols_share_scoped_layout():
     assert 'style="--team-count:${teamList.length}"' in company
 
 
-def test_company_title_text_can_shrink_beside_its_symbol():
+def test_company_titles_stay_on_one_line_beside_their_symbols():
     page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
     overview = page.split("function renderStrategium()", 1)[1].split("function drawMapConnectors()", 1)[0]
     assert '<span class="company-plate-name">Company ${COMPANY_NAMES[id]}</span>' in overview
     rule = re.search(r"\.company-plate-name\s*\{([^}]+)\}", page)
     assert rule is not None
     assert "min-width: 0" in rule.group(1)
-    assert "overflow-wrap: anywhere" in rule.group(1)
+    assert "white-space: nowrap" in rule.group(1)
+    assert "letter-spacing: 0" in rule.group(1)
+    assert "@media (min-width: 761px) and (max-width: 1024px)" in page
+    assert ".map-company-row .company-slot { grid-column: auto; grid-row: auto; }" in page
     assert "if (!map || !svg || window.innerWidth <= 760) return;" in page
 
 

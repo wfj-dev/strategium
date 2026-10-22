@@ -969,7 +969,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/aar-management":
             self._get_aar_management_list(urllib.parse.parse_qs(parsed.query))
         elif re.fullmatch(r"/api/aar-management/records/[0-9]{1,20}", parsed.path):
-            self._get_aar_management_detail(parsed.path.rsplit("/", 1)[-1])
+            self._get_aar_management_detail(parsed.path.rsplit("/", 1)[-1], query=urllib.parse.parse_qs(parsed.query))
         elif re.fullmatch(r"/api/aar-own/records/[0-9]{1,20}", parsed.path):
             self._get_aar_management_detail(parsed.path.rsplit("/", 1)[-1], member_access=True)
         elif parsed.path == "/api/chapter-lore":
@@ -1554,6 +1554,10 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if not user:
             return
         search = (query.get("q") or [""])[0].strip()
+        queue_kind = (query.get("queue_kind") or ["all"])[0]
+        if queue_kind not in {"all", "edit", "delete", "recovery"}:
+            self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_queue_kind"})
+            return
         if len(search) > 64:
             self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_query"})
             return
@@ -1563,14 +1567,14 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         except ValueError:
             self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_offset"})
             return
-        response = _aar_management_request(str(user["id"]), "list", {"query": search, "offset": offset, "queue_offset": queue_offset})
+        response = _aar_management_request(str(user["id"]), "list", {"query": search, "offset": offset, "queue_offset": queue_offset, "queue_kind": queue_kind})
         if response is None:
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
             return
         status, payload = response
         self._send(status, payload, {"Cache-Control": "no-store"})
 
-    def _get_aar_management_detail(self, record_id: str, *, member_access: bool = False) -> None:
+    def _get_aar_management_detail(self, record_id: str, *, member_access: bool = False, query: dict[str, list[str]] | None = None) -> None:
         if member_access:
             user = self._cookie_user()
             if not user:
@@ -1582,7 +1586,15 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             user, _access = self._aar_management_access("can_edit")
             if not user:
                 return
-        response = _aar_management_request(str(user["id"]), "own-record" if member_access else "records", {}, record_id)
+        review = {}
+        if not member_access and query and query.get("review_type"):
+            review_type = query["review_type"][0]
+            review_id = (query.get("review_id") or [""])[0]
+            if review_type not in {"edit", "delete", "recovery", "award"} or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", review_id):
+                self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_review"})
+                return
+            review = {"review_type": review_type, "review_id": review_id}
+        response = _aar_management_request(str(user["id"]), "own-record" if member_access else "records", review, record_id)
         if response is None:
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
             return
