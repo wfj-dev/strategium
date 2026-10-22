@@ -9,3 +9,21 @@ jericho-strategium.duckdns.org {
 
     reverse_proxy 127.0.0.1:8787
 }
+
+    watchfortressjericho.duckdns.org {
+        tls {
+            key_type rsa2048
+            issuer acme {
+                preferred_chains {
+                    root_common_name "ISRG Root X1"
+                }
+            }
+        }
+
+        # Website AAR and membership bridge routes must stay private.
+        handle /v1/aar/* {
+            respond "not found" 404
+        }
+
+        reverse_proxy 127.0.0.1:8080
+    }
