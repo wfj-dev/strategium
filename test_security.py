@@ -209,7 +209,7 @@ def test_member_correction_requests_require_csrf_but_not_editor_permission(local
     monkeypatch.setattr(server, "_aar_management_request", lambda *args: captured.append(args) or (201, {"ok": True, "status": "pending"}))
     cookie = _session_value({"id": "42", "name": "Brother", "csrf": "csrf-token"})
     headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "Content-Type": "application/json"}
-    body = json.dumps({"record_id": "123", "requested_changes": "Correct armory data."}).encode()
+    body = json.dumps({"record_id": "123", "submission": {"armory_data": 3}, "original_record_hash": "a" * 64}).encode()
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(urllib.request.Request(local_site + "/api/aar-edit-requests", data=body, headers=headers))
     assert error.value.code == 403
@@ -226,10 +226,79 @@ def test_member_correction_requests_require_csrf_but_not_editor_permission(local
     assert len(captured) == 1
 
 
+def test_member_owned_aar_read_and_delete_request_keep_staff_routes_private(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    monkeypatch.setattr(server, "_aar_access", lambda user: {"allowed": True, "aar_management": {"can_edit": False, "can_delete": False}})
+    captured = []
+    monkeypatch.setattr(server, "_aar_management_request", lambda *args: captured.append(args) or (200, {"id": "123"}))
+    cookie = _session_value({"id": "42", "name": "Brother", "csrf": "csrf-token"})
+    headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "Content-Type": "application/json"}
+    with urllib.request.urlopen(urllib.request.Request(local_site + "/api/aar-own/records/123", headers=headers)) as response:
+        assert response.status == 200
+        assert response.headers["Cache-Control"] == "no-store"
+    assert captured[0] == ("42", "own-record", {}, "123")
+    deletion = local_site + "/api/aar-own/records/123/delete-request"
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(urllib.request.Request(deletion, data=b'{"reason":"Duplicate report"}', headers=headers))
+    assert error.value.code == 403
+    headers["X-CSRF-Token"] = "csrf-token"
+    with urllib.request.urlopen(urllib.request.Request(deletion, data=b'{"reason":"Duplicate report"}', headers=headers)) as response:
+        assert response.status == 200
+    assert captured[-1][0:2] == ("42", "own-delete-request")
+    for path in ("/api/aar-management/records/123", "/api/aar-management/records/123/delete-confirm"):
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(urllib.request.Request(local_site + path, data=b'{}' if path.endswith("confirm") else None, headers=headers))
+        assert error.value.code == 403
+
+
 def test_request_is_secure_uses_forwarded_proto() -> None:
     headers = {"X-Forwarded-Proto": "https"}
     assert _request_is_secure(headers)
     assert not _request_is_secure({"X-Forwarded-Proto": "http"})
+
+
+def test_management_proxy_reads_bounded_complete_responses(monkeypatch):
+    monkeypatch.setenv("STRATEGIUM_BOT_SHARED_SECRET", "review-response-test-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    response_body = json.dumps({"pending_deletions": [{"reason": "x" * 150000}]}).encode()
+    class Response:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def read(self, limit):
+            return response_body[:limit]
+    monkeypatch.setattr(server.urllib.request, "build_opener", lambda *args: type("Opener", (), {"open": lambda *args, **kwargs: Response()})())
+    assert server._aar_management_request("42", "list", {}) == (200, json.loads(response_body))
+    response_body = b"x" * (server.MAX_AAR_MANAGEMENT_RESPONSE_BYTES + 10)
+    assert server._aar_management_request("42", "list", {}) is None
+
+
+def test_staff_deletion_decline_requires_csrf_and_editor_access(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    capabilities = {"can_edit": False, "can_delete": False}
+    monkeypatch.setattr(server, "_aar_access", lambda user: {"allowed": True, "aar_management": capabilities})
+    captured = []
+    monkeypatch.setattr(server, "_aar_management_request", lambda *args: captured.append(args) or (200, {"status": "cancelled"}))
+    cookie = _session_value({"id": "42", "name": "Reviewer", "csrf": "csrf-token"})
+    headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "Content-Type": "application/json", "X-CSRF-Token": "csrf-token"}
+    path = local_site + "/api/aar-management/records/123/delete-reject"
+    for editor, csrf, expected in [(False, "csrf-token", 403), (True, "wrong", 403), (True, "csrf-token", 200)]:
+        capabilities["can_edit"] = editor
+        headers["X-CSRF-Token"] = csrf
+        request = urllib.request.Request(path, data=b'{"note":"Keep the valid report"}', headers=headers)
+        if expected == 200:
+            with urllib.request.urlopen(request) as response:
+                assert response.status == expected
+        else:
+            with pytest.raises(urllib.error.HTTPError) as error:
+                urllib.request.urlopen(request)
+            assert error.value.code == expected
+    assert len(captured) == 1
+    assert captured[0][0:2] == ("42", "delete-reject")
 
 
 @pytest.mark.parametrize(
@@ -1116,8 +1185,11 @@ def test_aar_management_request_uses_matching_private_bot_paths_and_signatures(m
     cases = [
         ("list", "", "/v1/aar/management/list"),
         ("records", "123", "/v1/aar/management/records/123"),
+        ("own-record", "123", "/v1/aar/own/records/123"),
+        ("own-delete-request", "123", "/v1/aar/own/records/123/delete-request"),
         ("delete-request", "123", "/v1/aar/management/records/123/delete-request"),
         ("delete-confirm", "123", "/v1/aar/management/records/123/delete-confirm"),
+        ("delete-reject", "123", "/v1/aar/management/records/123/delete-reject"),
         ("edit-resume", "123", "/v1/aar/management/records/123/edit-resume"),
         ("reviews/0123456789abcdef01234567/acknowledge", "123", "/v1/aar/management/records/123/reviews/0123456789abcdef01234567/acknowledge"),
     ]
@@ -1364,14 +1436,16 @@ const html = fs.readFileSync(process.argv[1], 'utf8');
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 const handlers = {};
 const navigation = [];
+const consoleElement = {outerHTML:''};
 const offer = {id: 'offer', attempt_id: 'GW-' + 'a'.repeat(32), name: 'Psychic Hunt', briefing: 'Support the operation', aar_mission: 'Inferno', aar_mission_value: 'pve_inferno', aar_mode: 'omega', aar_difficulty: '@Omega', status: 'locked', capacity: 5, required_rank: 'Watch Librarian', specialist_id: '43', participants: ['42','43','44','45','46']};
 const context = {
     state: {auth: {authenticated: true}, selectedSector: 'alpha', geography: {sectors: [{id:'alpha',name:'Alpha'}],systems: []}},
     warView: {busy: false, error: '', planet: 'world', subsector: 'alpha', pool: 'omega', data: {version: 1, actor: {id: '42', roles: ['Watch Captain'], company_id: '1'}, campaigns: {}, commitments: {}, kill_teams: [], proposals: [], planets: [{id: 'world', name:'World',subsector_id:'alpha'}], boards: {world: [offer, {...offer,id:'vanilla-offer',name:'Vanilla only',aar_mode:'ops_strat',pool:'vanilla',capacity:3}]}, content: {objectives:29}, participant_names: {'42':'Captain','43':'Librarian'}}},
     COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? ''), titleCase: value=>value,
     aarDraft: {memberDirectory:new Map(), managementRecordId:'old', idempotencyKey:'old', reviewing:true},
-    document: {addEventListener:(name,callback)=>{handlers[name]=callback;}},
-    setPage:async (...args)=>navigation.push(args), renderReach:()=>{}
+    document: {addEventListener:(name,callback)=>{handlers[name]=callback;},getElementById:()=>consoleElement,querySelectorAll:()=>[]},
+    setPage:async (...args)=>navigation.push(args), renderReach:()=>{throw new Error('Canvas must stay mounted');},
+    loadWar:async()=>{},showSectorLevel:identity=>{context.state.selectedSector=identity;}
 };
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
@@ -1382,15 +1456,27 @@ assert.match(markup,/data-war-action="cancel"/);
 assert.doesNotMatch(markup,/data-war-action="deploy"|data-war-action="ready"|coordinator/i);
 assert.doesNotMatch(markup,/Vanilla only/);
 assert.match(markup,/data-war-pool="omega" aria-pressed="true"/);
+assert.match(markup,/1 locked/);
+assert.match(markup,/0 available/);
+assert.match(markup,/Game mission/);
+assert.match(markup,/Briefing theme/);
+assert.doesNotMatch(markup,/briefing types/);
 assert.doesNotMatch(markup,/aria-label="Strike evidence review"/);
 context.warView.data.actor.can_review=true;
 context.warView.data.reviews=[{mission:'Inferno',aar_id:'99',reason:'Evidence reused',status:'pending',participants:['43'],strike_id:'held',receipt_url:'https://discord.com/channels/1/2/99'}];
 assert.match(context.warConsoleHtml(),/data-war-action="review"/);
 assert.match(context.warConsoleHtml(),/data-war-action="reverse"/);
+assert.match(context.warConsoleHtml(),/Settled strike to reverse/);
 context.warView.data.actor.can_review=false;
 (async()=>{
     await handlers.click({target:{closest:()=>({dataset:{warPool:'vanilla'}})}});
     assert.equal(context.warView.pool,'vanilla');
+    assert.match(consoleElement.outerHTML,/Vanilla only/);
+    await handlers.change({target:{closest:()=>({dataset:{warField:'planet_id'},value:'world'})}});
+    assert.match(consoleElement.outerHTML,/war-console/);
+    await handlers.change({target:{closest:()=>({dataset:{warField:'subsector_id'},value:'alpha'})}});
+    assert.equal(context.state.selectedSector,'alpha');
+    context.warView.planet='world';
     assert.match(context.warConsoleHtml(),/Vanilla only/);
     assert.doesNotMatch(context.warConsoleHtml(),/Psychic Hunt/);
     context.warView.pool='omega';
@@ -1415,6 +1501,129 @@ context.warView.data.actor.can_review=false;
 """
         result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for campaign request ordering")
+def test_war_selection_ignores_late_responses():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const pending = [];
+const context = {
+    state:{auth:{authenticated:true},geography:{sectors:[]}},
+    warView:{requestSequence:0,planet:'first'},apiUrl:path=>path,
+    fetch:()=>new Promise(resolve=>pending.push(resolve))
+};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('async function loadWar()'),html.indexOf('function warConsoleHtml()')),context);
+(async()=>{
+    const first=context.loadWar();
+    context.warView.planet='second';
+    const second=context.loadWar();
+    pending[1]({ok:true,json:async()=>({planet:'second',campaigns:{}})});
+    await second;
+    pending[0]({ok:true,json:async()=>({planet:'first',campaigns:{}})});
+    await first;
+    assert.equal(context.warView.data.planet,'second');
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for focused campaign polling")
+def test_war_polling_continues_with_focus_and_preserves_drafts():
+    source = r"""
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+let loads=0,focused=null;
+const makeInput=()=>({value:'',selectionStart:0,selectionEnd:0,tagName:'INPUT',dataset:{},hasAttribute:name=>name==='data-war-reversal-reason',getAttribute:name=>name==='data-war-reversal-reason'?'':null,focus(){focused=this;},setSelectionRange(start,end){this.selectionStart=start;this.selectionEnd=end;}});
+let input=makeInput();input.value='Verified duplicate credit';input.selectionStart=4;input.selectionEnd=8;focused=input;
+const panel={querySelectorAll:()=>[input],set outerHTML(value){input=makeInput();}};
+const context={state:{page:'reach',geography:{sectors:[]}},warView:{busy:false,data:{}},
+ document:{visibilityState:'visible',get activeElement(){return focused;},querySelector:()=>null,querySelectorAll:()=>[],getElementById:identity=>identity==='war-console'?panel:{}},
+ loadReach:async()=>{loads++;},warConsoleHtml:()=>'<section></section>',renderReach:()=>{throw Error('Canvas remounted');},updateStatusBadge:()=>{},titleCase:value=>value};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function refreshWarConsole()'),html.indexOf('document.addEventListener("change", async event =>')),context);
+vm.runInContext(html.slice(html.indexOf('async function refreshReach()'),html.indexOf('function visibleReachDirectives()')),context);
+(async()=>{
+ await context.refreshReach();
+ assert.equal(loads,1);assert.equal(input.value,'Verified duplicate credit');
+ assert.equal(focused,input);assert.equal(input.selectionStart,4);assert.equal(input.selectionEnd,8);
+ focused={dataset:{warPool:'omega'},closest:()=>({})};
+ await context.refreshReach();await context.refreshReach();assert.equal(loads,3);
+ context.loadReach=async()=>{context.state.page='submit-aar';};
+ context.refreshWarConsole=()=>{throw Error('Wrong page refreshed');};
+ await context.refreshReach();
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for audited deletion handlers")
+def test_forgemaster_direct_deletion_requires_confirmation_and_resumes_failures():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const requests=[];
+const confirmations=[];
+const status={textContent:''};
+let confirmed=false;
+let failConfirmation=false;
+let pending=false;
+let refreshes=0;
+const context={
+    state:{auth:{csrf:'csrf-token',aar_management:{can_delete:true}}},
+    aarManager:{selectedId:'123',detail:{id:'123'}},apiUrl:path=>path,
+    window:{confirm:message=>{confirmations.push(message);return confirmed;}},
+    document:{getElementById:()=>status},renderAarManagement:()=>{},
+    loadAarManagement:async()=>{refreshes++;},
+    fetch:async(url,options)=>{
+        requests.push({url,...options});
+        const request=url.endsWith('delete-request');
+        return {ok:request || !failConfirmation,json:async()=>request
+            ? {status:'requested',reason:'Duplicate report'}
+            : failConfirmation ? {message:'Bridge unavailable'} : {status:pending?'processing_pending':'deleted'}};
+    }
+};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('async function deleteManagedAar('),html.indexOf('function renderAarManagement()')),context);
+(async()=>{
+    await context.deleteManagedAar('123','Duplicate report',true);
+    assert.equal(requests.length,0);
+    confirmed=true;
+    context.state.auth.aar_management.can_delete=false;
+    await context.deleteManagedAar('123','Duplicate report',true);
+    assert.equal(requests.length,0);
+    context.state.auth.aar_management.can_delete=true;
+    failConfirmation=true;
+    await context.deleteManagedAar('123','Duplicate report',true);
+    assert.equal(requests.length,2);
+    assert(requests[0].url.endsWith('delete-request'));
+    assert(requests[1].url.endsWith('delete-confirm'));
+    assert.equal(JSON.parse(requests[0].body).reason,'Duplicate report');
+    assert.equal(requests[0].headers['X-CSRF-Token'],'csrf-token');
+    assert.equal(context.aarManager.detail.delete_request.reason,'Duplicate report');
+    assert.equal(status.textContent,'Bridge unavailable');
+    assert.equal(context.aarManager.deleteBusy,false);
+    assert.match(confirmations.at(-1),/123[\s\S]*Duplicate report/);
+    failConfirmation=false;pending=true;
+    await context.deleteManagedAar('123','Duplicate report');
+    assert.equal(requests.length,3);
+    assert.equal(refreshes,1);
+    assert.equal(context.aarManager.selectedId,'');
+    assert.match(context.aarManager.notice,/Pending Deletions/);
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the browser-handler regression")
@@ -1843,8 +2052,11 @@ assert.deepEqual([...context.aarDraft.tags], ['black_laurels']);
 assert.equal(context.aarDraft.memberDirectory.get('102').name, 'Brother Two');
 assert.equal(context.aarDraft.geneCarrier, '102');
 assert.equal(context.aarDraft.existingScreenshots.length, 1);
+context.beginAarManagementEdit({id:'456',original_record_hash:'a'.repeat(64),submission:{mode:'induction_omega',brother_ids:['101','102']}},true);
+assert.equal(context.aarDraft.memberProposal,true);
+assert.equal(context.aarDraft.originalRecordHash,'a'.repeat(64));
 assert.equal(revoked, 1);
-assert.equal(rendered, 1);
+assert.equal(rendered, 2);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
