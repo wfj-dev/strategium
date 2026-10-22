@@ -12,6 +12,7 @@ from http.server import ThreadingHTTPServer
 import pytest
 
 import server
+from scripts import build_web_assets
 from server import (
     BACKSTORY_MAX_CHARS,
     BACKSTORY_MAX_WORDS,
@@ -792,7 +793,20 @@ def test_pauldron_assets_are_allowlisted(local_site, tmp_path, monkeypatch) -> N
         assert error.value.code == 404
 
 
-@pytest.mark.parametrize("chapter", ["Consecrators", "Doom Eagles"])
+def test_pauldron_builder_prefers_root_level_future_chapter_art(tmp_path, monkeypatch) -> None:
+    painted = tmp_path / "Painted Pauldrons"
+    completed = painted / "Completed"
+    completed.mkdir(parents=True)
+    completed_art = completed / "Black Vipers.png"
+    future_art = painted / "Black Vipers.png"
+    completed_art.write_bytes(b"existing")
+    future_art.write_bytes(b"future")
+    monkeypatch.setattr(build_web_assets, "ASSETS", tmp_path)
+
+    assert build_web_assets.pauldron_sources() == [future_art]
+
+
+@pytest.mark.parametrize("chapter", ["Consecrators", "Doom Eagles", "Black Vipers"])
 def test_new_chapter_pauldron_is_registered_and_served(local_site, chapter) -> None:
     page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
     art = page.split("const PAULDRON_ART =", 1)[1].split("].map(", 1)[0]
@@ -800,6 +814,21 @@ def test_new_chapter_pauldron_is_registered_and_served(local_site, chapter) -> N
     with urllib.request.urlopen(local_site + "/assets/pauldrons/" + urllib.parse.quote(chapter + ".webp")) as response:
         assert response.headers["Content-Type"] == "image/webp"
         assert response.read().startswith(b"RIFF")
+
+
+def test_black_vipers_chapter_has_site_lore_and_pauldron_mapping():
+    page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
+    chapters = page.split("const CHAPTERS =", 1)[1].split("function seededPick(", 1)[0]
+    art = page.split("const PAULDRON_ART =", 1)[1].split("let bloodPageSize", 1)[0]
+    lore = page.split("const CHAPTER_LORE_FALLBACKS =", 1)[1].split("};", 1)[0]
+    assert '"Black Vipers"' in chapters
+    assert '"Black Vipers"' in art
+    for fact in (
+        "Primaris-only", "Ultima Founding", "999.M41", "Vulkan",
+        "no homeworld is known or claimed", "Sur Kgosi", "disappeared",
+        "Cawl's agents", "red viper-head badge", "unrecorded", "pp. 63, 71",
+    ):
+        assert fact in lore
 
 
 def test_rank_ribbons_serve_only_known_images(local_site, tmp_path, monkeypatch) -> None:
@@ -1862,13 +1891,60 @@ def test_award_review_identifies_affected_member_in_queue_and_preview():
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(process.argv[1],'utf8');
 const start=html.indexOf('function aarSelectedReviewHtml('),end=html.indexOf('function renderAarManagement()',start);
-const context={escapeHtml:value=>String(value??''),aarManager:{selectedId:'123',reviewId:'review-id'},aarReviewHref:(id,type,review)=>`/manage-aars?aar=${id}&review_type=${type}&review_id=${review}`,state:{auth:{aar_management:{can_delete:true}}}};
+const context={escapeHtml:value=>String(value??''),AAR_SUBMISSION_MODES:{},AAR_SUBMISSION_TAGS:[],aarManager:{selectedId:'123',reviewId:'review-id'},aarReviewHref:(id,type,review)=>`/manage-aars?aar=${id}&review_type=${type}&review_id=${review}`,state:{auth:{aar_management:{can_delete:true}}}};
 vm.createContext(context);vm.runInContext(html.slice(start,end),context);
 const review={kind:'award',record_id:'123',review_id:'review-id',member_name:'Forge Master Jules',user_id:'42',challenge:'Black Laurels',status:'pending'};
 const detail=context.aarSelectedReviewHtml({id:'123',review},'');
 const row=context.aarReviewListItemHtml({id:'123',kind:'award',review:'review-id',label:'Award review',title:`${review.member_name} / ${review.challenge}`,text:'AAR 123'});
 assert.match(detail,/Forge Master Jules/);assert.match(detail,/Black Laurels/);assert.match(detail,/Acknowledge this review/);
 assert.match(row,/Forge Master Jules[\s\S]*Black Laurels/);assert.match(row,/review_type=award/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for AAR history rendering")
+def test_aar_history_cards_show_match_metadata_and_ticket_identity():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const context={aarManager:{selectedId:'',reviewId:''},AAR_SUBMISSION_TAGS:[['black_laurels','Black Laurels']],
+  AAR_SUBMISSION_MODES:{ops_strat:{label:'Operations / Stratagems'},pvp:{label:'PvP'}},
+  escapeHtml:value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;'),
+  aarReviewHref:(id,type,review)=>`/manage-aars?aar=${id}${type?'&review_type='+type+'&review_id='+review:''}`};
+vm.createContext(context);
+const start=html.indexOf('function aarReviewListItemHtml('),end=html.indexOf('function renderAarManagement()',start);
+vm.runInContext(html.slice(start,end),context);
+const history=context.aarReviewListItemHtml({kind:'',id:'123',review:'',label:'PvE',title:'Inferno',
+  mode:'ops_strat',difficulty:'Ruthless',rank:'A',waves:10,kia:1,date:'2026-10-22T12:00:00Z',
+  participants:['Brother One'],tags:['black_laurels']});
+assert.match(history,/aar-history-item/);assert.match(history,/Ruthless/);assert.match(history,/Brother One/);
+assert(history.includes('Operations / Stratagems'));assert.match(history,/Rank A/);
+assert.match(history,/10 waves/);assert.match(history,/1 KIA/);
+assert.match(history,/Black Laurels/);assert.match(history,/Open report/);
+const zeroCounts=context.aarReviewListItemHtml({kind:'',id:'125',waves:0,kia:0});
+assert.match(zeroCounts,/0 waves/);assert.match(zeroCounts,/0 KIA/);
+const pvp=context.aarReviewListItemHtml({kind:'',id:'124',review:'',label:'PvP',title:'Match',
+  mode:'pvp',difficulty:'@PvP Difficulty',pvp_result:'W'});
+assert(pvp.includes('W'));
+const ticket=context.aarReviewListItemHtml({kind:'delete',id:'123',review:'request-token',
+  label:'Deletion request · Pending',title:'Inferno',text:'Duplicate report',date:'2026-10-22T12:00:00Z'});
+assert.match(ticket,/aar-review-ticket/);assert.match(ticket,/Ticket · AAR 123/);
+assert.match(ticket,/review_type=delete&amp;review_id=request-token|review_type=delete&review_id=request-token/);
+const ordered=context.sortAarReviewTickets([
+  {kind:'edit',date:'2026-10-22T12:00:00Z'},
+  {kind:'delete',date:'2026-10-20T12:00:00Z'},
+  {kind:'edit',date:'2026-10-21T12:00:00Z'}
+]);
+assert.deepEqual(ordered.map(item=>item.kind),['delete','edit','edit']);
+const mappedRecords=context.mapAarHistoryRecords([{id:'321',mode:'ops_strat',mission:'Inferno',difficulty:'Ruthless',
+  timestamp:'2026-10-22T12:00:00Z',brother_names:['Brother One'],brother_ids:['42'],
+  tags:['black_laurels'],tag_labels:['Black Laurels'],rank:'A',waves:10,kia:1,pvp_result:null}]);
+const mapped=context.aarReviewListItemHtml(mappedRecords[0]);
+assert(mapped.includes('Operations / Stratagems'));assert.match(mapped,/Brother One/);
+assert.match(mapped,/Black Laurels/);assert.match(mapped,/Rank A/);assert.match(mapped,/10 waves/);
+assert.match(html,/Mission, participant, tag, or report field/);
+assert.match(html,/normalized words across AAR IDs, receipt URLs/);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr

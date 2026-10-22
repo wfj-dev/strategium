@@ -13,7 +13,6 @@ import os
 import re
 from pathlib import Path
 
-import numpy as np
 from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +36,27 @@ def _save(source: Path, target: Path, *, max_size: tuple[int, int] | None = None
     print(f"{target.relative_to(ROOT)}  {source.stat().st_size // 1024} KB -> {target.stat().st_size // 1024} KB")
 
 
+def pauldron_sources() -> list[Path]:
+    painted = ASSETS / "Painted Pauldrons"
+    sources = {
+        source.stem: source
+        for source in sorted((painted / "Completed").glob("*.png"))
+    }
+    sources.update({source.stem: source for source in sorted(painted.glob("*.png"))})
+    return [sources[name] for name in sorted(sources)]
+
+
+def build_pauldron(name: str) -> Path:
+    source = next((path for path in pauldron_sources() if path.stem == name), None)
+    if source is None:
+        raise FileNotFoundError(f"No pauldron artwork named {name!r}")
+    target = WEB / "pauldrons" / f"{source.stem}.webp"
+    _save(source, target, max_size=(192, 192))
+    return target
+
+
 def build_map_icons() -> None:
+    import numpy as np
     import cv2
 
     sheet = Image.open(ASSETS / "40k map icons.webp").convert("RGBA")
@@ -73,6 +92,7 @@ def build_map_icons() -> None:
 
 
 def build_galactic_assets() -> dict:
+    import numpy as np
     import cv2
 
     output = WEB / "galactic-map"
@@ -140,14 +160,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--galactic-map-only", action="store_true")
     parser.add_argument("--map-icons-only", action="store_true")
+    parser.add_argument("--pauldron", help="Build only the named Chapter pauldron thumbnail")
     args = parser.parse_args()
+    if args.pauldron:
+        build_pauldron(args.pauldron)
+        return
     if args.map_icons_only:
         build_map_icons()
         return
     if args.galactic_map_only:
         build_galactic_assets()
         return
-    for source in sorted((ASSETS / "Painted Pauldrons" / "Completed").glob("*.png")):
+    for source in pauldron_sources():
         _save(source, WEB / "pauldrons" / f"{source.stem}.webp", max_size=(192, 192))
     for source in sorted((ASSETS / "Ranks").glob("*.png")):
         name = re.sub(r"^\d+-", "", source.stem)
