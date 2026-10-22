@@ -369,6 +369,10 @@ def _aar_management_request(
         path = f"/management/{action}"
     elif action == "records":
         path = f"/management/records/{record_id}"
+    elif action == "own-record":
+        path = f"/own/records/{record_id}"
+    elif action == "own-delete-request":
+        path = f"/own/records/{record_id}/delete-request"
     else:
         path = f"/management/records/{record_id}/{action}"
     request = urllib.request.Request(
@@ -962,6 +966,8 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             self._get_aar_management_list(urllib.parse.parse_qs(parsed.query))
         elif re.fullmatch(r"/api/aar-management/records/[0-9]{1,20}", parsed.path):
             self._get_aar_management_detail(parsed.path.rsplit("/", 1)[-1])
+        elif re.fullmatch(r"/api/aar-own/records/[0-9]{1,20}", parsed.path):
+            self._get_aar_management_detail(parsed.path.rsplit("/", 1)[-1], member_access=True)
         elif parsed.path == "/api/chapter-lore":
             reference = _load_json(CHAPTERS_REFERENCE_PATH, {})
             chapters = reference.get("chapters", []) if isinstance(reference, dict) else []
@@ -1081,6 +1087,10 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/aar-edit-requests":
             self._post_aar_management_action("", "request-edit")
+            return
+        own_delete_match = re.fullmatch(r"/api/aar-own/records/([0-9]{1,20})/delete-request", path)
+        if own_delete_match:
+            self._post_aar_management_action(own_delete_match.group(1), "own-delete-request")
             return
         edit_request_match = re.fullmatch(r"/api/aar-management/edit-requests/([a-f0-9]{24})/(resolve|reject)", path)
         if edit_request_match:
@@ -1555,11 +1565,19 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         status, payload = response
         self._send(status, payload, {"Cache-Control": "no-store"})
 
-    def _get_aar_management_detail(self, record_id: str) -> None:
-        user, _access = self._aar_management_access("can_edit")
-        if not user:
-            return
-        response = _aar_management_request(str(user["id"]), "records", {}, record_id)
+    def _get_aar_management_detail(self, record_id: str, *, member_access: bool = False) -> None:
+        if member_access:
+            user = self._cookie_user()
+            if not user:
+                self._send(HTTPStatus.UNAUTHORIZED, {"error": "login_required"})
+                return
+            if not self._require_aar_access(user):
+                return
+        else:
+            user, _access = self._aar_management_access("can_edit")
+            if not user:
+                return
+        response = _aar_management_request(str(user["id"]), "own-record" if member_access else "records", {}, record_id)
         if response is None:
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
             return
@@ -1652,7 +1670,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         capability = "can_delete" if action == "delete-confirm" or action.startswith("reviews/") else "can_edit"
         access = _aar_access(str(user["id"]))
         management = access.get("aar_management")
-        if not access.get("allowed") or action != "request-edit" and (not isinstance(management, dict) or management.get(capability) is not True):
+        if not access.get("allowed") or action not in {"request-edit", "own-delete-request"} and (not isinstance(management, dict) or management.get(capability) is not True):
             self._send(HTTPStatus.FORBIDDEN, {"error": "aar_management_denied"})
             return
         if not self.headers.get("Content-Type", "").lower().startswith("application/json"):

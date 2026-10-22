@@ -11,6 +11,12 @@ each pool independently; both currently use vanilla maps. Map signup and automat
 requests. The existing signed AAR bridge also carries these requests, so no campaign
 database or bot credentials are exposed to the browser.
 
+Select a subsector to open its campaign panel alongside the desktop map, or use
+the collapsible subsector navigator on phones. The panel contains command actions,
+planet selection, Vanilla/Omega pools and strike cards. Counts describe the selected
+planet's current pool, while cards distinguish the game mission from its briefing
+theme. Changing selections or refreshing campaign data keeps the map canvas mounted.
+
 Strike participation requires the actual Watch Brother role, even for higher ranks
 and specialists. The bot verifies the role ID at signup and rechecks the full roster
 before locking; the interface hides signup controls when that permission is absent.
@@ -88,15 +94,29 @@ At `/manage-aars`, current High Command and Watch Techmarines can search and edi
 
 Run `./setup-secrets.sh` to provision the shared `STRATEGIUM_BOT_AAR_SHARED_SECRET` in both local `.env` files. The site forwards uploads to `STRATEGIUM_BOT_AAR_INTAKE_URL` (default `http://127.0.0.1:8080/v1/aar/submissions`) with a timestamped HMAC; the browser never receives the secret. The sibling `/v1/aar/access` route verifies current guild membership and returns the guild display name. Remote HTTPS targets must be explicitly listed in `STRATEGIUM_BOT_AAR_ALLOWED_HOSTS` as comma-separated hostnames. Enable the bot route explicitly with `web_submission.enabled: true` in the bot configuration. Keep the bot bridge private and do not expose `/v1/aar/*` through a public reverse proxy. The existing staff-only `/submit_aar` slash command and its test mode are unchanged.
 
-### Member Correction Requests
+Forgemasters can delete from the record detail with a reason and final confirmation;
+the interface records the request and confirms it through the same audited endpoints.
+Interrupted deletions remain resumable under Pending Deletions, with the original
+Discord receipt link retained. Other editors have request-only deletion controls.
 
-The Submit AAR page includes a correction-request form for an AAR ID or Discord
-receipt link and requested changes. A member may request changes only to an AAR they
-submitted or participated in. This queues a request without changing archive data.
-Existing authorized editors see it under **Manage AARs > Edit Requests**, apply the
-correction through the existing editor, then mark it corrected or decline with a note.
-The queue and decision endpoints remain staff-only; submitting a request grants no
-edit access. Existing strike-link, evidence and credit-reversal protections remain.
+### Member AAR Edits
+
+The Submit AAR page includes **Edit My AAR**. Enter a website AAR ID or its Discord
+receipt link to open the existing structured report. Only its original submitter or
+a recorded participant can propose changes. Submitted fields are staged for approval;
+the canonical AAR, receipt and awards remain unchanged until staff approval. Existing
+screenshots and evidence hashes are retained; replacement evidence remains a staff edit.
+
+Techmarines and High Command review current/proposed fields under
+**Manage AARs > Edit Requests**, then approve or decline with a note. Approval uses
+the existing audited receipt/archive update and recovery flow. A proposal based on
+an outdated record is rejected rather than silently overwriting newer changes.
+Members cannot access the staff queue or directly apply their proposed changes.
+
+Submitters and participants may also request deletion of their website AAR with a
+reason. Only a Forgemaster can confirm deletion. Neither editing nor deletion is
+offered for member-posted Discord AARs. Existing strike-link, evidence and
+credit-reversal protections remain.
 
 ## Rank Guide
 

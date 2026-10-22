@@ -654,12 +654,16 @@
   .war-strike p { font-size: 12px; overflow-wrap: anywhere; }
   .war-pools { display: flex; gap: 8px; margin-bottom: 14px; }
   .war-pools [aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(207,174,104,.1); }
-  #war-console { margin-top: 22px; }
+  #war-console { margin: 0; }
   #war-console .reach-toolbar { align-items: end; }
+  #war-console .reach-toolbar > label { flex: 1 1 160px; }
   #war-console label { display: grid; gap: 5px; font-size: 12px; min-width: 0; max-width: 100%; }
-  #war-console .reach-select { max-width: 100%; width: 220px; }
+  #war-console .reach-select { max-width: 100%; width: 100%; margin-left: 0; }
   #war-console progress { width: 140px; accent-color: var(--green); }
   #war-console [role="status"] { overflow-wrap: anywhere; }
+  .war-board-status { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 14px; color: var(--green-dim); font-size: 11px; }
+  .war-strike-grid { grid-template-columns: minmax(0, 1fr); }
+  .war-pools > button { flex: 1; }
   .chapter-record-overlay { z-index: 64; align-items: center; padding: 20px; }
   #member-modal { z-index: 66; }
   .chapter-record-overlay .overlay-panel { max-width: 760px; }
@@ -962,7 +966,7 @@
   }
   .reach-map-shell { position: relative; min-width: 0; overflow: hidden; }
   .reach-sector-panel {
-    position: absolute; z-index: 5; inset: 0 0 0 auto; width: min(340px, 40%); min-width: 260px;
+    position: absolute; z-index: 5; inset: 0 0 0 auto; width: min(460px, 48%); min-width: 300px;
     display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(79,214,122,.38);
     background: rgba(3,9,6,.97); box-shadow: -12px 0 34px rgba(0,0,0,.52), inset 0 0 28px rgba(79,214,122,.035);
     opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(calc(100% + 10px));
@@ -976,6 +980,10 @@
   .reach-sector-panel-close { flex: 0 0 32px; width: 32px; height: 32px; padding: 0; border: 1px solid var(--border-dim); background: transparent; color: var(--green); cursor: pointer; font: inherit; }
   .reach-sector-panel-close:hover { border-color: var(--gold); color: var(--gold); }
   .reach-sector-panel-list { min-height: 0; padding: 8px; overflow: auto; overscroll-behavior: contain; }
+  .reach-sector-panel-body { min-height: 0; padding: 14px; overflow: auto; overscroll-behavior: contain; }
+  .reach-sector-panel-body > details { margin-top: 18px; }
+  .reach-sector-panel-body > details > summary { cursor: pointer; color: var(--green-dim); font-size: 11px; padding: 8px 0; }
+  .reach-mobile-index { display: none; }
   .reach-sector-system { display: block; width: 100%; margin: 0 0 6px; padding: 10px; border: 1px solid var(--border-dim); border-left: 2px solid var(--green-faint); background: rgba(79,214,122,.025); color: var(--green-dim); text-align: left; cursor: pointer; }
   .reach-sector-system:hover, .reach-sector-system[aria-pressed="true"] { border-color: var(--gold-dim); border-left-color: var(--gold); background: rgba(207,174,104,.055); }
   .reach-sector-system-name { display: block; color: var(--white); font: 600 12px 'Cinzel', serif; overflow-wrap: anywhere; }
@@ -1266,6 +1274,11 @@
   .aar-management-entry-actions { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
   .aar-management-entry-actions a, .aar-management-list a { color: var(--green); }
   .aar-management-list textarea.field-input { min-height: 90px; resize: vertical; }
+  .aar-edit-request { display: grid; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-dim); }
+  .aar-edit-request-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .aar-proposal-change { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 8px 0; border-top: 1px solid var(--border-dim); font-size: 11px; overflow-wrap: anywhere; }
+  .aar-proposal-change strong { grid-column: 1 / -1; color: var(--gold); }
+  .aar-management-entry-actions { flex-wrap: wrap; }
   .aar-image { position: relative; min-width: 0; border: 1px solid var(--border-dim); background: #050705; }
   .aar-image img { display: block; width: 100%; height: 100px; object-fit: contain; }
   .aar-image-name { display: block; overflow: hidden; padding: 5px 7px; color: var(--green-dim); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1387,8 +1400,12 @@
     .slate-corner.tr { top: 25px; left: 18px; right: auto; }
     .reach-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .reach-viewport { display: none; }
-    .reach-sector-panel { display: none; }
+    .reach-sector-panel { display: none; position: static; width: 100%; min-width: 0; transform: none; box-shadow: none; }
+    .reach-map-shell.has-sector-panel .reach-sector-panel { display: flex; }
+    .reach-sector-panel-body { overflow: visible; }
     .reach-desktop-index { display: none; }
+    .reach-mobile-index { display: block; margin-bottom: 14px; }
+    .reach-mobile-index > summary { padding: 12px 0; color: var(--green); cursor: pointer; font-size: 11px; }
     .reach-mobile-nav { display: block; margin-top: 8px; }
     .reach-legend, .reach-hint { display: none; }
     .reach-select { margin-left: 0; }
@@ -3560,7 +3577,7 @@ const aarDraft = {
   waves: "10", kia: "0", geneSeed: "unknown", geneCarrier: "", pvpMap: "Cathedrum",
   pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), inductees: new Set(), tags: new Set(), files: [], memberFilter: "",
   memberDirectory: new Map(), memberSearchStatus: "idle", memberSearchHasMore: false, memberSearchSequence: 0, memberSearchTimer: null,
-  managementRecordId: "", existingScreenshots: [],
+  managementRecordId: "", existingScreenshots: [], memberProposal: false, originalRecordHash: "",
   submitting: false, reviewing: false, idempotencyKey: ""
 };
 const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
@@ -3568,11 +3585,10 @@ const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false
 const aarCorrection = { record: "", changes: "", busy: false, status: "" };
 
 function aarCorrectionFormHtml() {
-  return `<section class="aar-section" aria-labelledby="aar-correction-heading"><h3 id="aar-correction-heading">Request an AAR correction</h3>
+  return `<section class="aar-section" aria-labelledby="aar-correction-heading"><h3 id="aar-correction-heading">Edit My AAR</h3>
     <form id="aar-correction-form" class="aar-fields">
       <label class="aar-field"><span class="field-label">AAR ID or Discord message link</span><input id="aar-correction-record" class="field-input" value="${escapeHtml(aarCorrection.record)}" maxlength="200" required></label>
-      <label class="aar-field aar-field-wide"><span class="field-label">Requested changes</span><textarea id="aar-correction-changes" class="field-input" rows="3" minlength="8" maxlength="2000" required>${escapeHtml(aarCorrection.changes)}</textarea></label>
-      <button class="btn-dossier-action" type="submit"${aarCorrection.busy ? " disabled" : ""}>${aarCorrection.busy ? "Submitting..." : "Request correction"}</button>
+      <button class="btn-dossier-action" type="submit"${aarCorrection.busy ? " disabled" : ""}>${aarCorrection.busy ? "Loading..." : "Open for editing"}</button>
       <div id="aar-correction-status" class="aar-status" role="status" aria-live="polite">${escapeHtml(aarCorrection.status)}</div>
     </form></section>`;
 }
@@ -3583,7 +3599,6 @@ function setupAarCorrectionForm() {
     event.preventDefault();
     if (aarCorrection.busy) return;
     aarCorrection.record = document.getElementById("aar-correction-record").value.trim();
-    aarCorrection.changes = document.getElementById("aar-correction-changes").value.trim();
     const status = document.getElementById("aar-correction-status");
     let recordId = aarCorrection.record;
     if (!/^[0-9]{1,20}$/.test(recordId)) {
@@ -3594,18 +3609,16 @@ function setupAarCorrectionForm() {
         recordId = match[1];
       } catch { status.textContent = "Enter an AAR ID or a valid Discord message link."; return; }
     }
-    if (aarCorrection.changes.length < 8) { status.textContent = "Describe the requested correction in at least 8 characters."; return; }
     aarCorrection.busy = true;
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
-      const response = await fetch(apiUrl("/api/aar-edit-requests"), {method: "POST", credentials: "include", headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""}, body: JSON.stringify({record_id: recordId, requested_changes: aarCorrection.changes})});
+      const response = await fetch(apiUrl(`/api/aar-own/records/${encodeURIComponent(recordId)}`), {credentials: "include", cache: "no-store"});
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || result.error || "Correction request failed.");
-      aarCorrection.status = "Correction requested. An authorized AAR editor will review it.";
-      status.textContent = aarCorrection.status;
-      aarCorrection.changes = "";
-      document.getElementById("aar-correction-changes").value = "";
+      if (!response.ok) throw new Error(result.message || result.error || "This website AAR could not be opened for editing.");
+      if (result.delete_request?.status) throw new Error("This AAR is locked while deletion is pending.");
+      aarCorrection.status = "";
+      beginAarManagementEdit(result, true);
     } catch (error) { aarCorrection.status = error.message; status.textContent = aarCorrection.status; }
     finally { aarCorrection.busy = false; submit.disabled = false; }
   });
@@ -3734,7 +3747,7 @@ function revokeAarPreview(file) {
 }
 
 function addAarScreenshots(files) {
-  if (aarDraft.submitting) return false;
+  if (aarDraft.submitting || aarDraft.memberProposal) return false;
   const selected = Array.from(files || []);
   if (!selected.length) return false;
   const maxImageBytes = Math.min(AAR_MAX_IMAGE_BYTES, Number(state.auth?.aar_max_file_bytes) || AAR_MAX_IMAGE_BYTES);
@@ -3828,6 +3841,7 @@ function aarTagOptionsHtml(isPvp, allowedTagKeys, selectedTags) {
 function renderSubmitAar() {
   const app = document.getElementById("app");
   const managementEdit = Boolean(aarDraft.managementRecordId);
+  const memberProposal = managementEdit && aarDraft.memberProposal === true;
   const mode = AAR_SUBMISSION_MODES[aarDraft.mode] || AAR_SUBMISSION_MODES.ops_strat;
   const pvp = Boolean(mode.pvp);
   const missionOptions = mode.missions;
@@ -3929,12 +3943,13 @@ function renderSubmitAar() {
   app.innerHTML = `
     <section class="aar-room" aria-label="${managementEdit ? "Edit submitted after-action report" : "After-action report submission"}">
       <header class="aar-heading">
-        <div class="blood-overline">&gt; ${managementEdit ? "ARCHIVE CONTROL // STAFF CORRECTION" : "COGITATOR INTAKE // AFTER-ACTION REPORT"}</div>
+        <div class="blood-overline">&gt; ${memberProposal ? "ARCHIVE CONTROL // PROPOSED EDIT" : managementEdit ? "ARCHIVE CONTROL // STAFF CORRECTION" : "COGITATOR INTAKE // AFTER-ACTION REPORT"}</div>
         <h2>${managementEdit ? "Edit AAR" : "Submit AAR"}</h2>
-        <p class="aar-description">${managementEdit ? `Correct record ${escapeHtml(aarDraft.managementRecordId)}. The Discord receipt will be synchronized when saved.` : "Record the operation, its participants, and the evidence for the Watch archive."}</p>
-        ${managementEdit ? `<button class="btn-dossier-action" type="button" data-aar-edit-cancel>Back to AAR archive</button>` : ""}
+        <p class="aar-description">${memberProposal ? `Proposed changes to AAR ${escapeHtml(aarDraft.managementRecordId)} require Techmarine or High Command approval. Existing evidence is retained.` : managementEdit ? `Correct record ${escapeHtml(aarDraft.managementRecordId)}. The Discord receipt will be synchronized when saved.` : "Record the operation, its participants, and the evidence for the Watch archive."}</p>
+        ${managementEdit ? `<button class="btn-dossier-action" type="button" data-aar-edit-cancel>${memberProposal ? "Cancel proposed edit" : "Back to AAR archive"}</button>` : ""}
       </header>
       ${authMessage}
+      ${state.auth?.authenticated && state.auth.aar_allowed && !managementEdit ? `<p><a class="btn-dossier-action" href="#aar-correction-heading">Edit My AAR</a></p>` : ""}
       ${state.auth?.authenticated && state.auth.aar_allowed ? `<form id="aar-form" class="aar-form">
         <section class="aar-section" aria-labelledby="aar-details-heading">
           <h3 id="aar-details-heading">Operation Details</h3>
@@ -3956,7 +3971,7 @@ function renderSubmitAar() {
         ${tagOptions ? `<section class="aar-section" aria-labelledby="aar-tags-heading"><h3 id="aar-tags-heading">Mission Tags</h3><div class="aar-members" role="group" aria-label="Select mission tags">${tagOptions}</div><p class="aar-upload-hint">Defense of Herisor is enabled for Hard Siege or Hard-Stratagem Termination/Reclamation with exactly three brothers. Other tags depend on the selected mission and team.</p></section>` : ""}
         <section class="aar-section" aria-labelledby="aar-evidence-heading">
           <h3 id="aar-evidence-heading">Mission Screenshots</h3>
-          <div id="aar-drop-zone" class="aar-upload aar-drop-zone">
+          ${memberProposal ? `<div class="aar-images">${existingImageRows}</div>` : `<div id="aar-drop-zone" class="aar-upload aar-drop-zone">
             <div class="aar-evidence-actions">
               <label class="aar-file-picker" for="aar-screenshots">
                 <span class="aar-file-picker-icon" aria-hidden="true">+</span>
@@ -3977,22 +3992,50 @@ function renderSubmitAar() {
                 <button type="button" id="aar-phone-close" class="btn-dossier-action btn-dossier-cancel">Close Link</button></div>
               ` : `<button type="button" id="aar-phone-start" class="btn-dossier-action"${aarPhoneHandoff.busy || aarDraft.submitting ? " disabled" : ""}>${aarPhoneHandoff.busy ? "Opening..." : "Add From Phone"}</button>`}
             </div>`}
-          </div>
+          </div>`}
         </section>
         ${aarDraft.reviewing ? reviewPanel : ""}
         <div class="aar-submit-row">
-          <button id="aar-submit" class="btn-primary" type="submit"${aarDraft.submitting ? " disabled" : ""}>${aarDraft.submitting ? (managementEdit ? "Saving…" : "Submitting…") : aarDraft.reviewing ? (managementEdit ? "Save correction" : "Submit AAR") : (managementEdit ? "Review correction" : "Review AAR")}</button>
+          <button id="aar-submit" class="btn-primary" type="submit"${aarDraft.submitting ? " disabled" : ""}>${aarDraft.submitting ? (managementEdit ? "Saving…" : "Submitting…") : aarDraft.reviewing ? (memberProposal ? "Submit edit for approval" : managementEdit ? "Save correction" : "Submit AAR") : (managementEdit ? "Review changes" : "Review AAR")}</button>
           <div id="aar-status" class="aar-status" role="status" aria-live="polite"></div>
         </div>
       </form>` : ""}
+      ${memberProposal ? `<section class="aar-section"><h3>Request AAR deletion</h3><label class="aar-field"><span class="field-label">Deletion reason</span><textarea id="aar-own-delete-reason" class="field-input" minlength="8" maxlength="400" rows="3"></textarea></label><button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-own-delete-request>Request deletion</button></section>` : ""}
       ${state.auth?.authenticated && state.auth.aar_allowed && !managementEdit ? aarCorrectionFormHtml() : ""}
     </section>`;
   setupAarCorrectionForm();
 
   const form = document.getElementById("aar-form");
+  document.querySelector("[data-aar-own-delete-request]")?.addEventListener("click", async event => {
+    if (aarDraft.submitting) return;
+    const reason = document.getElementById("aar-own-delete-reason")?.value.trim() || "";
+    if (reason.length < 8) { setAarStatus("Enter a deletion reason of at least 8 characters.", "error"); return; }
+    const button = event.currentTarget;
+    button.disabled = true;
+    aarDraft.submitting = true;
+    try {
+      const response = await fetch(apiUrl(`/api/aar-own/records/${encodeURIComponent(aarDraft.managementRecordId)}/delete-request`), {
+        method: "POST", credentials: "include", headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""}, body: JSON.stringify({reason})
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || "Deletion could not be requested.");
+      aarDraft.managementRecordId = "";
+      aarDraft.memberProposal = false;
+      aarDraft.existingScreenshots = [];
+      aarDraft.reviewing = false;
+      aarCorrection.status = "Deletion requested. The AAR is unchanged until a Forgemaster confirms removal.";
+      aarDraft.submitting = false;
+      renderSubmitAar();
+      setAarStatus(aarCorrection.status, "success");
+    } catch (error) { setAarStatus(error.message, "error"); }
+    finally { aarDraft.submitting = false; button.disabled = false; }
+  });
   document.querySelector("[data-aar-edit-cancel]")?.addEventListener("click", () => {
+    if (aarDraft.submitting) return;
     aarDraft.managementRecordId = "";
     aarDraft.existingScreenshots = [];
+    aarDraft.memberProposal = false;
+    if (memberProposal) { renderSubmitAar(); return; }
     aarManager.selectedId = "";
     aarManager.detail = null;
     aarManager.status = "ready";
@@ -4197,6 +4240,31 @@ function renderSubmitAar() {
       pvp_game_mode: currentMode.pvp ? aarDraft.pvpMode : null,
       pvp_result: currentMode.pvp ? aarDraft.pvpResult : null
     };
+    if (memberProposal) {
+      aarDraft.submitting = true;
+      renderSubmitAar();
+      try {
+        const response = await fetch(apiUrl("/api/aar-edit-requests"), {
+          method: "POST", credentials: "include", headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""},
+          body: JSON.stringify({record_id: aarDraft.managementRecordId, original_record_hash: aarDraft.originalRecordHash, submission: payload})
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || result.error || "The proposed edit could not be submitted.");
+        aarDraft.managementRecordId = "";
+        aarDraft.memberProposal = false;
+        aarDraft.existingScreenshots = [];
+        aarDraft.reviewing = false;
+        aarCorrection.status = "Edit submitted for Techmarine or High Command approval. The original AAR and awards are unchanged.";
+        aarDraft.submitting = false;
+        renderSubmitAar();
+        setAarStatus(aarCorrection.status, "success");
+      } catch (error) {
+        aarDraft.submitting = false;
+        renderSubmitAar();
+        setAarStatus(error.message, "error");
+      }
+      return;
+    }
     const body = new FormData();
     body.append("submission", JSON.stringify(payload));
     aarDraft.files.forEach(item => body.append("screenshots", item.file, item.name));
@@ -4268,11 +4336,13 @@ function renderSubmitAar() {
   });
 }
 
-function beginAarManagementEdit(detail) {
+function beginAarManagementEdit(detail, memberProposal = false) {
   const submission = detail?.submission;
   if (!submission || !detail.id) return;
   aarDraft.files.forEach(revokeAarPreview);
   aarDraft.managementRecordId = String(detail.id);
+  aarDraft.memberProposal = memberProposal;
+  aarDraft.originalRecordHash = detail.original_record_hash || "";
   aarDraft.strikeId = submission.strike_id || "";
   aarDraft.strikeSuccess = submission.strike_success === false ? "failure" : "success";
   aarDraft.mode = submission.mode || "ops_strat";
@@ -4353,6 +4423,69 @@ async function openAarManagementRecord(recordId) {
   renderAarManagement();
 }
 
+async function deleteManagedAar(recordId, reason, requestFirst = false) {
+  if (state.auth?.aar_management?.can_delete !== true || aarManager.deleteBusy) return;
+  if (!window.confirm(`Permanently delete AAR ${recordId}, its Discord receipt, and its active award credit?\n\nReason: ${reason}`)) return;
+  aarManager.deleteBusy = true;
+  const post = async (action, payload) => {
+    const response = await fetch(apiUrl(`/api/aar-management/records/${encodeURIComponent(recordId)}/${action}`), {
+      method: "POST", credentials: "include",
+      headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""},
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || result.error || "Deletion could not be completed.");
+    return result;
+  };
+  try {
+    if (requestFirst) {
+      const request = await post("delete-request", {reason});
+      if (aarManager.detail?.id === recordId) aarManager.detail.delete_request = {status: request.status, reason: request.reason || reason};
+      if (request.reason && request.reason !== reason) throw new Error("An existing deletion request has a different reason. Review it before confirming.");
+    }
+    const result = await post("delete-confirm", {});
+    aarManager.notice = result.status === "processing_pending"
+      ? "Deletion is still processing. Resume it from Pending Deletions."
+      : "AAR and Discord receipt deleted; affected awards reconciled.";
+    aarManager.selectedId = "";
+    aarManager.detail = null;
+    await loadAarManagement();
+  } catch (error) {
+    renderAarManagement();
+    const status = document.getElementById("aar-management-status");
+    if (status) status.textContent = error.message || "Deletion could not be completed. Retry to resume safely.";
+  } finally { aarManager.deleteBusy = false; }
+}
+
+function aarEditProposalChangesHtml(item) {
+  const previous = item.original_submission || {};
+  const proposed = item.submission || {};
+  const labels = {brother_ids: "Participants", inductee_ids: "Inductees", armory_data: "Armory Data", gene_seed_status: "Gene-Seed", gene_seed_carrier_id: "Gene-Seed Carrier", strike_success: "Strike Result"};
+  const display = (key, value) => {
+    if (value === null || value === undefined || value === "" || (Array.isArray(value) && !value.length)) return "None";
+    if (Array.isArray(value)) return value.map(identity => item.participant_names?.[identity] || AAR_SUBMISSION_TAGS.find(([tag]) => tag === identity)?.[1] || identity).join(", ");
+    if (key === "mission") return AAR_PVE_MISSIONS.find(([identity]) => identity === value)?.[1] || value;
+    if (key === "mode") return AAR_SUBMISSION_MODES[value]?.label || value;
+    if (key === "strike_success") return value ? "Success" : "Failure";
+    return String(value);
+  };
+  return Object.keys({...previous, ...proposed}).filter(key => JSON.stringify(previous[key] ?? null) !== JSON.stringify(proposed[key] ?? null)).map(key =>
+    `<div class="aar-proposal-change"><strong>${escapeHtml(labels[key] || titleCase(key.replaceAll("_", " ")))}</strong><span>Current: ${escapeHtml(display(key, previous[key]))}</span><span>Proposed: ${escapeHtml(display(key, proposed[key]))}</span></div>`
+  ).join("");
+}
+
+async function approveAarEditProposal(item, note) {
+  const body = new FormData();
+  body.append("submission", JSON.stringify({...item.submission, edit_proposal_id: item.request_id, edit_proposal_note: note}));
+  body.append("keep_screenshots", "true");
+  const response = await fetch(apiUrl(`/api/aar-management/records/${encodeURIComponent(item.record_id)}`), {
+    method: "PATCH", credentials: "include", headers: {"X-CSRF-Token": state.auth.csrf || "", "X-AAR-Management-Request-ID": `proposal-${item.request_id}`}, body
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.message || result.error || "The proposed edit could not be approved.");
+  return result;
+}
+
 function renderAarManagement() {
   const app = document.getElementById("app");
   if (state.auth?.aar_management?.can_edit !== true) { app.innerHTML = ""; return; }
@@ -4360,9 +4493,9 @@ function renderAarManagement() {
   const deleteRequest = detail?.delete_request;
   const deleteControl = deleteRequest?.status
     ? `<section class="aar-section"><h3>Deletion Request</h3><p class="aar-upload-hint">${escapeHtml(deleteRequest.status.replaceAll("_", " "))}${deleteRequest.reason ? ` · ${escapeHtml(deleteRequest.reason)}` : ""}</p>
-        ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}">Confirm permanent deletion</button>` : `<p class="aar-upload-hint">Awaiting Forgemaster confirmation.</p>`}</section>`
+        ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}" data-aar-delete-reason="${escapeHtml(deleteRequest.reason || "No reason recorded")}">Confirm permanent deletion</button>` : `<p class="aar-upload-hint">Awaiting Forgemaster confirmation.</p>`}</section>`
     : detail
-    ? `<section class="aar-section"><h3>Delete Request</h3><label class="aar-field aar-field-wide"><span class="field-label">Reason</span><textarea id="aar-delete-reason" class="field-input" rows="3" maxlength="400" placeholder="Explain why this report must be removed"></textarea></label><button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-request="${escapeHtml(detail.id)}">Request deletion</button></section>`
+    ? `<section class="aar-section"><h3>${state.auth.aar_management?.can_delete === true ? "Delete AAR" : "Request deletion"}</h3><label class="aar-field aar-field-wide"><span class="field-label">Deletion reason</span><textarea id="aar-delete-reason" class="field-input" rows="3" minlength="8" maxlength="400" placeholder="Explain why this report must be removed"></textarea></label><button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-request="${escapeHtml(detail.id)}">${state.auth.aar_management?.can_delete === true ? "Delete permanently..." : "Request deletion"}</button></section>`
     : "";
   const rows = aarManager.records.map(record => {
     const participants = (record.brother_names || []).map(name => escapeHtml(name)).join(", ");
@@ -4380,14 +4513,16 @@ function renderAarManagement() {
   }).join("");
   const pendingDeletionRows = aarManager.pendingDeletions.map(item => `<article class="aar-section aar-management-entry">
     <div><strong>Deletion ${escapeHtml(item.status.replaceAll("_", " "))} · AAR ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.reason || "No reason recorded")}</p></div>
-    ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-recover-delete-confirm="${escapeHtml(item.id)}">Resume Forgemaster confirmation</button>` : `<span class="aar-upload-hint">Forgemaster action required</span>`}
+    <div class="aar-management-entry-actions">${String(item.receipt_url || "").startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(item.receipt_url)}" target="_blank" rel="noopener noreferrer">Original AAR</a>` : ""}
+    ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-recover-delete-confirm="${escapeHtml(item.id)}" data-aar-delete-reason="${escapeHtml(item.reason || "No reason recorded")}">Resume deletion</button>` : `<span class="aar-upload-hint">Forgemaster action required</span>`}</div>
   </article>`).join("");
-  const editRequestRows = (aarManager.editRequests || []).map(item => `<article class="aar-management-entry">
-    <div><strong>AAR ${escapeHtml(item.record_id)} / ${escapeHtml(item.requester_name || item.requester_id)}</strong><p class="aar-upload-hint">${escapeHtml(item.requested_at ? new Date(item.requested_at).toLocaleString() : "")}</p><p style="white-space:pre-wrap;overflow-wrap:anywhere">${escapeHtml(item.requested_changes)}</p></div>
+  const editRequestRows = (aarManager.editRequests || []).map(item => `<article class="aar-edit-request">
+    <div><strong>AAR ${escapeHtml(item.record_id)} / ${escapeHtml(item.requester_name || item.requester_id)}</strong><p class="aar-upload-hint">${escapeHtml(item.requested_at ? new Date(item.requested_at).toLocaleString() : "")}</p><p class="aar-edit-request-copy">${escapeHtml(item.requested_changes)}</p></div>
+    ${item.submission ? aarEditProposalChangesHtml(item) : ""}
     ${item.editable ? `<button class="btn-dossier-action" type="button" data-aar-request-open="${escapeHtml(item.record_id)}">Open AAR</button>` : `<span class="aar-upload-hint">Original report requires archive staff correction.</span>`}
     ${String(item.receipt_url || "").startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(item.receipt_url)}" target="_blank" rel="noopener noreferrer">Original AAR</a>` : ""}
     <label class="aar-field"><span class="field-label">Editor note</span><textarea class="field-input" data-aar-request-note="${escapeHtml(item.request_id)}" rows="2" maxlength="500"></textarea></label>
-    <div class="aar-management-entry-actions"><button class="btn-dossier-action" type="button" data-aar-request-decision="resolve" data-aar-request-id="${escapeHtml(item.request_id)}">Mark corrected</button><button class="btn-dossier-action" type="button" data-aar-request-decision="reject" data-aar-request-id="${escapeHtml(item.request_id)}">Decline</button></div>
+    <div class="aar-management-entry-actions"><button class="btn-dossier-action" type="button" data-aar-request-decision="${item.submission ? "approve" : "resolve"}" data-aar-request-id="${escapeHtml(item.request_id)}">${item.submission ? "Approve edit" : "Mark corrected"}</button><button class="btn-dossier-action" type="button" data-aar-request-decision="reject" data-aar-request-id="${escapeHtml(item.request_id)}">Decline</button></div>
   </article>`).join("");
   const pendingEditRows = aarManager.pendingEdits.map(item => `<article class="aar-section aar-management-entry">
     <div><strong>Edit pending · ${escapeHtml(item.mission || "AAR")} · ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.status.replaceAll("_", " "))}</p></div>
@@ -4426,10 +4561,10 @@ function renderAarManagement() {
     ${aarManager.selectedId ? `<nav aria-label="AAR archive"><button type="button" class="btn-dossier-action" data-aar-manage-back><span aria-hidden="true">&larr;</span> Back to Manage AARs</button></nav>` : ""}
     <header class="aar-heading"><div class="blood-overline">&gt; ARCHIVE CONTROL // STAFF ACCESS</div><h2>Manage AARs</h2><p class="aar-description">Search Strategium-submitted reports in the Watch archive.</p>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
     ${aarManager.selectedId ? "" : `<label class="aar-field aar-field-wide"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission, participant, or submitter ID"></label>`}
-    <section class="aar-section" aria-label="AAR edit requests"><h3>Edit Requests (${Number(aarManager.editRequestCount) || (aarManager.editRequests || []).length})</h3><div class="aar-management-list">${editRequestRows || `<p class="aar-empty">No pending member correction requests.</p>`}</div></section>
+    ${!aarManager.selectedId ? `<section class="aar-section" aria-label="AAR edit requests"><h3>Edit Requests (${Number(aarManager.editRequestCount) || (aarManager.editRequests || []).length})</h3><div class="aar-management-list">${editRequestRows || `<p class="aar-empty">No pending member correction requests.</p>`}</div></section>
     ${pendingDeletionRows ? `<section class="aar-section"><h3>Pending Deletions</h3><div class="aar-management-list">${pendingDeletionRows}</div></section>` : ""}
     ${pendingEditRows ? `<section class="aar-section"><h3>Pending Edits</h3><div class="aar-management-list">${pendingEditRows}</div></section>` : ""}
-    ${reconciliationReviewRows ? `<section class="aar-section"><h3>Award Reconciliation Review</h3><div class="aar-management-list">${reconciliationReviewRows}</div></section>` : ""}
+    ${reconciliationReviewRows ? `<section class="aar-section"><h3>Award Reconciliation Review</h3><div class="aar-management-list">${reconciliationReviewRows}</div></section>` : ""}` : ""}
     <div class="aar-management-list">${body}</div>
     ${!aarManager.selectedId && aarManager.status === "ready" ? `<div class="aar-submit-row"><button type="button" class="btn-dossier-action" data-aar-manage-page="previous"${aarManager.offset <= 0 ? " disabled" : ""}>Previous</button><span class="aar-upload-hint">${aarManager.total ? `${aarManager.offset + 1}–${Math.min(aarManager.offset + aarManager.records.length, aarManager.total)} of ${aarManager.total}` : "0 records"}</span><button type="button" class="btn-dossier-action" data-aar-manage-page="next"${aarManager.hasMore ? "" : " disabled"}>Next</button></div>` : ""}
     <div id="aar-management-status" class="aar-status" role="status" aria-live="polite"></div>
@@ -4453,6 +4588,14 @@ function renderAarManagement() {
     if (note.length < 4) { status.textContent = "Enter an editor note of at least 4 characters."; return; }
     button.disabled = true;
     try {
+      if (button.dataset.aarRequestDecision === "approve") {
+        const item = aarManager.editRequests.find(proposal => proposal.request_id === identity);
+        if (!item?.submission) throw new Error("This proposal is unavailable. Reload the archive.");
+        const result = await approveAarEditProposal(item, note);
+        aarManager.notice = result.processing_pending ? "Edit approval is processing. Resume its pending archive update if needed." : "Proposed edit approved; the AAR and Discord receipt are synchronized.";
+        await loadAarManagement();
+        return;
+      }
       const response = await fetch(apiUrl(`/api/aar-management/edit-requests/${identity}/${button.dataset.aarRequestDecision}`), {method: "POST", credentials: "include", headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""}, body: JSON.stringify({note})});
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || result.error || "Edit-request update failed.");
@@ -4470,6 +4613,7 @@ function renderAarManagement() {
     beginAarManagementEdit(aarManager.detail);
   });
   document.querySelector("[data-aar-manage-delete-request]")?.addEventListener("click", async event => {
+    if (aarManager.deleteBusy) return;
     const reason = document.getElementById("aar-delete-reason")?.value.trim() || "";
     if (reason.length < 8) {
       const status = document.getElementById("aar-management-status");
@@ -4477,6 +4621,12 @@ function renderAarManagement() {
       return;
     }
     const recordId = event.currentTarget.dataset.aarManageDeleteRequest;
+    if (state.auth.aar_management?.can_delete === true) {
+      await deleteManagedAar(recordId, reason, true);
+      return;
+    }
+    const button = event.currentTarget;
+    button.disabled = true;
     try {
       const response = await fetch(apiUrl(`/api/aar-management/records/${recordId}/delete-request`), {
         method: "POST", credentials: "include", headers: {
@@ -4490,37 +4640,11 @@ function renderAarManagement() {
     } catch (error) {
       const status = document.getElementById("aar-management-status");
       if (status) status.textContent = error.message || "Deletion request failed.";
-    }
+    } finally { button.disabled = false; }
   });
   document.querySelectorAll("[data-aar-manage-delete-confirm], [data-aar-recover-delete-confirm]").forEach(button => button.addEventListener("click", async event => {
     const recordId = event.currentTarget.dataset.aarManageDeleteConfirm || event.currentTarget.dataset.aarRecoverDeleteConfirm;
-    if (!window.confirm(`Permanently delete AAR ${recordId}, its Discord receipt, and its active award credit?`)) return;
-    try {
-      const response = await fetch(apiUrl(`/api/aar-management/records/${recordId}/delete-confirm`), {
-        method: "POST", credentials: "include", headers: {
-          "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""
-        }, body: JSON.stringify({})
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.message || result.error || "Deletion could not be confirmed.");
-      if (result.status === "processing_pending") {
-        aarManager.notice = "Deletion is still processing; retry confirmation to resume.";
-        if (aarManager.detail) {
-          aarManager.detail.delete_request = { ...aarManager.detail.delete_request, status: result.resume_status || "record_deleted" };
-          aarManager.selectedId = recordId;
-          aarManager.status = "detail";
-          renderAarManagement();
-        }
-        return;
-      }
-      aarManager.notice = "AAR and Discord receipt deleted; affected awards reconciled.";
-      aarManager.selectedId = "";
-      aarManager.detail = null;
-      await loadAarManagement();
-    } catch (error) {
-      const status = document.getElementById("aar-management-status");
-      if (status) status.textContent = error.message || "Deletion could not be confirmed.";
-    }
+    await deleteManagedAar(recordId, button.dataset.aarDeleteReason || "No reason recorded");
   }));
   document.querySelectorAll("[data-aar-resume-edit]").forEach(button => button.addEventListener("click", async event => {
     const recordId = event.currentTarget.dataset.aarResumeEdit;
@@ -5312,13 +5436,15 @@ async function loadReach() {
   await loadWar();
 }
 
-const warView = { data: null, error: "", busy: false, planet: "", subsector: "", pool: "vanilla" };
+const warView = { data: null, error: "", busy: false, planet: "", subsector: "", pool: "vanilla", requestSequence: 0 };
 
 async function loadWar() {
+  const sequence = ++warView.requestSequence;
   if (!state.auth.authenticated) { warView.data = null; return; }
   try {
     const response = await fetch(apiUrl(`/api/war?planet=${encodeURIComponent(warView.planet)}`), { credentials: "include", cache: "no-store" });
     const result = await response.json();
+    if (sequence !== warView.requestSequence) return;
     if (!response.ok) throw new Error(result.message || result.error || "Campaign relay unavailable");
     warView.data = result;
     warView.error = "";
@@ -5326,13 +5452,16 @@ async function loadWar() {
       const campaign = result.campaigns[sector.id];
       sector.status = campaign?.status === "contested" ? "critical" : campaign?.status || "secure";
     }
-  } catch (error) { warView.data = null; warView.error = error.message; }
+  } catch (error) {
+    if (sequence !== warView.requestSequence) return;
+    warView.data = null; warView.error = error.message;
+  }
 }
 
 function warConsoleHtml() {
   const war = warView.data;
-  if (!state.auth.authenticated) return `<div class="reach-toolbar">Sign in to access the Galactic War.</div>`;
-  if (!war) return `<div class="reach-toolbar" role="status">${escapeHtml(warView.error || "Campaign relay pending")}</div>`;
+  if (!state.auth.authenticated) return `<section id="war-console"><p>Sign in to access the Galactic War.</p></section>`;
+  if (!war) return `<section id="war-console" role="status">${escapeHtml(warView.error || "Campaign relay pending")}</section>`;
   const sectorId = warView.subsector || state.selectedSector || state.geography?.sectors[0]?.id || "";
   const campaign = war.campaigns[sectorId];
   const roles = new Set(war.actor.roles);
@@ -5343,7 +5472,7 @@ function warConsoleHtml() {
   const teams = war.kill_teams.filter(team => master || team.company_id === company);
   const systems = (state.geography?.systems || []).filter(system => system.sectorId === sectorId);
   const planets = war.planets.filter(planet => planet.subsector_id === sectorId);
-  const select = (name, label, options) => `<label>${label}<select class="reach-select" data-war-field="${name}" aria-label="${label}">${options}</select></label>`;
+  const select = (name, label, options) => `<label>${label}<select class="reach-select" data-war-field="${name}" aria-label="${label}"${warView.busy ? " disabled" : ""}>${options}</select></label>`;
   const option = (value, label, selected = false) => `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
   const button = (action, label, extra = "") => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy ? " disabled" : ""}>${label}</button>`;
   const commitments = Object.entries(war.commitments).filter(([, target]) => target === sectorId);
@@ -5356,7 +5485,7 @@ function warConsoleHtml() {
       ${review.receipt_url?.startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(review.receipt_url)}" target="_blank" rel="noopener noreferrer">Evidence receipt</a>` : ""}
       ${review.status === "pending" && !review.participants.includes(war.actor.id) ? `<label>Review reason<input class="reach-select" data-war-review-reason="${escapeHtml(review.strike_id)}" maxlength="500"></label>${button("review", "Approve", `data-strike="${escapeHtml(review.strike_id)}" data-decision="approve" `)}${button("review", "Reject", `data-strike="${escapeHtml(review.strike_id)}" data-decision="reject" `)}` : `<span>${review.status === "approved" ? "Approved / archive processing" : "Independent reviewer required"}</span>`}
     </div>`).join("") || `<p>No reports awaiting review.</p>`}
-    <h3 class="tier-label">Strike credit corrections</h3><div class="reach-toolbar"><label>Result<select class="reach-select" data-war-reversal>${(war.recent_results || []).filter(result => !result.reversed && !result.participants.includes(war.actor.id)).map(result => option(result.strike_id, `${result.mission} / AAR ${result.aar_id}`)).join("")}</select></label><label>Reversal reason<input class="reach-select" data-war-reversal-reason maxlength="500"></label>${button("reverse", "Reverse strike credit")}</div>
+    <h3 class="tier-label">Strike credit corrections</h3><div class="reach-toolbar"><label>Settled strike to reverse<select class="reach-select" data-war-reversal>${(war.recent_results || []).filter(result => !result.reversed && !result.participants.includes(war.actor.id)).map(result => option(result.strike_id, `${result.mission} / AAR ${result.aar_id}`)).join("")}</select></label><label>Why reverse this credit?<input class="reach-select" data-war-reversal-reason maxlength="500"></label>${button("reverse", "Reverse strike credit")}</div>
   </section>` : "";
   return `<section id="war-console" aria-label="Galactic War command">
     <div class="reach-toolbar">
@@ -5375,41 +5504,70 @@ function warConsoleHtml() {
       <label>Cover reason <input class="reach-select" data-war-field="reason" maxlength="300" aria-label="Cover reason"></label>
       ${button("assign", "Assign system")}
     </div>` : ""}
-    <div class="reach-toolbar">${select("planet_id", "Planet", option("", "Select planet", !warView.planet) + planets.map(planet => option(planet.id, `${planet.name}${planet.terrain_provisional ? " [provisional terrain]" : ""}`, planet.id === warView.planet)).join(""))}<span>Vanilla maps / ${war.content.objectives} briefing types</span></div>
+    <div class="reach-toolbar">${select("planet_id", "Planet", option("", "Select planet", !warView.planet) + planets.map(planet => option(planet.id, `${planet.name}${planet.terrain_provisional ? " [provisional terrain]" : ""}`, planet.id === warView.planet)).join(""))}</div>
     <div class="war-pools" role="group" aria-label="Strike format">
-      <button class="btn-dossier-action" type="button" data-war-pool="vanilla" aria-pressed="${pool === "vanilla"}">Vanilla</button>
-      <button class="btn-dossier-action" type="button" data-war-pool="omega" aria-pressed="${pool === "omega"}">Omega</button>
+      <button class="btn-dossier-action" type="button" data-war-pool="vanilla" aria-pressed="${pool === "vanilla"}"${warView.busy ? " disabled" : ""}>Vanilla</button>
+      <button class="btn-dossier-action" type="button" data-war-pool="omega" aria-pressed="${pool === "omega"}"${warView.busy ? " disabled" : ""}>Omega</button>
     </div>
+    <div class="war-board-status" aria-label="Selected strike board status">${warView.planet ? `<span>${board.filter(offer => offer.status === "available").length} available</span><span>${board.filter(offer => offer.status === "recruiting").length} recruiting</span><span>${board.filter(offer => ["locked", "deployed"].includes(offer.status)).length} locked</span><span>${board.filter(offer => offer.status === "review_pending").length} awaiting review</span>` : "No planet selected"}</div>
     ${!canParticipate ? `<p class="aar-upload-hint">The Watch Brother role and active membership are required for strike signup.</p>` : ""}
-    <div class="war-strike-grid">${board.map(offer => `<article class="war-strike"><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p><p>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${escapeHtml(offer.briefing)}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
+    <div class="war-strike-grid">${board.map(offer => `<article class="war-strike"><span class="field-label">Game mission</span><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p><p><span class="field-label">Briefing theme</span><br>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${escapeHtml(offer.briefing)}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
       <ul>${offer.participants.map(identity => `<li>${escapeHtml(war.participant_names?.[identity] || identity)}${offer.specialist_id === identity ? " (required specialist)" : ""}</li>`).join("")}</ul>
       ${offer.attempt_id && ["locked", "deployed"].includes(offer.status) ? `<p>Strike ID: <code>${escapeHtml(offer.attempt_id)}</code></p>` : ""}<div class="tools">
       ${["available", "recruiting"].includes(offer.status) && (canParticipate || offer.participants.includes(war.actor.id)) ? button(offer.participants.includes(war.actor.id) ? "leave" : "join", offer.participants.includes(war.actor.id) ? "Withdraw" : "Join strike", `data-strike="${escapeHtml(offer.id)}" `) : ""}
       ${["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", "Submit AAR", `data-strike="${escapeHtml(offer.id)}" `) : ""}
-    </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("")}</div>
+    </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("") || (warView.planet ? `<p class="aar-empty">No strikes on this board.</p>` : "")}</div>
     ${reviewPanel}
     <div role="status" aria-live="polite">${escapeHtml(warView.error)}</div>
   </section>`;
 }
 
+function refreshWarConsole() {
+  const focused = document.activeElement;
+  const field = focused?.dataset?.warField;
+  const pool = focused?.dataset?.warPool;
+  const console = document.getElementById("war-console");
+  if (console) console.outerHTML = warConsoleHtml();
+  if (field || pool) {
+    [...document.querySelectorAll("[data-war-field], [data-war-pool]")].find(control =>
+      field ? control.dataset.warField === field : control.dataset.warPool === pool
+    )?.focus({preventScroll: true});
+  }
+  const values = [
+    Object.values(warView.data?.campaigns || {}).filter(campaign => campaign.status === "contested").length,
+    Object.keys(warView.data?.commitments || {}).length,
+    Object.keys(warView.data?.assignments || {}).length
+  ];
+  document.querySelectorAll(".reach-summary .reach-stat-value").forEach((element, index) => {
+    if (index < values.length) element.textContent = String(values[index]);
+  });
+  document.querySelectorAll("[data-sector-status]").forEach(element => {
+    const status = state.geography?.sectors.find(sector => sector.id === element.dataset.sectorStatus)?.status || "secure";
+    element.textContent = status === "critical" ? "Contested" : titleCase(status);
+  });
+}
+
 document.addEventListener("change", async event => {
   const field = event.target.closest("[data-war-field]");
-  if (!field) return;
+  if (!field || warView.busy) return;
   if (field.dataset.warField === "subsector_id") {
     warView.subsector = field.value;
     warView.planet = "";
-    await loadWar(); renderReach();
+    showSectorLevel(field.value);
+    await loadWar(); refreshWarConsole();
   } else if (field.dataset.warField === "planet_id") {
     warView.planet = field.value;
-    await loadWar(); renderReach();
+    refreshWarConsole();
+    await loadWar(); refreshWarConsole();
   }
 });
 
 document.addEventListener("click", async event => {
   const poolButton = event.target.closest("[data-war-pool]");
   if (poolButton?.dataset.warPool && ["vanilla", "omega"].includes(poolButton.dataset.warPool)) {
+    if (warView.busy) return;
     warView.pool = poolButton.dataset.warPool;
-    renderReach();
+    refreshWarConsole();
     return;
   }
   const button = event.target.closest("[data-war-action]");
@@ -5426,6 +5584,7 @@ document.addEventListener("click", async event => {
     aarDraft.tags = new Set();
     aarDraft.inductees = new Set();
     aarDraft.managementRecordId = "";
+    aarDraft.memberProposal = false;
     aarDraft.existingScreenshots = [];
     aarDraft.strikeSuccess = "success";
     aarDraft.idempotencyKey = "";
@@ -5460,7 +5619,9 @@ document.addEventListener("click", async event => {
     }
   }
   warView.busy = true;
+  ++warView.requestSequence;
   button.disabled = true;
+  document.querySelectorAll("[data-war-field], [data-war-pool]").forEach(control => { control.disabled = true; });
   try {
     const response = await fetch(apiUrl("/api/war"), { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || "" }, body: JSON.stringify(payload) });
     const result = await response.json();
@@ -5472,14 +5633,15 @@ document.addEventListener("click", async event => {
       sector.status = campaign?.status === "contested" ? "critical" : campaign?.status || "secure";
     }
   } catch (error) { warView.error = error.message; }
-  finally { warView.busy = false; renderReach(); updateStatusBadge(); }
+  finally { warView.busy = false; refreshWarConsole(); updateStatusBadge(); }
 });
 
 async function refreshReach() {
   if (state.page !== "reach" || document.visibilityState !== "visible") return;
-  if (document.querySelector(".reach-viewport.dragging")) return;
+  if (warView.busy || document.querySelector(".reach-viewport.dragging") || document.activeElement?.closest("#war-console")) return;
   await loadReach();
-  renderReach();
+  if (document.getElementById("reach-canvas")) refreshWarConsole();
+  else renderReach();
   updateStatusBadge();
 }
 
@@ -7197,8 +7359,8 @@ function mobileGeographyHtml() {
       const systems = state.geography.systems.filter(system => system.sectorId === sector.id)
         .sort((a, b) => a.name.localeCompare(b.name));
       return `<details class="reach-mobile-sector">
-        <summary><span>${escapeHtml(sector.name)}</span><small>${escapeHtml(titleCase(sector.status))} / ${systems.length ? `${systems.length} systems` : "Uncharted"}</small></summary>
-        <div class="reach-mobile-systems">${systems.length ? systems.map(system => `
+        <summary><span>${escapeHtml(sector.name)}</span><small><span data-sector-status="${escapeHtml(sector.id)}">${escapeHtml(sector.status === "critical" ? "Contested" : titleCase(sector.status))}</span> / ${systems.length ? `${systems.length} systems` : "Uncharted"}</small></summary>
+        <div class="reach-mobile-systems"><button class="reach-mobile-system" type="button" data-sector="${escapeHtml(sector.id)}">Open campaign</button>${systems.length ? systems.map(system => `
           <button class="reach-mobile-system" type="button" data-mobile-system="${escapeHtml(system.id)}">
             <span>${escapeHtml(system.name)}</span><small>${bodyCounts.get(system.id) || 0} bodies</small>
           </button>`).join("") : `<div class="reach-mobile-empty">Uncharted</div>`}</div>
@@ -7227,15 +7389,18 @@ function geographySectorPanelHtml(sectorId, selectedSystemId) {
       <div>
         <div class="reach-sector-panel-kicker">${selectedSystem ? "Selected system" : `Sector ${String(sector.number).padStart(2, "0")} // ${systems.length} systems`}</div>
         <h2 class="reach-sector-panel-title">${escapeHtml(selectedSystem?.name || sector.name)}</h2>
-        <div class="reach-sector-panel-meta">${escapeHtml(titleCase(sector.status))} · ${selectedSystem ? "Planetary system" : "Charted systems and worlds"}</div>
+        <div class="reach-sector-panel-meta">${escapeHtml(sector.status === "critical" ? "Contested" : titleCase(sector.status))} · ${selectedSystem ? "Planetary system" : "Charted systems and worlds"}</div>
       </div>
       <div class="reach-sector-panel-actions">
         ${selectedSystem ? `<button class="reach-sector-panel-back" type="button" data-sector-panel-back>Sector systems</button>` : ""}
         <button class="reach-sector-panel-close" type="button" data-sector-panel-close aria-label="Close sector panel" title="Close sector panel">&times;</button>
       </div>
     </div>
-    <div class="reach-sector-panel-list" aria-label="Systems in ${escapeHtml(sector.name)}">
-      ${systemCards || `<div class="reach-sector-empty">No charted systems in this sector.</div>`}
+    <div class="reach-sector-panel-body">
+      ${warConsoleHtml()}
+      <details><summary>Systems and worlds (${systems.length})</summary><div class="reach-sector-panel-list" aria-label="Systems in ${escapeHtml(sector.name)}">
+        ${systemCards || `<div class="reach-sector-empty">No charted systems in this sector.</div>`}
+      </div></details>
     </div>`;
 }
 
@@ -7247,13 +7412,11 @@ function updateGeographySectorPanel() {
   const open = Boolean(sectorId && state.geography?.sectors.some(sector => sector.id === sectorId));
   shell.classList.toggle("has-sector-panel", open);
   panel.setAttribute("aria-hidden", String(!open));
-  panel.innerHTML = open ? geographySectorPanelHtml(sectorId, state.selectedSystem) : "";
   if (open && warView.subsector !== sectorId) {
     warView.subsector = sectorId;
     warView.planet = "";
-    const console = document.getElementById("war-console");
-    if (console) console.outerHTML = warConsoleHtml();
   }
+  panel.innerHTML = open ? geographySectorPanelHtml(sectorId, state.selectedSystem) : "";
 }
 
 function renderReach() {
@@ -7291,6 +7454,7 @@ function renderReach() {
       <div class="reach-stat"><div class="reach-stat-value">${Object.keys(warView.data?.assignments || {}).length}</div><div class="reach-stat-label">Kill Teams Assigned</div></div>
       <div class="reach-stat"><div class="reach-stat-value">14</div><div class="reach-stat-label">Days Per Campaign</div></div>
     </div>
+    ${geographyLive ? `<details class="reach-mobile-index"${selectedSector ? "" : " open"}><summary>Choose subsector</summary>${mobileGeographyHtml()}</details>` : ""}
     <div class="reach-map-shell${selectedSector ? " has-sector-panel" : ""}">
       <div class="reach-viewport" id="reach-viewport">
         ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Galactic sector chart with the Jericho Reach at its center"></canvas>` : reachSvg(reach, directives)}
@@ -7313,9 +7477,8 @@ function renderReach() {
         ${geographyLive && selectedSector ? geographySectorPanelHtml(selectedSector.id, state.selectedSystem) : ""}
       </aside>
     </div>
-    ${warConsoleHtml()}
+    ${!geographyLive ? warConsoleHtml() : ""}
     ${geographyLive ? `<details class="reach-desktop-index"><summary>Sector navigator</summary>${mobileGeographyHtml()}</details>` : ""}
-    ${geographyLive ? mobileGeographyHtml() : ""}
     ${terminalTransmissionHtml("JERICHO_REACH_OPERATIONS", "ACCESSING ASTROPATHIC OPERATIONS LEDGER...", [
       { label: "Location", value: "The Jericho Reach, Ultima Segmentum" },
       { label: "Requesting Authority", value: "Ordo Xenos Inquisitorial Seal // VERIFIED" },
@@ -7556,7 +7719,7 @@ function showSectorLevel(sectorId) {
   state.selectedSystem = null;
   state.reachView = null;
   state.reachSemanticZoomAt = performance.now();
-  if (!focusGeographySectorCamera(sectorId)) renderReach();
+  if (!focusGeographySectorCamera(sectorId) && !document.getElementById("reach-canvas")) renderReach();
   updateGeographySectorPanel();
 }
 
@@ -7568,7 +7731,7 @@ function showSystemLevel(systemId) {
   state.selectedSystem = system.id;
   state.reachView = null;
   state.reachSemanticZoomAt = performance.now();
-  if (!focusGeographySystemCamera(systemId)) renderReach();
+  if (!focusGeographySystemCamera(systemId) && !document.getElementById("reach-canvas")) renderReach();
   updateGeographySectorPanel();
 }
 
@@ -8033,7 +8196,10 @@ function wireEvents() {
     }
     const sectorEl = e.target.closest("[data-sector]");
     if (sectorEl) {
+      const mobileIndex = sectorEl.closest(".reach-mobile-index");
+      if (mobileIndex) mobileIndex.open = false;
       showSectorLevel(sectorEl.dataset.sector);
+      if (mobileIndex) document.getElementById("reach-sector-panel")?.scrollIntoView({block: "start"});
       return;
     }
     const systemEl = e.target.closest("[data-system]");
