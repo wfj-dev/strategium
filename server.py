@@ -155,6 +155,7 @@ SESSION_TTL_SECONDS = int(os.getenv("STRATEGIUM_SESSION_TTL_SECONDS", str(60 * 6
 MAX_JSON_BODY_BYTES = 1024 * 1024
 MAX_AAR_SUBMISSION_BYTES = 34 * 1024 * 1024
 MAX_AAR_IMAGE_BYTES = 32 * 1024 * 1024
+MAX_AAR_MANAGEMENT_RESPONSE_BYTES = 512 * 1024
 MAX_AAR_CONCURRENT_SUBMISSIONS = 2
 _AAR_SUBMISSION_SLOTS = threading.BoundedSemaphore(MAX_AAR_CONCURRENT_SUBMISSIONS)
 EVIDENCE_TTL_SECONDS = 600
@@ -384,7 +385,10 @@ def _aar_management_request(
     try:
         opener = urllib.request.build_opener(_NoRedirectHandler)
         with opener.open(request, timeout=12) as response:
-            result = json.loads(response.read(131072))
+            response_body = response.read(MAX_AAR_MANAGEMENT_RESPONSE_BYTES + 1)
+            if len(response_body) > MAX_AAR_MANAGEMENT_RESPONSE_BYTES:
+                return None
+            result = json.loads(response_body)
             return response.status, result if isinstance(result, dict) else {}
     except urllib.error.HTTPError as error:
         try:
@@ -1097,7 +1101,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             identity, decision = edit_request_match.groups()
             self._post_aar_management_action("", f"edit-requests/{identity}/{decision}")
             return
-        management_match = re.fullmatch(r"/api/aar-management/records/([0-9]{1,20})/(delete-request|delete-confirm|edit-resume|reviews/[a-f0-9]{24}/acknowledge)", path)
+        management_match = re.fullmatch(r"/api/aar-management/records/([0-9]{1,20})/(delete-request|delete-confirm|delete-reject|edit-resume|reviews/[a-f0-9]{24}/acknowledge)", path)
         if management_match:
             self._post_aar_management_action(*management_match.groups())
             return
@@ -1555,10 +1559,11 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             return
         try:
             offset = max(0, min(int((query.get("offset") or ["0"])[0]), 100000))
+            queue_offset = max(0, min(int((query.get("queue_offset") or ["0"])[0]), 100000))
         except ValueError:
             self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_offset"})
             return
-        response = _aar_management_request(str(user["id"]), "list", {"query": search, "offset": offset})
+        response = _aar_management_request(str(user["id"]), "list", {"query": search, "offset": offset, "queue_offset": queue_offset})
         if response is None:
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "aar_management_unavailable"})
             return

@@ -16,6 +16,8 @@ the collapsible subsector navigator on phones. The panel contains command action
 planet selection, Vanilla/Omega pools and strike cards. Counts describe the selected
 planet's current pool, while cards distinguish the game mission from its briefing
 theme. Changing selections or refreshing campaign data keeps the map canvas mounted.
+Campaign polling continues while controls are focused; form values, text selection
+and keyboard focus are preserved when the console updates.
 
 Strike participation requires the actual Watch Brother role, even for higher ranks
 and specialists. The bot verifies the role ID at signup and rechecks the full roster
@@ -113,10 +115,19 @@ the existing audited receipt/archive update and recovery flow. A proposal based 
 an outdated record is rejected rather than silently overwriting newer changes.
 Members cannot access the staff queue or directly apply their proposed changes.
 
+Review items use separate Previous/Next request controls, with up to ten items per
+page and a byte-bounded response. Archive search/pagination remains independent.
+
 Submitters and participants may also request deletion of their website AAR with a
 reason. Only a Forgemaster can confirm deletion. Neither editing nor deletion is
 offered for member-posted Discord AARs. Existing strike-link, evidence and
 credit-reversal protections remain.
+
+Members may have at most ten pending deletion requests; the overall deletion queue
+is capped at 1,000. Editors can decline a requested deletion with an audited reason,
+retaining the AAR and unlocking editing. Decline is unavailable once deletion has
+started. Decisions are bound to the specific request so stale screens cannot act
+on a later request for the same AAR. A later request retains the earlier decline audit.
 
 ## Rank Guide
 

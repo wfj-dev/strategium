@@ -1276,6 +1276,7 @@
   .aar-management-list textarea.field-input { min-height: 90px; resize: vertical; }
   .aar-edit-request { display: grid; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-dim); }
   .aar-edit-request-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .aar-deletion-request { display: grid; gap: 12px; }
   .aar-proposal-change { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 8px 0; border-top: 1px solid var(--border-dim); font-size: 11px; overflow-wrap: anywhere; }
   .aar-proposal-change strong { grid-column: 1 / -1; color: var(--gold); }
   .aar-management-entry-actions { flex-wrap: wrap; }
@@ -3581,7 +3582,7 @@ const aarDraft = {
   submitting: false, reviewing: false, idempotencyKey: ""
 };
 const aarPhoneHandoff = { sessionId: "", qr: "", url: "", expiresAt: 0, imported: new Set(), timer: null, busy: false, polling: false };
-const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, pendingDeletions: [], pendingEdits: [], editRequests: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
+const aarManager = { query: "", offset: 0, records: [], total: 0, hasMore: false, queueOffset: 0, queueHistory: [], queueTotal: 0, queueNextOffset: 0, queueHasMore: false, pendingDeletions: [], pendingEdits: [], editRequests: [], reconciliationReviews: [], status: "idle", timer: null, selectedId: "", detail: null, notice: "" };
 const aarCorrection = { record: "", changes: "", busy: false, status: "" };
 
 function aarCorrectionFormHtml() {
@@ -4377,7 +4378,7 @@ async function loadAarManagement() {
   aarManager.status = "loading";
   renderAarManagement();
   try {
-    const params = new URLSearchParams({ q: aarManager.query, offset: String(aarManager.offset) });
+    const params = new URLSearchParams({ q: aarManager.query, offset: String(aarManager.offset), queue_offset: String(aarManager.queueOffset) });
     const response = await fetch(apiUrl(`/api/aar-management?${params}`), { credentials: "include", cache: "no-store" });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.message || "AAR archive is unavailable.");
@@ -4385,6 +4386,15 @@ async function loadAarManagement() {
     aarManager.total = Number(result.total) || 0;
     aarManager.hasMore = result.has_more === true;
     aarManager.pendingDeletions = Array.isArray(result.pending_deletions) ? result.pending_deletions : [];
+    aarManager.queueTotal = Number(result.queue_total) || 0;
+    aarManager.queueNextOffset = Number(result.queue_next_offset) || 0;
+    aarManager.queueHasMore = result.queue_has_more === true;
+    if (aarManager.queueOffset > 0 && !aarManager.queueHasMore && aarManager.queueNextOffset === aarManager.queueOffset) {
+      aarManager.queueOffset = 0;
+      aarManager.queueHistory = [];
+      await loadAarManagement();
+      return;
+    }
     aarManager.pendingEdits = Array.isArray(result.pending_edits) ? result.pending_edits : [];
     aarManager.editRequests = Array.isArray(result.edit_requests) ? result.edit_requests : [];
     aarManager.editRequestCount = Number(result.edit_request_count) || aarManager.editRequests.length;
@@ -4427,6 +4437,7 @@ async function deleteManagedAar(recordId, reason, requestFirst = false) {
   if (state.auth?.aar_management?.can_delete !== true || aarManager.deleteBusy) return;
   if (!window.confirm(`Permanently delete AAR ${recordId}, its Discord receipt, and its active award credit?\n\nReason: ${reason}`)) return;
   aarManager.deleteBusy = true;
+  let requestToken = aarManager.detail?.id === recordId ? aarManager.detail.delete_request?.request_token : aarManager.pendingDeletions.find(item => item.id === recordId)?.request_token;
   const post = async (action, payload) => {
     const response = await fetch(apiUrl(`/api/aar-management/records/${encodeURIComponent(recordId)}/${action}`), {
       method: "POST", credentials: "include",
@@ -4440,10 +4451,11 @@ async function deleteManagedAar(recordId, reason, requestFirst = false) {
   try {
     if (requestFirst) {
       const request = await post("delete-request", {reason});
-      if (aarManager.detail?.id === recordId) aarManager.detail.delete_request = {status: request.status, reason: request.reason || reason};
+      requestToken = request.request_token;
+      if (aarManager.detail?.id === recordId) aarManager.detail.delete_request = {status: request.status, reason: request.reason || reason, request_token: requestToken};
       if (request.reason && request.reason !== reason) throw new Error("An existing deletion request has a different reason. Review it before confirming.");
     }
-    const result = await post("delete-confirm", {});
+    const result = await post("delete-confirm", {request_token: requestToken});
     aarManager.notice = result.status === "processing_pending"
       ? "Deletion is still processing. Resume it from Pending Deletions."
       : "AAR and Discord receipt deleted; affected awards reconciled.";
@@ -4486,6 +4498,10 @@ async function approveAarEditProposal(item, note) {
   return result;
 }
 
+function aarDeletionDeclineHtml(recordId) {
+  return `<label class="aar-field"><span class="field-label">Reason to decline deletion</span><textarea class="field-input" data-aar-delete-decline-note="${escapeHtml(recordId)}" rows="2" minlength="8" maxlength="400"></textarea></label><button type="button" class="btn-dossier-action" data-aar-manage-delete-reject="${escapeHtml(recordId)}">Decline deletion</button>`;
+}
+
 function renderAarManagement() {
   const app = document.getElementById("app");
   if (state.auth?.aar_management?.can_edit !== true) { app.innerHTML = ""; return; }
@@ -4493,7 +4509,7 @@ function renderAarManagement() {
   const deleteRequest = detail?.delete_request;
   const deleteControl = deleteRequest?.status
     ? `<section class="aar-section"><h3>Deletion Request</h3><p class="aar-upload-hint">${escapeHtml(deleteRequest.status.replaceAll("_", " "))}${deleteRequest.reason ? ` · ${escapeHtml(deleteRequest.reason)}` : ""}</p>
-        ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}" data-aar-delete-reason="${escapeHtml(deleteRequest.reason || "No reason recorded")}">Confirm permanent deletion</button>` : `<p class="aar-upload-hint">Awaiting Forgemaster confirmation.</p>`}</section>`
+        ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-confirm="${escapeHtml(detail.id)}" data-aar-delete-reason="${escapeHtml(deleteRequest.reason || "No reason recorded")}">Confirm permanent deletion</button>` : `<p class="aar-upload-hint">Awaiting Forgemaster confirmation.</p>`}${deleteRequest.status === "requested" ? aarDeletionDeclineHtml(detail.id) : ""}</section>`
     : detail
     ? `<section class="aar-section"><h3>${state.auth.aar_management?.can_delete === true ? "Delete AAR" : "Request deletion"}</h3><label class="aar-field aar-field-wide"><span class="field-label">Deletion reason</span><textarea id="aar-delete-reason" class="field-input" rows="3" minlength="8" maxlength="400" placeholder="Explain why this report must be removed"></textarea></label><button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-request="${escapeHtml(detail.id)}">${state.auth.aar_management?.can_delete === true ? "Delete permanently..." : "Request deletion"}</button></section>`
     : "";
@@ -4511,10 +4527,11 @@ function renderAarManagement() {
       <div class="aar-management-entry-actions">${receiptLink}<span>${record.editable ? "Editable" : "Submission data unavailable"}</span></div>
     </article>`;
   }).join("");
-  const pendingDeletionRows = aarManager.pendingDeletions.map(item => `<article class="aar-section aar-management-entry">
+  const pendingDeletionRows = aarManager.pendingDeletions.map(item => `<article class="aar-section aar-deletion-request">
     <div><strong>Deletion ${escapeHtml(item.status.replaceAll("_", " "))} · AAR ${escapeHtml(item.id)}</strong><p class="aar-upload-hint">${escapeHtml(item.reason || "No reason recorded")}</p></div>
     <div class="aar-management-entry-actions">${String(item.receipt_url || "").startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(item.receipt_url)}" target="_blank" rel="noopener noreferrer">Original AAR</a>` : ""}
     ${state.auth.aar_management?.can_delete === true ? `<button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-recover-delete-confirm="${escapeHtml(item.id)}" data-aar-delete-reason="${escapeHtml(item.reason || "No reason recorded")}">Resume deletion</button>` : `<span class="aar-upload-hint">Forgemaster action required</span>`}</div>
+    ${item.status === "requested" ? aarDeletionDeclineHtml(item.id) : ""}
   </article>`).join("");
   const editRequestRows = (aarManager.editRequests || []).map(item => `<article class="aar-edit-request">
     <div><strong>AAR ${escapeHtml(item.record_id)} / ${escapeHtml(item.requester_name || item.requester_id)}</strong><p class="aar-upload-hint">${escapeHtml(item.requested_at ? new Date(item.requested_at).toLocaleString() : "")}</p><p class="aar-edit-request-copy">${escapeHtml(item.requested_changes)}</p></div>
@@ -4561,10 +4578,11 @@ function renderAarManagement() {
     ${aarManager.selectedId ? `<nav aria-label="AAR archive"><button type="button" class="btn-dossier-action" data-aar-manage-back><span aria-hidden="true">&larr;</span> Back to Manage AARs</button></nav>` : ""}
     <header class="aar-heading"><div class="blood-overline">&gt; ARCHIVE CONTROL // STAFF ACCESS</div><h2>Manage AARs</h2><p class="aar-description">Search Strategium-submitted reports in the Watch archive.</p>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
     ${aarManager.selectedId ? "" : `<label class="aar-field aar-field-wide"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission, participant, or submitter ID"></label>`}
-    ${!aarManager.selectedId ? `<section class="aar-section" aria-label="AAR edit requests"><h3>Edit Requests (${Number(aarManager.editRequestCount) || (aarManager.editRequests || []).length})</h3><div class="aar-management-list">${editRequestRows || `<p class="aar-empty">No pending member correction requests.</p>`}</div></section>
+    ${!aarManager.selectedId ? `<section class="aar-section" aria-label="AAR edit requests"><h3>Edit Requests (${Number(aarManager.editRequestCount) || (aarManager.editRequests || []).length})</h3><div class="aar-management-list">${editRequestRows || `<p class="aar-empty">${aarManager.editRequestCount ? "Member edit requests are on another review page." : "No pending member correction requests."}</p>`}</div></section>
     ${pendingDeletionRows ? `<section class="aar-section"><h3>Pending Deletions</h3><div class="aar-management-list">${pendingDeletionRows}</div></section>` : ""}
     ${pendingEditRows ? `<section class="aar-section"><h3>Pending Edits</h3><div class="aar-management-list">${pendingEditRows}</div></section>` : ""}
     ${reconciliationReviewRows ? `<section class="aar-section"><h3>Award Reconciliation Review</h3><div class="aar-management-list">${reconciliationReviewRows}</div></section>` : ""}` : ""}
+    ${!aarManager.selectedId && aarManager.queueTotal > 0 ? `<nav class="aar-submit-row" aria-label="Review queue pages"><button class="btn-dossier-action" type="button" data-aar-queue-page="previous"${aarManager.queueHistory.length ? "" : " disabled"}>Previous requests</button><span class="aar-upload-hint">${aarManager.queueOffset + 1}-${aarManager.queueNextOffset} of ${aarManager.queueTotal} review items</span><button class="btn-dossier-action" type="button" data-aar-queue-page="next"${aarManager.queueHasMore ? "" : " disabled"}>Next requests</button></nav>` : ""}
     <div class="aar-management-list">${body}</div>
     ${!aarManager.selectedId && aarManager.status === "ready" ? `<div class="aar-submit-row"><button type="button" class="btn-dossier-action" data-aar-manage-page="previous"${aarManager.offset <= 0 ? " disabled" : ""}>Previous</button><span class="aar-upload-hint">${aarManager.total ? `${aarManager.offset + 1}–${Math.min(aarManager.offset + aarManager.records.length, aarManager.total)} of ${aarManager.total}` : "0 records"}</span><button type="button" class="btn-dossier-action" data-aar-manage-page="next"${aarManager.hasMore ? "" : " disabled"}>Next</button></div>` : ""}
     <div id="aar-management-status" class="aar-status" role="status" aria-live="polite"></div>
@@ -4646,6 +4664,24 @@ function renderAarManagement() {
     const recordId = event.currentTarget.dataset.aarManageDeleteConfirm || event.currentTarget.dataset.aarRecoverDeleteConfirm;
     await deleteManagedAar(recordId, button.dataset.aarDeleteReason || "No reason recorded");
   }));
+  document.querySelectorAll("[data-aar-manage-delete-reject]").forEach(button => button.addEventListener("click", async () => {
+    const recordId = button.dataset.aarManageDeleteReject;
+    const note = [...document.querySelectorAll("[data-aar-delete-decline-note]")].find(input => input.dataset.aarDeleteDeclineNote === recordId)?.value.trim() || "";
+    const status = document.getElementById("aar-management-status");
+    if (note.length < 8) { status.textContent = "Enter a decline reason of at least 8 characters."; return; }
+    button.disabled = true;
+    try {
+      const requestToken = aarManager.detail?.id === recordId ? aarManager.detail.delete_request?.request_token : aarManager.pendingDeletions.find(item => item.id === recordId)?.request_token;
+      const response = await fetch(apiUrl(`/api/aar-management/records/${encodeURIComponent(recordId)}/delete-reject`), {
+        method: "POST", credentials: "include", headers: {"Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || ""}, body: JSON.stringify({note, request_token: requestToken})
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || "Deletion could not be declined.");
+      aarManager.notice = "Deletion declined. The AAR is retained and unlocked for editing.";
+      await loadAarManagement();
+      if (aarManager.selectedId === recordId) await openAarManagementRecord(recordId);
+    } catch (error) { status.textContent = error.message; button.disabled = false; }
+  }));
   document.querySelectorAll("[data-aar-resume-edit]").forEach(button => button.addEventListener("click", async event => {
     const recordId = event.currentTarget.dataset.aarResumeEdit;
     const requestId = event.currentTarget.dataset.aarEditRequest;
@@ -4684,6 +4720,15 @@ function renderAarManagement() {
   }));
   document.querySelectorAll("[data-aar-manage-page]").forEach(button => button.addEventListener("click", () => {
     aarManager.offset = Math.max(0, aarManager.offset + (button.dataset.aarManagePage === "next" ? 25 : -25));
+    void loadAarManagement();
+  }));
+  document.querySelectorAll("[data-aar-queue-page]").forEach(button => button.addEventListener("click", () => {
+    if (button.dataset.aarQueuePage === "previous") {
+      aarManager.queueOffset = aarManager.queueHistory.pop() ?? 0;
+    } else if (aarManager.queueHasMore) {
+      aarManager.queueHistory.push(aarManager.queueOffset);
+      aarManager.queueOffset = aarManager.queueNextOffset;
+    }
     void loadAarManagement();
   }));
 }
@@ -5527,12 +5572,29 @@ function refreshWarConsole() {
   const field = focused?.dataset?.warField;
   const pool = focused?.dataset?.warPool;
   const console = document.getElementById("war-console");
+  const attributes = ["data-war-field", "data-war-review-reason", "data-war-cancel-reason", "data-war-reversal", "data-war-reversal-reason"];
+  const drafts = [...(console?.querySelectorAll?.("input, textarea, select") || [])].map(control => ({
+    attribute: attributes.find(name => control.hasAttribute(name)),
+    identity: attributes.map(name => control.getAttribute(name)),
+    value: control.value, focused: control === focused, start: control.selectionStart, end: control.selectionEnd
+  }));
   if (console) console.outerHTML = warConsoleHtml();
   if (field || pool) {
     [...document.querySelectorAll("[data-war-field], [data-war-pool]")].find(control =>
       field ? control.dataset.warField === field : control.dataset.warPool === pool
     )?.focus({preventScroll: true});
   }
+  const controls = [...(document.getElementById("war-console")?.querySelectorAll?.("input, textarea, select") || [])];
+  drafts.forEach(draft => {
+    if (!draft.attribute) return;
+    const control = controls.find(element => attributes.every((name, index) => element.getAttribute(name) === draft.identity[index]));
+    if (!control || (control.tagName === "SELECT" && ![...control.options].some(option => option.value === draft.value))) return;
+    control.value = draft.value;
+    if (draft.focused) {
+      control.focus({preventScroll: true});
+      if (typeof draft.start === "number" && typeof control.setSelectionRange === "function") control.setSelectionRange(draft.start, draft.end);
+    }
+  });
   const values = [
     Object.values(warView.data?.campaigns || {}).filter(campaign => campaign.status === "contested").length,
     Object.keys(warView.data?.commitments || {}).length,
@@ -5638,8 +5700,9 @@ document.addEventListener("click", async event => {
 
 async function refreshReach() {
   if (state.page !== "reach" || document.visibilityState !== "visible") return;
-  if (warView.busy || document.querySelector(".reach-viewport.dragging") || document.activeElement?.closest("#war-console")) return;
+  if (warView.busy || document.querySelector(".reach-viewport.dragging")) return;
   await loadReach();
+  if (state.page !== "reach") return;
   if (document.getElementById("reach-canvas")) refreshWarConsole();
   else renderReach();
   updateStatusBadge();

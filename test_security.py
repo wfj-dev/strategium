@@ -258,6 +258,49 @@ def test_request_is_secure_uses_forwarded_proto() -> None:
     assert not _request_is_secure({"X-Forwarded-Proto": "http"})
 
 
+def test_management_proxy_reads_bounded_complete_responses(monkeypatch):
+    monkeypatch.setenv("STRATEGIUM_BOT_SHARED_SECRET", "review-response-test-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    response_body = json.dumps({"pending_deletions": [{"reason": "x" * 150000}]}).encode()
+    class Response:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def read(self, limit):
+            return response_body[:limit]
+    monkeypatch.setattr(server.urllib.request, "build_opener", lambda *args: type("Opener", (), {"open": lambda *args, **kwargs: Response()})())
+    assert server._aar_management_request("42", "list", {}) == (200, json.loads(response_body))
+    response_body = b"x" * (server.MAX_AAR_MANAGEMENT_RESPONSE_BYTES + 10)
+    assert server._aar_management_request("42", "list", {}) is None
+
+
+def test_staff_deletion_decline_requires_csrf_and_editor_access(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    capabilities = {"can_edit": False, "can_delete": False}
+    monkeypatch.setattr(server, "_aar_access", lambda user: {"allowed": True, "aar_management": capabilities})
+    captured = []
+    monkeypatch.setattr(server, "_aar_management_request", lambda *args: captured.append(args) or (200, {"status": "cancelled"}))
+    cookie = _session_value({"id": "42", "name": "Reviewer", "csrf": "csrf-token"})
+    headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "Content-Type": "application/json", "X-CSRF-Token": "csrf-token"}
+    path = local_site + "/api/aar-management/records/123/delete-reject"
+    for editor, csrf, expected in [(False, "csrf-token", 403), (True, "wrong", 403), (True, "csrf-token", 200)]:
+        capabilities["can_edit"] = editor
+        headers["X-CSRF-Token"] = csrf
+        request = urllib.request.Request(path, data=b'{"note":"Keep the valid report"}', headers=headers)
+        if expected == 200:
+            with urllib.request.urlopen(request) as response:
+                assert response.status == expected
+        else:
+            with pytest.raises(urllib.error.HTTPError) as error:
+                urllib.request.urlopen(request)
+            assert error.value.code == expected
+    assert len(captured) == 1
+    assert captured[0][0:2] == ("42", "delete-reject")
+
+
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
@@ -1146,6 +1189,7 @@ def test_aar_management_request_uses_matching_private_bot_paths_and_signatures(m
         ("own-delete-request", "123", "/v1/aar/own/records/123/delete-request"),
         ("delete-request", "123", "/v1/aar/management/records/123/delete-request"),
         ("delete-confirm", "123", "/v1/aar/management/records/123/delete-confirm"),
+        ("delete-reject", "123", "/v1/aar/management/records/123/delete-reject"),
         ("edit-resume", "123", "/v1/aar/management/records/123/edit-resume"),
         ("reviews/0123456789abcdef01234567/acknowledge", "123", "/v1/aar/management/records/123/reviews/0123456789abcdef01234567/acknowledge"),
     ]
@@ -1483,6 +1527,38 @@ vm.runInContext(html.slice(html.indexOf('async function loadWar()'),html.indexOf
     pending[0]({ok:true,json:async()=>({planet:'first',campaigns:{}})});
     await first;
     assert.equal(context.warView.data.planet,'second');
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for focused campaign polling")
+def test_war_polling_continues_with_focus_and_preserves_drafts():
+    source = r"""
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+let loads=0,focused=null;
+const makeInput=()=>({value:'',selectionStart:0,selectionEnd:0,tagName:'INPUT',dataset:{},hasAttribute:name=>name==='data-war-reversal-reason',getAttribute:name=>name==='data-war-reversal-reason'?'':null,focus(){focused=this;},setSelectionRange(start,end){this.selectionStart=start;this.selectionEnd=end;}});
+let input=makeInput();input.value='Verified duplicate credit';input.selectionStart=4;input.selectionEnd=8;focused=input;
+const panel={querySelectorAll:()=>[input],set outerHTML(value){input=makeInput();}};
+const context={state:{page:'reach',geography:{sectors:[]}},warView:{busy:false,data:{}},
+ document:{visibilityState:'visible',get activeElement(){return focused;},querySelector:()=>null,querySelectorAll:()=>[],getElementById:identity=>identity==='war-console'?panel:{}},
+ loadReach:async()=>{loads++;},warConsoleHtml:()=>'<section></section>',renderReach:()=>{throw Error('Canvas remounted');},updateStatusBadge:()=>{},titleCase:value=>value};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function refreshWarConsole()'),html.indexOf('document.addEventListener("change", async event =>')),context);
+vm.runInContext(html.slice(html.indexOf('async function refreshReach()'),html.indexOf('function visibleReachDirectives()')),context);
+(async()=>{
+ await context.refreshReach();
+ assert.equal(loads,1);assert.equal(input.value,'Verified duplicate credit');
+ assert.equal(focused,input);assert.equal(input.selectionStart,4);assert.equal(input.selectionEnd,8);
+ focused={dataset:{warPool:'omega'},closest:()=>({})};
+ await context.refreshReach();await context.refreshReach();assert.equal(loads,3);
+ context.loadReach=async()=>{context.state.page='submit-aar';};
+ context.refreshWarConsole=()=>{throw Error('Wrong page refreshed');};
+ await context.refreshReach();
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
