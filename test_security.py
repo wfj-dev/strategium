@@ -1652,15 +1652,18 @@ const vm = require('node:vm');
 const html = fs.readFileSync(process.argv[1], 'utf8');
 const requests=[];
 const confirmations=[];
-const status={textContent:''};
+const status={textContent:'',focus:()=>{focuses++;},scrollIntoView:()=>{scrolls++;}};
 let confirmed=false;
 let failConfirmation=false;
 let pending=false;
 let refreshes=0;
+let focuses=0,scrolls=0;
+const locations=[];
 const context={
-    state:{auth:{csrf:'csrf-token',aar_management:{can_delete:true}}},
+    state:{page:'manage-aars',auth:{csrf:'csrf-token',aar_management:{can_delete:true}}},
     aarManager:{selectedId:'123',detail:{id:'123'}},apiUrl:path=>path,
     window:{confirm:message=>{confirmations.push(message);return confirmed;}},
+    history:{replaceState:(_state,_title,path)=>locations.push(path)},
     document:{getElementById:()=>status},renderAarManagement:()=>{},
     loadAarManagement:async()=>{refreshes++;},
     fetch:async(url,options)=>{
@@ -1697,7 +1700,17 @@ vm.runInContext(html.slice(html.indexOf('async function deleteManagedAar('),html
     assert.equal(requests.length,3);
     assert.equal(refreshes,1);
     assert.equal(context.aarManager.selectedId,'');
-    assert.match(context.aarManager.notice,/Pending Deletions/);
+    assert.match(context.aarManager.notice,/still finishing/);
+    assert.equal(focuses,1);assert.equal(scrolls,1);
+    assert.equal(locations.at(-1),'/manage-aars');
+    pending=false;
+    context.aarManager.detail={id:'123',delete_request:{status:'requested'}};
+    context.aarManager.selectedId='123';
+    await context.deleteManagedAar('123','Duplicate report');
+    assert.equal(context.aarManager.notice,'AAR 123 was deleted.');
+    assert.equal(context.aarManager.selectedId,'');
+    assert.equal(context.aarManager.reviewId,'');
+    assert.equal(refreshes,2);assert.equal(focuses,2);assert.equal(scrolls,2);
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
@@ -1838,6 +1851,24 @@ context.state.auth.aar_management.can_delete=false;
 context.renderAarManagement();
 assert.doesNotMatch(app.innerHTML,/data-aar-manage-delete-confirm/);
 assert.match(app.innerHTML,/not authorized as Forgemaster/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for award review member identity rendering")
+def test_award_review_identifies_affected_member_in_queue_and_preview():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function aarSelectedReviewHtml('),end=html.indexOf('function renderAarManagement()',start);
+const context={escapeHtml:value=>String(value??''),aarManager:{selectedId:'123',reviewId:'review-id'},aarReviewHref:(id,type,review)=>`/manage-aars?aar=${id}&review_type=${type}&review_id=${review}`,state:{auth:{aar_management:{can_delete:true}}}};
+vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+const review={kind:'award',record_id:'123',review_id:'review-id',member_name:'Forge Master Jules',user_id:'42',challenge:'Black Laurels',status:'pending'};
+const detail=context.aarSelectedReviewHtml({id:'123',review},'');
+const row=context.aarReviewListItemHtml({id:'123',kind:'award',review:'review-id',label:'Award review',title:`${review.member_name} / ${review.challenge}`,text:'AAR 123'});
+assert.match(detail,/Forge Master Jules/);assert.match(detail,/Black Laurels/);assert.match(detail,/Acknowledge this review/);
+assert.match(row,/Forge Master Jules[\s\S]*Black Laurels/);assert.match(row,/review_type=award/);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
