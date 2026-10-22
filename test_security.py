@@ -1867,14 +1867,17 @@ def test_unit_detail_headers_and_overview_symbols_share_scoped_layout():
     assert 'style="--team-count:${teamList.length}"' in company
 
 
-def test_company_title_text_can_shrink_beside_its_symbol():
+def test_company_titles_stay_on_one_line_beside_their_symbols():
     page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
     overview = page.split("function renderStrategium()", 1)[1].split("function drawMapConnectors()", 1)[0]
     assert '<span class="company-plate-name">Company ${COMPANY_NAMES[id]}</span>' in overview
     rule = re.search(r"\.company-plate-name\s*\{([^}]+)\}", page)
     assert rule is not None
     assert "min-width: 0" in rule.group(1)
-    assert "overflow-wrap: anywhere" in rule.group(1)
+    assert "white-space: nowrap" in rule.group(1)
+    assert "letter-spacing: 0" in rule.group(1)
+    assert "@media (min-width: 761px) and (max-width: 1024px)" in page
+    assert ".map-company-row .company-slot { grid-column: auto; grid-row: auto; }" in page
     assert "if (!map || !svg || window.innerWidth <= 760) return;" in page
 
 

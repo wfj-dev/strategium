@@ -417,6 +417,11 @@
     width: 50%; min-width: 0; height: 92px; padding: 10px 9px 11px; align-self: center;
   }
   .map-top .plate-name { font-size: 16px; }
+  @media (min-width: 761px) and (max-width: 1024px) {
+    .map-company-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .map-company-row .company-slot { grid-column: auto; grid-row: auto; }
+    .map-connectors { display: none; }
+  }
   @media (max-width: 760px) {
     .fortress-map { display: block; max-width: none; }
     .map-connectors { display: none; }
@@ -516,7 +521,7 @@
     display: flex; align-items: center; gap: 8px;
   }
   .company-plate-captain { font-size: 12.5px; color: var(--green); }
-  .company-plate-name { min-width: 0; overflow-wrap: anywhere; }
+  .company-plate-name { min-width: 0; white-space: nowrap; font-size: 11px; letter-spacing: 0; }
   .company-plate-count { font-size: 10.5px; color: var(--green-faint); }
 
   .company-sigil {
