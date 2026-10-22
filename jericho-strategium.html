@@ -1338,6 +1338,7 @@
   .aar-status { min-height: 20px; color: var(--green-dim); font-size: 11px; }
   .aar-status[data-tone="error"] { color: var(--red); }
   .aar-status[data-tone="success"] { color: var(--gold); }
+  .aar-management-notice { margin: 14px 0; padding: 12px 14px; border: 1px solid var(--gold-dim); background: rgba(207,174,104,.08); color: var(--gold); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
   .aar-login { margin-top: 14px; }
   @media (max-width: 600px) {
     .aar-heading { padding: 10px 5px 18px; }
@@ -4553,11 +4554,19 @@ async function deleteManagedAar(recordId, reason, requestFirst = false) {
     }
     const result = await post("delete-confirm", {request_token: requestToken});
     aarManager.notice = result.status === "processing_pending"
-      ? "Deletion is still processing. Resume it from Pending Deletions."
-      : "AAR and Discord receipt deleted; affected awards reconciled.";
+      ? `Deletion of AAR ${recordId} is still finishing. Open its deletion review to resume.`
+      : `AAR ${recordId} was deleted.`;
     aarManager.selectedId = "";
     aarManager.detail = null;
+    aarManager.reviewType = "";
+    aarManager.reviewId = "";
+    aarManager.detailSequence = (aarManager.detailSequence || 0) + 1;
+    if (state.page !== "manage-aars") return;
+    history.replaceState({page: "manage-aars"}, "", "/manage-aars");
     await loadAarManagement();
+    const notice = document.getElementById("aar-management-notice");
+    notice?.focus({preventScroll: true});
+    notice?.scrollIntoView({block: "center"});
   } catch (error) {
     renderAarManagement();
     const status = document.getElementById("aar-management-status");
@@ -4625,10 +4634,14 @@ function aarSelectedReviewHtml(detail, deleteControl) {
   const heading = review.kind === "edit" ? "Proposed edit" : review.kind === "delete" ? "Deletion request" : review.kind === "award" ? "Award reconciliation" : "Incomplete archive update";
   const info = `<h3>${heading}</h3><p class="aar-upload-hint">${escapeHtml(review.requester_name || review.requester_id || review.request_actor_id || "Staff")} / ${escapeHtml(review.status || "")}${review.requested_at ? ` / ${escapeHtml(new Date(review.requested_at).toLocaleString())}` : ""}</p>`;
   if (review.kind === "delete") return ["cancelled", "complete"].includes(review.status) ? `${info}<p>${escapeHtml(review.decline_reason || "This deletion request is closed.")}</p>` : `${info}${deleteControl}`;
-  if (review.kind === "award") return `${info}<p>${escapeHtml(review.challenge || "Challenge award")} / ${escapeHtml(review.user_id || "")}</p>${review.status === "complete" ? `<p>Award review acknowledged.</p>` : state.auth.aar_management?.can_delete === true ? `<button class="btn-dossier-action" type="button" data-aar-review-ack="${escapeHtml(review.review_id)}" data-aar-review-record="${escapeHtml(detail.id)}">Acknowledge award review</button>` : `<p class="aar-empty">Forgemaster review required.</p>`}`;
+  if (review.kind === "award") return `${info}<p>${escapeHtml(review.member_name || review.user_id || "Unknown member")} / ${escapeHtml(review.challenge || "Challenge award")}</p>${review.status === "complete" ? `<p>Award review acknowledged.</p>` : state.auth.aar_management?.can_delete === true ? `<button class="btn-dossier-action" type="button" data-aar-review-ack="${escapeHtml(review.review_id)}" data-aar-review-record="${escapeHtml(detail.id)}">Acknowledge this review</button>` : `<p class="aar-empty">Forgemaster review required.</p>`}`;
   if (review.kind === "recovery" || review.processing_request_id) return `${info}${["receipt_updated", "archive_saved"].includes(review.processing_status || review.status) ? `<button type="button" class="btn-dossier-action" data-aar-resume-edit="${escapeHtml(detail.id)}" data-aar-edit-request="${escapeHtml(review.processing_request_id || review.request_id)}">Resume archive update</button>` : `<p class="aar-empty">${review.status === "complete" ? "Archive update complete." : "The receipt update is processing."}</p>`}`;
   if (review.status !== "pending") return `${info}<p>${escapeHtml(review.editor_note || "This request is closed.")}</p>`;
   return `${info}<div aria-label="Proposed report changes">${review.submission ? aarEditProposalChangesHtml(review) : escapeHtml(review.requested_changes || "")}</div><div class="aar-review-actions"><label class="aar-field"><span class="field-label">Review note</span><textarea class="field-input" data-aar-request-note="${escapeHtml(review.request_id)}" rows="2" maxlength="500"></textarea></label><div class="aar-management-entry-actions"><button class="btn-primary" type="button" data-aar-request-decision="${review.submission ? "approve" : "resolve"}" data-aar-request-id="${escapeHtml(review.request_id)}">${review.submission ? "Approve edit" : "Mark corrected"}</button><button class="btn-dossier-action" type="button" data-aar-request-decision="reject" data-aar-request-id="${escapeHtml(review.request_id)}">Decline edit</button></div></div>`;
+}
+
+function aarReviewListItemHtml(item) {
+  return `<a class="aar-review-item" href="${escapeHtml(aarReviewHref(item.id, item.kind, item.review))}" data-aar-review-open="${escapeHtml(item.id)}" data-review-type="${escapeHtml(item.kind)}" data-review-id="${escapeHtml(item.review)}" aria-current="${item.id === aarManager.selectedId && item.review === aarManager.reviewId}"><span class="aar-review-kind">${escapeHtml(item.label)}</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text || "")}</span><span>Open AAR ${escapeHtml(item.id)} &rarr;</span></a>`;
 }
 
 function renderAarManagement() {
@@ -4646,13 +4659,13 @@ function renderAarManagement() {
     ...aarManager.editRequests.map(item => ({kind: "edit", id: item.record_id, review: item.request_id, label: "Edit request", title: AAR_PVE_MISSIONS.find(([value]) => value === item.submission?.mission)?.[1] || `AAR ${item.record_id}`, text: item.requester_name || item.requester_id})),
     ...aarManager.pendingDeletions.map(item => ({kind: "delete", id: item.id, review: item.request_token || `delete-${item.id}`, label: "Deletion request", title: item.mission || `AAR ${item.id}`, text: item.reason})),
     ...aarManager.pendingEdits.map(item => ({kind: "recovery", id: item.id, review: item.request_id, label: "Incomplete archive update", title: item.mission || `AAR ${item.id}`, text: item.status === "receipt_updated" ? "Report updated; archive save unfinished" : "Report saved; award reconciliation unfinished"})),
-    ...aarManager.reconciliationReviews.map(item => ({kind: "award", id: item.record_id, review: item.review_id, label: "Award review", title: item.challenge || "Challenge award", text: `AAR ${item.record_id}`}))
+    ...aarManager.reconciliationReviews.map(item => ({kind: "award", id: item.record_id, review: item.review_id, label: "Award review", title: `${item.member_name || item.user_id || "Unknown member"} / ${item.challenge || "Challenge award"}`, text: `AAR ${item.record_id}`}))
   ];
   const archive = aarManager.records.map(item => ({kind: "", id: item.id, review: "", label: item.difficulty || "AAR", title: item.mission || `AAR ${item.id}`, text: (item.brother_names || []).join(", ")}));
   const visibleRequests = requests.filter(item => aarManager.view === "maintenance" ? ["recovery", "award"].includes(item.kind) : ["edit", "delete"].includes(item.kind));
-  const rows = (aarManager.view === "archive" ? archive : visibleRequests).map(item => `<a class="aar-review-item" href="${escapeHtml(aarReviewHref(item.id, item.kind, item.review))}" data-aar-review-open="${escapeHtml(item.id)}" data-review-type="${escapeHtml(item.kind)}" data-review-id="${escapeHtml(item.review)}" aria-current="${item.id === aarManager.selectedId && item.review === aarManager.reviewId}"><span class="aar-review-kind">${escapeHtml(item.label)}</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text || "")}</span><span>Open AAR ${escapeHtml(item.id)} &rarr;</span></a>`).join("");
+  const rows = (aarManager.view === "archive" ? archive : visibleRequests).map(aarReviewListItemHtml).join("");
   const preview = aarManager.status === "loading-detail" ? `<p class="aar-empty" role="status">Loading AAR preview...</p>` : aarManager.status === "detail-error" ? `<p class="aar-empty" role="alert">${escapeHtml(aarManager.error)}</p>` : detail ? `${detail.delete_request || detail.review?.kind === "delete" ? aarSelectedReviewHtml(detail, deleteControl) : ""}${aarReportPreviewHtml(detail)}${!detail.delete_request && detail.review?.kind !== "delete" ? aarSelectedReviewHtml(detail, deleteControl) : ""}` : `<p class="aar-empty">Select an edit, deletion, or archive report.</p>`;
-  app.innerHTML = `<section class="aar-room" aria-label="Manage submitted AARs"><header class="aar-heading"><h2>Manage AARs</h2>${aarManager.notice ? `<p class="aar-status" role="status">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
+  app.innerHTML = `<section class="aar-room" aria-label="Manage submitted AARs"><header class="aar-heading"><h2>Manage AARs</h2>${aarManager.notice ? `<p id="aar-management-notice" class="aar-management-notice" role="status" aria-live="polite" tabindex="-1">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
     <div class="aar-review-workspace${aarManager.selectedId ? " has-preview" : ""}"><aside class="aar-review-sidebar"><div class="war-pools" role="tablist" aria-label="AAR views"><button class="btn-dossier-action" role="tab" data-aar-view="requests" aria-selected="${aarManager.view === "requests"}">Edits &amp; deletions</button><button class="btn-dossier-action" role="tab" data-aar-view="archive" aria-selected="${aarManager.view === "archive"}">Archive</button></div>
     ${Number(aarManager.queueCounts.recovery) > 0 ? `<button class="btn-dossier-action" type="button" data-aar-view="maintenance">Unfinished updates (${Number(aarManager.queueCounts.recovery)})</button>` : ""}
     ${aarManager.view === "archive" ? `<label class="aar-field"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission or participant"></label>` : aarManager.view === "maintenance" ? `<h3>Unfinished archive and award updates</h3>` : `<label class="aar-field"><span class="field-label">Show</span><select id="aar-review-filter" class="field-input">${[["requests", "Edits and deletions"], ["edit", "Member edits"], ["delete", "Deletion requests"]].map(([key, label]) => `<option value="${key}"${aarManager.queueKind === key ? " selected" : ""}>${label} (${Number(aarManager.queueCounts[key]) || 0})</option>`).join("")}</select></label>`}
