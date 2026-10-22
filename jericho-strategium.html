@@ -1301,10 +1301,19 @@
   .aar-review-sidebar { min-width: 0; }
   .aar-review-sidebar [role="tab"][aria-selected="true"] { background: rgba(207,174,104,.12); border-color: var(--gold); color: var(--gold); }
   .aar-review-list { display: grid; }
-  .aar-review-item { display: grid; gap: 6px; padding: 14px 10px; border-bottom: 1px solid var(--border-dim); border-left: 2px solid transparent; color: var(--green-dim); text-decoration: none; overflow-wrap: anywhere; font-size: 11px; }
+  .aar-review-item { display: grid; gap: 7px; margin: 5px 0; padding: 13px 12px; border: 1px solid var(--border-dim); border-left: 2px solid transparent; background: rgba(79,214,122,.025); color: var(--green-dim); text-decoration: none; overflow-wrap: anywhere; font-size: 11px; transition: border-color .15s ease, background .15s ease; }
   .aar-review-item strong { color: var(--white); font-size: 12px; }
   .aar-review-item:hover, .aar-review-item[aria-current="true"] { border-left-color: var(--gold); background: rgba(207,174,104,.05); }
   .aar-review-kind { color: var(--gold); font-size: 10px; text-transform: uppercase; }
+  .aar-review-ticket { border-left-color: var(--gold-dim); }
+  .aar-review-ticket .aar-review-kind { color: var(--gold); }
+  .aar-review-item-head, .aar-review-item-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .aar-review-item-head time, .aar-review-item-foot { color: var(--green-faint); font-size: 10px; }
+  .aar-review-item-foot { justify-content: flex-start; }
+  .aar-history-item { border-left-color: var(--green-dim); }
+  .aar-history-item .aar-review-kind { color: var(--green); }
+  .aar-history-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .aar-history-tag { padding: 2px 6px; border: 1px solid var(--gold-dim); color: var(--gold); font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
   .aar-review-preview { min-width: 0; padding-left: 24px; border-left: 1px solid var(--border-dim); }
   .aar-review-preview h3 { color: var(--gold); font-size: 18px; margin: 16px 0 10px; }
   .aar-report-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; margin: 18px 0; }
@@ -1986,7 +1995,11 @@ const SURNAMES = ["Vahl","Kreig","Ostmark","Halvard","Serrun","Kant","Vireth","D
   "Marrow","Idris"];
 const CHAPTERS = ["Hawk Lords","Ultramarines","Imperial Fists","Blood Angels","Salamanders",
   "Raven Guard","White Scars","Space Wolves","Iron Hands","Crimson Fists","Black Templars",
-  "Star Phantoms","Marines Errant","Novamarines","Astral Claws","Executioners"];
+  "Star Phantoms","Marines Errant","Novamarines","Astral Claws","Executioners","Black Vipers"];
+
+const CHAPTER_LORE_FALLBACKS = {
+  "Black Vipers": "A Primaris-only successor of the Salamanders, the Black Vipers were raised in the Ultima Founding around 999.M41 through the work of Archmagos Belisarius Cawl. Their primarch is Vulkan; no homeworld is known or claimed. They are reported to shun allies. Salamanders Chaplain Sur Kgosi was sent to instruct them and disappeared, while Cawl's agents have been sighted near the Chapter. Their livery is black with red trim, red backpacks and knee plates, a red chest eagle, and a red viper-head badge. Beyond these sparse accounts, their doctrine and later history are unrecorded. Source: Codex: Space Marines (9th ed.), pp. 63, 71."
+};
 
 function seededPick(arr, seed) {
   return arr[seed % arr.length];
@@ -3270,7 +3283,7 @@ function chaptersOnRecord() {
 }
 
 const PAULDRON_ART = Object.fromEntries([
-  "Angels Encarmine", "Angels of Defiance", "Angels of Vengeance", "Black Templars",
+  "Angels Encarmine", "Angels of Defiance", "Angels of Vengeance", "Black Templars", "Black Vipers",
   "Blood Angels", "Blood Ravens", "Blood Scythes", "Carcharodons", "Carmine Blades",
   "Consecrators", "Cowled Wardens", "Crimson Fists", "Dark Angels", "Dark Krakens", "Death Spectres", "Doom Eagles",
   "Executioners", "Exorcists", "Flesh Tearers", "Genesis Chapter", "Hawk Lords",
@@ -3358,7 +3371,7 @@ async function toggleBloodAudio() {
 
 function chapterRosterHtml(selected) {
   const members = sortByRank(selected.members);
-  const lore = state.chapterLore?.[selected.name];
+  const lore = state.chapterLore?.[selected.name] || CHAPTER_LORE_FALLBACKS[selected.name];
   return `<section class="chapter-record-roster" aria-labelledby="chapter-record-title">
     <div class="blood-roster-heading">
       <div><div class="blood-overline">Chapter origin // active watch</div><h2 id="chapter-record-title" class="overlay-title">${escapeHtml(selected.name)}</h2></div>
@@ -4641,7 +4654,44 @@ function aarSelectedReviewHtml(detail, deleteControl) {
 }
 
 function aarReviewListItemHtml(item) {
-  return `<a class="aar-review-item" href="${escapeHtml(aarReviewHref(item.id, item.kind, item.review))}" data-aar-review-open="${escapeHtml(item.id)}" data-review-type="${escapeHtml(item.kind)}" data-review-id="${escapeHtml(item.review)}" aria-current="${item.id === aarManager.selectedId && item.review === aarManager.reviewId}"><span class="aar-review-kind">${escapeHtml(item.label)}</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text || "")}</span><span>Open AAR ${escapeHtml(item.id)} &rarr;</span></a>`;
+  const isArchive = item.kind === "";
+  const date = item.date ? new Date(item.date) : null;
+  const dateLabel = date && Number.isFinite(date.getTime()) ? date.toLocaleString() : "";
+  const tags = (item.tag_labels || item.tags || []).map(tag => {
+    const option = AAR_SUBMISSION_TAGS.find(([key]) => key === tag);
+    return option ? option[1] : tag;
+  });
+  const mode = AAR_SUBMISSION_MODES[item.mode];
+  const modeLabel = item.mode_label || (mode && mode.label) || item.mode || "After-action report";
+  const metadata = isArchive
+    ? `<span>${escapeHtml(item.difficulty || "AAR")}${item.rank ? ` · Rank ${escapeHtml(item.rank)}` : ""}${dateLabel ? ` · ${escapeHtml(dateLabel)}` : ""}</span>${item.waves !== null && item.waves !== undefined ? `<span>${escapeHtml(item.waves)} waves</span>` : ""}${item.kia !== null && item.kia !== undefined ? `<span>${escapeHtml(item.kia)} KIA</span>` : ""}${item.pvp_result ? `<span>${escapeHtml(item.pvp_result)}</span>` : ""}`
+    : `<span>${escapeHtml(item.text || "")}</span>`;
+  const participants = item.participants || [];
+  const participantLine = participants.length ? `<span>${escapeHtml(participants.join(", "))}</span>` : "";
+  return `<a class="aar-review-item ${isArchive ? "aar-history-item" : "aar-review-ticket"}" href="${escapeHtml(aarReviewHref(item.id, item.kind, item.review))}" data-aar-review-open="${escapeHtml(item.id)}" data-review-type="${escapeHtml(item.kind)}" data-review-id="${escapeHtml(item.review)}" aria-current="${item.id === aarManager.selectedId && item.review === aarManager.reviewId}">
+    <span class="aar-review-item-head"><span class="aar-review-kind">${escapeHtml(isArchive ? modeLabel : item.label)}</span>${dateLabel && !isArchive ? `<time datetime="${escapeHtml(item.date)}">${escapeHtml(dateLabel)}</time>` : ""}</span>
+    <strong>${escapeHtml(item.title)}</strong>${metadata}${participantLine}
+    ${tags.length ? `<span class="aar-history-tags" aria-label="Challenge tags">${tags.map(tag => `<span class="aar-history-tag">${escapeHtml(tag)}</span>`).join("")}</span>` : ""}
+    <span class="aar-review-item-foot">${isArchive ? `AAR ${escapeHtml(item.id)} · Open report` : `Ticket · AAR ${escapeHtml(item.id)} · Open review`} &rarr;</span></a>`;
+}
+
+function sortAarReviewTickets(items) {
+  return items.sort((left, right) => {
+    const leftTime = Date.parse(left.date || "");
+    const rightTime = Date.parse(right.date || "");
+    return (Number.isFinite(leftTime) ? leftTime : Number.MAX_SAFE_INTEGER)
+      - (Number.isFinite(rightTime) ? rightTime : Number.MAX_SAFE_INTEGER);
+  });
+}
+
+function mapAarHistoryRecords(records) {
+  return records.map(item => ({
+    kind: "", id: item.id, review: "", label: item.mode_label || item.mode || "After-action report",
+    mode: item.mode, mode_label: item.mode_label, title: item.mission || `AAR ${item.id}`,
+    difficulty: item.difficulty, date: item.timestamp, participants: item.brother_names || item.brother_ids || [],
+    tags: item.tag_labels || item.tags || [], rank: item.rank, waves: item.waves, kia: item.kia,
+    pvp_result: item.pvp_result
+  }));
 }
 
 function renderAarManagement() {
@@ -4656,19 +4706,20 @@ function renderAarManagement() {
     ? `<section class="aar-section"><h3>${state.auth.aar_management?.can_delete === true ? "Delete AAR" : "Request deletion"}</h3><label class="aar-field aar-field-wide"><span class="field-label">Deletion reason</span><textarea id="aar-delete-reason" class="field-input" rows="3" minlength="8" maxlength="400" placeholder="Explain why this report must be removed"></textarea></label><button type="button" class="btn-dossier-action btn-dossier-cancel" data-aar-manage-delete-request="${escapeHtml(detail.id)}">${state.auth.aar_management?.can_delete === true ? "Delete permanently..." : "Request deletion"}</button></section>`
     : "";
   const requests = [
-    ...aarManager.editRequests.map(item => ({kind: "edit", id: item.record_id, review: item.request_id, label: "Edit request", title: AAR_PVE_MISSIONS.find(([value]) => value === item.submission?.mission)?.[1] || `AAR ${item.record_id}`, text: item.requester_name || item.requester_id})),
-    ...aarManager.pendingDeletions.map(item => ({kind: "delete", id: item.id, review: item.request_token || `delete-${item.id}`, label: "Deletion request", title: item.mission || `AAR ${item.id}`, text: item.reason})),
-    ...aarManager.pendingEdits.map(item => ({kind: "recovery", id: item.id, review: item.request_id, label: "Incomplete archive update", title: item.mission || `AAR ${item.id}`, text: item.status === "receipt_updated" ? "Report updated; archive save unfinished" : "Report saved; award reconciliation unfinished"})),
-    ...aarManager.reconciliationReviews.map(item => ({kind: "award", id: item.record_id, review: item.review_id, label: "Award review", title: `${item.member_name || item.user_id || "Unknown member"} / ${item.challenge || "Challenge award"}`, text: `AAR ${item.record_id}`}))
+    ...aarManager.editRequests.map(item => ({kind: "edit", id: item.record_id, review: item.request_id, label: "Edit request · Pending", title: AAR_PVE_MISSIONS.find(([value]) => value === item.submission?.mission)?.[1] || `AAR ${item.record_id}`, text: item.requester_name || item.requester_id, date: item.requested_at})),
+    ...aarManager.pendingDeletions.map(item => ({kind: "delete", id: item.id, review: item.request_token || `delete-${item.id}`, label: "Deletion request · Pending", title: item.mission || `AAR ${item.id}`, text: item.reason, date: item.requested_at})),
+    ...aarManager.pendingEdits.map(item => ({kind: "recovery", id: item.id, review: item.request_id, label: "Archive recovery · Open", title: item.mission || `AAR ${item.id}`, text: item.status === "receipt_updated" ? "Receipt updated · archive save unfinished" : "Archive saved · award reconciliation unfinished"})),
+    ...aarManager.reconciliationReviews.map(item => ({kind: "award", id: item.record_id, review: item.review_id, label: "Award review · Open", title: `${item.member_name || item.user_id || "Unknown member"} / ${item.challenge || "Challenge award"}`, text: `AAR ${item.record_id}`}))
   ];
-  const archive = aarManager.records.map(item => ({kind: "", id: item.id, review: "", label: item.difficulty || "AAR", title: item.mission || `AAR ${item.id}`, text: (item.brother_names || []).join(", ")}));
+  const archive = mapAarHistoryRecords(aarManager.records);
   const visibleRequests = requests.filter(item => aarManager.view === "maintenance" ? ["recovery", "award"].includes(item.kind) : ["edit", "delete"].includes(item.kind));
+  if (aarManager.view === "requests") sortAarReviewTickets(visibleRequests);
   const rows = (aarManager.view === "archive" ? archive : visibleRequests).map(aarReviewListItemHtml).join("");
   const preview = aarManager.status === "loading-detail" ? `<p class="aar-empty" role="status">Loading AAR preview...</p>` : aarManager.status === "detail-error" ? `<p class="aar-empty" role="alert">${escapeHtml(aarManager.error)}</p>` : detail ? `${detail.delete_request || detail.review?.kind === "delete" ? aarSelectedReviewHtml(detail, deleteControl) : ""}${aarReportPreviewHtml(detail)}${!detail.delete_request && detail.review?.kind !== "delete" ? aarSelectedReviewHtml(detail, deleteControl) : ""}` : `<p class="aar-empty">Select an edit, deletion, or archive report.</p>`;
   app.innerHTML = `<section class="aar-room" aria-label="Manage submitted AARs"><header class="aar-heading"><h2>Manage AARs</h2>${aarManager.notice ? `<p id="aar-management-notice" class="aar-management-notice" role="status" aria-live="polite" tabindex="-1">${escapeHtml(aarManager.notice)}</p>` : ""}</header>
     <div class="aar-review-workspace${aarManager.selectedId ? " has-preview" : ""}"><aside class="aar-review-sidebar"><div class="war-pools" role="tablist" aria-label="AAR views"><button class="btn-dossier-action" role="tab" data-aar-view="requests" aria-selected="${aarManager.view === "requests"}">Edits &amp; deletions</button><button class="btn-dossier-action" role="tab" data-aar-view="archive" aria-selected="${aarManager.view === "archive"}">Archive</button></div>
     ${Number(aarManager.queueCounts.recovery) > 0 ? `<button class="btn-dossier-action" type="button" data-aar-view="maintenance">Unfinished updates (${Number(aarManager.queueCounts.recovery)})</button>` : ""}
-    ${aarManager.view === "archive" ? `<label class="aar-field"><span class="field-label">Search archive</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission or participant"></label>` : aarManager.view === "maintenance" ? `<h3>Unfinished archive and award updates</h3>` : `<label class="aar-field"><span class="field-label">Show</span><select id="aar-review-filter" class="field-input">${[["requests", "Edits and deletions"], ["edit", "Member edits"], ["delete", "Deletion requests"]].map(([key, label]) => `<option value="${key}"${aarManager.queueKind === key ? " selected" : ""}>${label} (${Number(aarManager.queueCounts[key]) || 0})</option>`).join("")}</select></label>`}
+    ${aarManager.view === "archive" ? `<label class="aar-field"><span class="field-label">Search AAR history</span><input id="aar-management-search" class="field-input" type="search" value="${escapeHtml(aarManager.query)}" placeholder="Mission, participant, tag, or report field"><span class="aar-upload-hint">Search matches normalized words across AAR IDs, receipt URLs, mission/difficulty/timestamp, submitter and participant IDs/names, challenge-tag keys/labels, and structured fields including mode, rank, waves, KIA, and PvP result. Underscores and hyphens are treated as spaces.</span></label>` : aarManager.view === "maintenance" ? `<h3>Unfinished archive and award updates</h3>` : `<label class="aar-field"><span class="field-label">Ticket queue</span><select id="aar-review-filter" class="field-input">${[["requests", "Edits and deletions"], ["edit", "Member edits"], ["delete", "Deletion requests"]].map(([key, label]) => `<option value="${key}"${aarManager.queueKind === key ? " selected" : ""}>${label} (${Number(aarManager.queueCounts[key]) || 0})</option>`).join("")}</select></label>`}
     <div class="aar-review-list">${aarManager.status === "error" ? `<p class="aar-empty">${escapeHtml(aarManager.error)}</p>` : rows || `<p class="aar-empty">${aarManager.status === "loading" ? "Loading..." : "No matching entries."}</p>`}</div>
     ${aarManager.view !== "archive" ? `<nav class="aar-submit-row" aria-label="Review queue pages"><button class="btn-dossier-action" type="button" data-aar-queue-page="previous"${aarManager.queueHistory.length ? "" : " disabled"}>&larr; Previous</button><span class="aar-upload-hint">${aarManager.queueTotal ? `${aarManager.queueOffset + 1}-${aarManager.queueNextOffset} of ${aarManager.queueTotal}` : "0 requests"}</span><button class="btn-dossier-action" type="button" data-aar-queue-page="next"${aarManager.queueHasMore ? "" : " disabled"}>Next &rarr;</button></nav>` : `<nav class="aar-submit-row" aria-label="Archive pages"><button class="btn-dossier-action" type="button" data-aar-manage-page="previous"${aarManager.offset <= 0 ? " disabled" : ""}>&larr; Previous</button><span class="aar-upload-hint">${aarManager.total} reports</span><button class="btn-dossier-action" type="button" data-aar-manage-page="next"${aarManager.hasMore ? "" : " disabled"}>Next &rarr;</button></nav>`}</aside>
     <section class="aar-review-preview" aria-label="Website AAR preview">${aarManager.selectedId ? `<nav aria-label="AAR archive"><button type="button" class="btn-dossier-action" data-aar-manage-back><span aria-hidden="true">&larr;</span> Back to Manage AARs</button><a class="btn-dossier-action" href="${escapeHtml(aarReviewHref(aarManager.selectedId, aarManager.reviewType, aarManager.reviewId))}">AAR permalink</a></nav>` : ""}${preview}<div id="aar-management-status" class="aar-status" role="status" aria-live="polite"></div></section></div>

@@ -107,7 +107,29 @@ The **Submit AARs** channel at `/submit-aar` provides authenticated guild member
 
 At `/manage-aars`, current High Command and Watch Techmarines can search and edit Strategium-submitted AARs, including replacing evidence; unchanged screenshots are retained. If the Discord receipt updates but archive processing fails, the pending edit appears in the manager and can be resumed after a refresh. Every operation rechecks current guild roles in the private bot bridge. Editors can request deletion with a reason, and a Forgemaster must confirm the permanent removal of both the canonical record and Discord receipt. The bot rebuilds affected challenge progress and computed stats without replaying announcements, revokes only challenge roles with recorded bot-award provenance, and flags ambiguous/manual grants for Forgemaster review. Forgemasters can acknowledge completed award reviews to clear them from the queue. A minimal deletion audit entry and mutation recovery state are retained.
 
-Run `./setup-secrets.sh` to provision the shared `STRATEGIUM_BOT_AAR_SHARED_SECRET` in both local `.env` files. The site forwards uploads to `STRATEGIUM_BOT_AAR_INTAKE_URL` (default `http://127.0.0.1:8080/v1/aar/submissions`) with a timestamped HMAC; the browser never receives the secret. The sibling `/v1/aar/access` route verifies current guild membership and returns the guild display name. Remote HTTPS targets must be explicitly listed in `STRATEGIUM_BOT_AAR_ALLOWED_HOSTS` as comma-separated hostnames. Enable the bot route explicitly with `web_submission.enabled: true` in the bot configuration. Keep the bot bridge private and do not expose `/v1/aar/*` through a public reverse proxy. The existing staff-only `/submit_aar` slash command and its test mode are unchanged.
+The Archive view presents reports as match-history entries with mission, mode,
+difficulty, rank, date, participants, waves/KIA or PvP result, and challenge-tag
+badges. Search uses the bridge's `q` query and matches normalized words across AAR
+ID, receipt URL, mission/difficulty/timestamp, submitter and participant IDs/names,
+challenge-tag keys and labels, and canonical structured report fields including mode,
+rank, waves, KIA, PvP result, and report tags. Search normalizes underscores and
+hyphens as spaces. Staff request queues use ticket-style entries with request type,
+status, date, and the exact AAR review link; edit and deletion tickets are shown
+together in oldest-request-first order. Unfinished archive and award work remains a
+separate maintenance queue. Existing role checks, review identity, pagination, and
+audited recovery paths are unchanged.
+
+The Record of Blood includes Black Vipers in the sample Chapter catalogue and
+pauldron index. Its concise lore summary identifies the Primaris-only Salamanders
+successor, marks its homeworld and later history as unknown, and cites
+*Codex: Space Marines* (9th ed.), pp. 63, 71. The live reference remains
+bridge-provided; a site fallback summary is shown if the connected reference omits it.
+The supplied artwork at `assets/Painted Pauldrons/Completed/Black Vipers.png` is
+converted by `.venv/bin/python -m scripts.build_web_assets --pauldron "Black Vipers"`
+to the site's WebP pauldron thumbnail. The builder also accepts artwork in the
+Painted Pauldrons root for future additions.
+
+Run `./setup-secrets.sh` to provision the shared `STRATEGIUM_BOT_AAR_SHARED_SECRET` in both local `.env` files. The site forwards uploads to `STRATEGIUM_BOT_AAR_INTAKE_URL` (default `http://127.0.0.1:8080/v1/aar/submissions`) with a timestamped HMAC; the browser never receives the secret. The sibling `/v1/aar/access` route verifies current guild membership and returns the guild display name. Remote HTTPS targets must be explicitly listed in `STRATEGIUM_BOT_AAR_ALLOWED_HOSTS` as comma-separated hostnames. Enable the bot route explicitly with `web_submission.enabled: true` in the bot configuration. Keep the bot bridge private and do not expose `/v1/aar/*` through a public reverse proxy. The `/submit_aar` slash command, including staff test mode, is retired; use the website's `/submit-aar` intake.
 
 Forgemasters can delete from the record detail with a reason and final confirmation;
 the interface records the request and confirms it through the same audited endpoints.
