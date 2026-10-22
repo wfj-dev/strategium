@@ -1541,6 +1541,46 @@ context.init().then(()=>assert.deepEqual(calls,['geography','auth','war','render
     assert result.returncode == 0, result.stderr
 
 
+def test_mobile_reach_keeps_chart_and_touch_navigation_visible():
+    page = (server.ROOT / "jericho-strategium.html").read_text(encoding="utf-8")
+    assert "(max-width: 900px) and (pointer: coarse)" in page
+    assert ".reach-viewport { display: block; width: 100%; aspect-ratio: auto;" in page
+    assert ".reach-viewport { display: none; }" not in page
+    assert "data-mobile-sector-select" in page
+    assert "data-mobile-map-focus" in page
+    assert "data-mobile-details" in page
+    assert '<details class="reach-mobile-index"><summary>Sector directory</summary>' in page
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for mobile map gestures")
+def test_canvas_pinch_is_anchored_and_cancelled_gestures_do_not_select():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const handlers={},selections=[];
+const context={activePointers:new Map(),pinchGesture:null,multiPointerGesture:false,pointerId:null,previousPointer:null,dragDistance:0,zoomAnchor:null,
+ width:400,height:300,state:{reachCanvasCamera:{x:0,y:0,targetX:0,targetY:0,zoom:1,targetZoom:1,baseZoom:1}},
+ canvas:{addEventListener:(name,handler)=>{handlers[name]=handler;},setPointerCapture:()=>{}},viewport:{classList:{add:()=>{},remove:()=>{}}},tooltip:null,
+ localPoint:event=>({x:event.clientX,y:event.clientY}),screenToWorld:(x,y)=>({x:context.state.reachCanvasCamera.x+(x-200)/context.state.reachCanvasCamera.zoom,y:context.state.reachCanvasCamera.y+(y-150)/context.state.reachCanvasCamera.zoom}),
+ canvasClamp:(value,min,max)=>Math.min(max,Math.max(min,value)),clampToArt:(x,y)=>({x,y}),clearSectorSelection:()=>{},updateCanvasHover:()=>{},
+ geography:{systems:[]},BODY_HOVER_RATIO:10,SYSTEM_HOVER_RATIO:10,geographySectorAt:()=>({id:'alpha'}),showSectorLevel:identity=>selections.push(identity)};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('  function pinchPoints()'),html.indexOf('  canvas.addEventListener("pointerleave"',html.indexOf('  function pinchPoints()'))),context);
+const event=(identity,x,y)=>({pointerId:identity,clientX:x,clientY:y,button:0,pointerType:'touch'});
+handlers.pointerdown(event(1,100,150));handlers.pointerdown(event(2,200,150));
+handlers.pointermove(event(2,300,150));
+assert.equal(context.state.reachCanvasCamera.zoom,2);
+assert.equal(context.state.reachCanvasCamera.targetZoom,2);
+assert.equal(context.state.reachCanvasCamera.x,-50);
+handlers.pointerup(event(2,300,150));handlers.pointermove(event(1,110,150));handlers.pointerup(event(1,110,150));
+assert.equal(context.activePointers.size,0);assert.deepEqual(selections,[]);
+handlers.pointerdown(event(3,150,150));handlers.pointercancel(event(3,150,150));assert.deepEqual(selections,[]);
+handlers.pointerdown(event(4,150,150));handlers.pointerup(event(4,150,150));assert.deepEqual(selections,['alpha']);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for campaign request ordering")
 def test_war_selection_ignores_late_responses():
     source = r"""
@@ -1777,6 +1817,32 @@ vm.runInContext(html.slice(start, end), context);
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for deletion review rendering")
+def test_deletion_confirmation_is_clear_and_above_report_preview():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const app={innerHTML:''};
+const context={state:{auth:{aar_management:{can_edit:true,can_delete:true}}},
+ aarManager:{detail:{id:'123',delete_request:{status:'requested',reason:'Duplicate report'},review:{kind:'delete',status:'requested'}},selectedId:'123',reviewId:'token',reviewType:'delete',view:'requests',status:'detail',records:[],editRequests:[],pendingDeletions:[],pendingEdits:[],reconciliationReviews:[],queueCounts:{},queueHistory:[]},
+ document:{getElementById:id=>id==='app'?app:null,querySelector:()=>null,querySelectorAll:()=>[]},
+ escapeHtml:value=>String(value??''),aarReviewHref:()=>'/manage-aars?aar=123',aarReportPreviewHtml:()=>'<h3>Mission evidence</h3>',aarDeletionDeclineHtml:()=>'<button>Decline deletion</button>',AAR_PVE_MISSIONS:[]};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function aarSelectedReviewHtml('),html.indexOf('function updateStatusBadge()')),context);
+context.renderAarManagement();
+assert.match(app.innerHTML,/>Confirm delete<\/button>/);
+assert(app.innerHTML.indexOf('data-aar-manage-delete-confirm')<app.innerHTML.indexOf('Mission evidence'));
+assert.match(app.innerHTML,/Edits &amp; deletions/);
+assert.doesNotMatch(app.innerHTML,/Processing issues|>Recovery</);
+context.state.auth.aar_management.can_delete=false;
+context.renderAarManagement();
+assert.doesNotMatch(app.innerHTML,/data-aar-manage-delete-confirm/);
+assert.match(app.innerHTML,/not authorized as Forgemaster/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the acting-sergeant regression")
 def test_kill_team_officers_are_shown_as_acting_sergeants():
     source = r"""
@@ -1926,7 +1992,7 @@ vm.runInContext(html.slice(start, end), context);
     context.scheduleAarGuildMemberSearch('Reserve Name');
     await timerCallback();
     assert.equal(requestedUrl, '/api/aar-members?q=Reserve%20Name');
-    assert.deepEqual({ ...context.aarDraft.memberDirectory.get('99') }, { id: '99', name: 'Brother Reserve' });
+    assert.deepEqual({ ...context.aarDraft.memberDirectory.get('99') }, { id: '99', name: 'Brother Reserve', fromGuildSearch: true });
     assert.equal(context.aarDraft.memberSearchStatus, 'results');
     assert.equal(context.aarDraft.memberSearchHasMore, true);
     assert.ok(renderCount >= 2);
@@ -2044,6 +2110,38 @@ event.clipboardData.items = [{ kind: 'string', type: 'text/plain' }];
 handler(event);
 assert.equal(imported.length, 12);
 assert.equal(prevented, 3);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for signed-in AAR labels")
+def test_aar_signed_in_participant_keeps_guild_name_with_missing_or_stale_roster():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('  const userId = String(state.auth?.user?.id',html.indexOf('function renderSubmitAar()'));
+const end=html.indexOf('  const memberSearchStatus =',start);
+const context={state:{auth:{user:{id:'42',name:'Forge Master Jules'}},dataStatus:'live',members:[]},
+ aarDraft:{brothers:new Set(['42']),inductees:new Set(),memberDirectory:new Map(),memberFilter:''},
+ managementEdit:false,RANK_LABELS:{watch_brother:'Watch Brother',forgemaster:'Forge Master'},displayName:()=> 'Jules',escapeHtml:value=>String(value)};
+vm.createContext(context);
+vm.runInContext('function labels(){'+html.slice(start,end)+';return memberOptions;}',context);
+for(const rank of [null,'watch_brother','forgemaster']){
+ context.state.members=rank?[{id:'42',name:'Stale Jules',rank}]:[];
+ const labels=context.labels();
+ assert.match(labels,/>Forge Master Jules<\/span>/);
+ assert.doesNotMatch(labels,/Watch Brother/);
+}
+context.state.members=[{id:'43',name:'Watch Brother Oldname',rank:'watch_brother'}];
+context.aarDraft.memberDirectory.set('43',{id:'43',name:'Forge Master Newname',fromGuildSearch:true});
+for(const query of ['newname','forge master']){
+ context.aarDraft.memberFilter=query;
+ const labels=context.labels();
+ assert.match(labels,/value="43"/);
+ assert.match(labels,/Forge Master Newname/);
+ assert.doesNotMatch(labels,/Oldname/);
+}
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
@@ -2250,7 +2348,8 @@ const state = {
 const context = {
     state,
     SECTOR_FOCUS_MAX_ZOOM_RATIO: 3.5,
-    document: { getElementById: () => ({ getBoundingClientRect: () => ({ width: 1000, height: 500 }) }) }
+    getComputedStyle: () => ({position: context.panelPosition}), panelPosition:'absolute',
+    document: { getElementById: identity => ({ getBoundingClientRect: () => ({ width: identity === 'reach-sector-panel' ? 340 : 1000, height: 500 }) }) }
 };
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
@@ -2271,6 +2370,13 @@ camera = state.reachCanvasCamera;
 centerScreen = (100 - camera.targetX) * camera.targetZoom + 500;
 assert.ok(Math.abs(centerScreen - 330) < 1e-9);
 assert.ok(camera.targetZoom <= camera.baseZoom * 120);
+context.panelPosition='static';
+assert.equal(context.geographyPanelFocusWidth(),0);
+context.focusGeographySectorCamera('sector_02');
+camera=state.reachCanvasCamera;
+assert.ok(Math.abs((500-camera.targetX)*camera.targetZoom+500-500)<1e-9);
+context.focusGeographySystemCamera('system_01');
+assert.equal(camera.targetX,100);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr

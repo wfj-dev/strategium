@@ -23,6 +23,15 @@ theme. Changing selections or refreshing campaign data keeps the map canvas moun
 Campaign polling continues while controls are focused; form values, text selection
 and keyboard focus are preserved when the console updates.
 
+Phones and small touch screens use the actual interactive chart, with one-finger
+dragging, two-finger pinch zoom, and tap selection. A native sector picker and
+collapsible directory provide alternatives to tapping small regions. Map/Details
+controls jump between the chart and its inline sector/system/strike panel. Zoom
+controls have 44px touch targets; the chart remains full-width with bounded height
+in portrait and landscape. Touching the chart stops camera interpolation, cancelled
+gestures do not select, and rotating the device preserves the mounted canvas and
+selected mission pool. Desktop keeps its side-panel layout.
+
 Strike participation requires the actual Watch Brother role, even for higher ranks
 and specialists. The bot verifies the role ID at signup and rechecks the full roster
 before locking; the interface hides signup controls when that permission is absent.
@@ -114,7 +123,7 @@ the canonical AAR, receipt and awards remain unchanged until staff approval. Exi
 screenshots and evidence hashes are retained; replacement evidence remains a staff edit.
 
 Techmarines and High Command review current/proposed fields under
-**Manage AARs > Requests**, then approve or decline with a note. A compact request
+**Manage AARs > Edits & deletions**, then approve or decline with a note. A compact request
 list opens the complete report, participants and screenshot evidence on the website,
 alongside the exact proposed edit or deletion reason and its decision controls.
 Each preview has a same-site permalink, such as `/manage-aars?aar=123`, with exact
@@ -126,10 +135,16 @@ the existing audited receipt/archive update and recovery flow. A proposal based 
 an outdated record is rejected rather than silently overwriting newer changes.
 Members cannot access the staff queue or directly apply their proposed changes.
 
-Review items have All/Edits/Deletions/Recovery filters applied before pagination,
+Member reviews have Edits-and-deletions/Edit/Deletion filters applied before pagination,
 with up to ten items per page and a byte-bounded response. Archive search/pagination
 remains independent under the Archive view. Closed reviews have no active decision
 controls; partially applied edits and deletions show their recovery state.
+
+The normal review queue contains only member edits and deletion requests. Automatic
+follow-up work from interrupted archive saves or award reconciliation appears
+separately under **Unfinished updates**, only when such work exists. It is not a
+member request. The signed-in participant in Submit AAR uses the same guild display
+name as the login badge, even when the published roster has older rank information.
 
 Submitters and participants may also request deletion of their website AAR with a
 reason. Only a Forgemaster can confirm deletion. Neither editing nor deletion is
