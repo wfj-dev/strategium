@@ -1,0 +1,53 @@
+{
+  "agri|jungle": [
+    "agri-jungle-1.webp",
+    "agri-jungle-2.webp"
+  ],
+  "cemetery|warzone": [
+    "cemetery-warzone-1.webp"
+  ],
+  "civilised|desert": [
+    "civilised-desert-1.webp",
+    "civilised-desert-2.webp"
+  ],
+  "civilised|ice": [
+    "civilised-ice-1.webp"
+  ],
+  "civilised|jungle": [
+    "civilised-jungle-1.webp"
+  ],
+  "civilised|warzone": [
+    "civilised-warzone-1.webp"
+  ],
+  "dead|asteroid": [
+    "dead-asteroid-1.webp"
+  ],
+  "death|ice": [
+    "death-ice-1.webp"
+  ],
+  "death|jungle": [
+    "death-jungle-1.webp"
+  ],
+  "feral|desert": [
+    "feral-desert-1.webp"
+  ],
+  "feral|warzone": [
+    "feral-warzone-1.webp"
+  ],
+  "forge|industrial": [
+    "forge-industrial-1.webp",
+    "forge-industrial-2.webp"
+  ],
+  "hive|industrial": [
+    "hive-industrial-1.webp"
+  ],
+  "hive|underhive": [
+    "hive-underhive-1.webp"
+  ],
+  "research_station|ice": [
+    "research_station-ice-1.webp"
+  ],
+  "research|industrial": [
+    "research-industrial-1.webp"
+  ]
+}

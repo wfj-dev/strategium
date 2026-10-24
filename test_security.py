@@ -512,6 +512,68 @@ def test_geography_api_serves_validated_hierarchy(local_site) -> None:
     assert len(payload["sectors"]) == 29
     assert all(sector["status"] == "secure" for sector in payload["sectors"])
     assert payload["landmarks"]["fortressBodyId"] == "watch_fortress_jericho"
+    assert len(payload["objectiveCatalog"]["objectives"]) == 29
+    calyx = next(body for body in payload["bodies"] if body["name"] == "Calyx")
+    assert (calyx["kind"], calyx["biome"]) == ("research_station", "ice")
+    assert payload["worldClasses"]["research"] == {"name": "Rho", "symbol": "\u03c1"}
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for objective lookup regression")
+def test_geography_objectives_match_exact_settings_and_escape_labels():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+const catalog = {objectives: [
+    {id:'purge',name:'<Purge>',category:'general',settings:['research|ice','hive|industrial']},
+    {id:'study',name:'Study',category:'specialist',track:'<Librarius>',settings:['research|ice']},
+    {id:'purge',name:'Duplicate',category:'general',settings:['research|ice']},
+    {id:'absent',name:'Absent',category:'general',settings:['hive|ice']}
+]};
+const context = {
+    state: {geography:{objectiveCatalog:catalog}},
+    titleCase: value=>value.split('_').map(word=>word[0].toUpperCase()+word.slice(1)).join(' '),
+    escapeHtml: value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'),
+    STELLAR_TYPES:{G:{name:'Yellow Star (G Class)'}}
+};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('const GEOGRAPHY_WORLD_TYPES ='),html.indexOf('function geographyBodyIcon(')), context);
+const station = {name:'<Calyx>',kind:'research_station',biome:'ice'};
+assert.equal(context.geographyCompatibleObjectives(station,catalog).length,2);
+assert.equal(context.geographyCompatibleObjectives({...station,kind:'research_world'},catalog).length,2);
+assert.equal(context.geographyCompatibleObjectives({...station,kind:'hive_world',biome:'industrial'},catalog).length,1);
+assert.equal(context.geographyCompatibleObjectives({...station,kind:'forge_world'},catalog).length,0);
+assert.equal(context.geographyCompatibleObjectives({kind:'planet',biome:'ice'},catalog),null);
+assert.equal(context.geographyCompatibleObjectives({kind:'hive_world'},catalog),null);
+assert.equal(context.geographyCompatibleObjectives(station,null),null);
+assert.equal(context.geographyBodyLabel(station),'Research Station / Ice');
+assert.equal(context.geographyBodyLabel({kind:'agri_world'}),'Agri-World');
+assert.equal(context.geographyBodyLabel({kind:'dead_world',biome:'asteroid'}),'Dead World / Lifeless / Asteroid');
+assert.equal(context.geographyBodyLabel({kind:'cemetery_world',biome:'warzone'}),'Cemetery World / Wasteland / Warzone');
+const rendered = context.geographyObjectivesHtml(station);
+assert.match(rendered,/Objective Types \(2\)/);
+assert.match(rendered,/General/);assert.match(rendered,/Specialist/);
+assert.match(rendered,/&lt;Purge&gt;/);assert.match(rendered,/&lt;Librarius&gt;/);assert.match(rendered,/&lt;Calyx&gt;/);
+assert(!rendered.includes('<Purge>'));assert(!rendered.includes('Absent'));
+assert.match(context.geographyObjectivesHtml({kind:'planet'}),/not recorded/);
+assert.match(context.geographyObjectivesHtml({...station,kind:'forge_world'}),/No authored objectives/);
+assert.equal(context.geographyObjectivesHtml({kind:'star'}),'');
+const geography = JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+context.state.geography = geography;
+assert.equal(context.geographyBodyLabel({kind:'death_world',biome:'ice'}),'Death World / Delta Tau (\u03b4\u03c4-class) / Ice');
+assert.equal(context.geographyBodyLabel({kind:'feral_world',biome:'desert'}),'Feral World / Phi Lambda (\u03c6\u03bb-class) / Desert');
+const mapping = {hive_world:'hive',forge_world:'forge',agri_world:'agri',civilized_world:'civilised',feral_world:'feral',death_world:'death',dead_world:'dead',cemetery_world:'cemetery',research_world:'research',research_station:'research'};
+const worlds = geography.bodies.filter(body=>body.systemId.startsWith('sector_29_') && body.kind !== 'star');
+assert.equal(worlds.length,19);
+for (const body of worlds) {
+    const expected = geography.objectiveCatalog.objectives.filter(objective=>objective.settings.includes(mapping[body.kind]+'|'+body.biome));
+    assert.deepEqual(Array.from(context.geographyCompatibleObjectives(body,geography.objectiveCatalog),objective=>objective.id),expected.map(objective=>objective.id));
+}
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html"), str(server.GEOGRAPHY_PATH)], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize("filename", ["base.webp", "sectors.png", "leviathan-tendril.webp", "1-secure.webp", "29-critical.webp", "4-lost.webp"])
@@ -537,6 +599,82 @@ def test_spectral_icons_are_served_from_explicit_allowlist(local_site, classific
 @pytest.mark.parametrize("filename", ["star_q.webp", "star_o.png", "../star_o.webp"])
 def test_spectral_icon_unknown_names_and_paths_are_rejected(filename) -> None:
     assert server._static_asset_path("/assets/map-icons/" + filename) is None
+
+
+def test_planet_portraits_are_served_for_every_catalogued_variant(local_site):
+    from PIL import Image
+
+    with urllib.request.urlopen(local_site + "/api/geography") as response:
+        catalog = json.loads(response.read())["planetArt"]
+    assert len(catalog) == 16
+    assert sum(map(len, catalog.values())) == 19
+    for filenames in catalog.values():
+        for filename in filenames:
+            with urllib.request.urlopen(local_site + "/assets/planets/" + filename) as response:
+                assert response.status == 200
+                assert response.headers["Content-Type"] == "image/webp"
+                assert response.read()
+            with Image.open(server.WEB_ASSETS_DIR / "planets" / filename) as image:
+                assert max(image.size) <= 512
+                assert image.getchannel("A").getextrema() == (0, 255)
+                assert image.getpixel((0, 0))[3] == 0
+
+
+@pytest.mark.parametrize("filename", ["manifest.json", "hive-underhive-1.png", "unknown-jungle-1.webp", "hive-underhive-0.webp", "hive-underhive-21.webp", "../hive-underhive-1.webp", "%2e%2e%2fhive-underhive-1.webp"])
+def test_planet_portraits_reject_unapproved_paths(filename):
+    assert server._static_asset_path("/assets/planets/" + filename) is None
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet artwork regression")
+def test_planet_artwork_matches_pairings_not_names_and_draws_at_orbit_position():
+    source = r"""
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+const geography=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const draws=[],arcs=[];
+const image={naturalWidth:512,naturalHeight:480};
+let loaded=true;
+const context={state:{geography},escapeHtml:value=>String(value),STELLAR_TYPES:{G:{name:'Yellow Star'}},
+    reachArtImage:()=>loaded?image:null,
+    context:{drawImage:(...args)=>draws.push(args),beginPath:()=>{},arc:(...args)=>arcs.push(args),stroke:()=>{}}};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('const GEOGRAPHY_WORLD_TYPES ='),html.indexOf('function openGeographySystem(')),context);
+const body={id:'unrelated_sector_world',name:'Unrelated Name',kind:'hive_world',biome:'underhive'};
+assert.equal(context.geographyBodyArtwork(body),'/assets/planets/hive-underhive-1.webp');
+assert.equal(context.geographyBodyArtwork({...body,name:'Vhaloris'}),context.geographyBodyArtwork(body));
+assert.equal(context.geographyBodyArtwork({...body,biome:'ice'}),'');
+assert.equal(context.geographyBodyArtwork({...body,kind:'star'}),'');
+assert.equal(context.geographyBodyArtwork({...body,kind:'watch_fortress'}),'');
+assert.equal(context.geographyBodyArtwork({...body,kind:'research_station',biome:'ice'}),'/assets/planets/research_station-ice-1.webp');
+assert.equal(context.geographyBodyArtwork({...body,kind:'research_world',biome:'ice'}),'');
+assert.match(context.geographyBodyIcon(body),/map-body-portrait/);
+assert.match(context.geographyBodyIcon({...body,biome:'ice'}),/map-icons\/hive_world.webp/);
+assert.match(context.geographyBodyIcon({kind:'star',stellarClass:'G'}),/map-icons\/star_g.webp/);
+const variants=new Set();
+for(let index=0;index<20;index++){
+    const candidate={...body,id:'world_'+index,kind:'agri_world',biome:'jungle'};
+    const filename=context.geographyBodyArtwork(candidate);
+    assert.equal(filename,context.geographyBodyArtwork(candidate));
+    variants.add(filename);
+}
+assert.equal(variants.size,2);
+const start=html.indexOf('  function drawPlanetBody(');
+vm.runInContext(html.slice(start,html.indexOf('    const seed = hashStr(body.id);',start))+'return "fallback";}',context);
+context.drawPlanetBody(body,{x:100,y:200},10,8,true,0);
+assert.equal(draws.length,1);assert.equal(draws[0][0],image);
+assert.deepEqual(draws[0].slice(1),[90,190.625,20,18.75]);
+assert.deepEqual(arcs[0].slice(0,3),[100,200,12]);
+context.drawPlanetBody(body,{x:110,y:210},10,8,false,1000);
+assert.deepEqual(draws[1].slice(1,3),[100,200.625]);
+loaded=false;
+assert.equal(context.drawPlanetBody(body,{x:100,y:200},10,8,false,0),'fallback');
+assert.equal(draws.length,2);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html"), str(server.GEOGRAPHY_PATH)], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 def test_geography_api_caches_and_reloads_validated_data(local_site, tmp_path, monkeypatch) -> None:
@@ -1634,6 +1772,21 @@ vm.runInContext(html.slice(html.indexOf('async function loadWar()'),html.indexOf
     pending[0]({ok:true,json:async()=>({planet:'first',campaigns:{}})});
     await first;
     assert.equal(context.warView.data.planet,'second');
+    const unavailable=context.loadWar();
+    pending[2]({ok:false,json:async()=>({error:'war_unavailable'})});
+    await unavailable;
+    assert.equal(context.warView.data,null);
+    assert.equal(context.warView.error,'Campaign connection unavailable. Map browsing is still available.');
+    const detailed=context.loadWar();
+    pending[3]({ok:false,json:async()=>({error:'forbidden',message:'Campaign access denied.'})});
+    await detailed;
+    assert.equal(context.warView.error,'Campaign access denied.');
+    context.escapeHtml=value=>String(value);
+    context.state.geography={sectors:[{id:'alpha',name:'Alpha'}],systems:[{id:'one',name:'One',sectorId:'alpha'}],bodies:[],routes:[]};
+    vm.runInContext(html.slice(html.indexOf('function geographySystemDirectoryHtml('),html.indexOf('function geographySectorPanelHtml(')),context);
+    const directory=context.geographySystemDirectoryHtml('alpha');
+    assert.match(directory,/<h3>Systems \(1\)<\/h3>/);
+    assert.doesNotMatch(directory,/Systems and worlds/);
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
