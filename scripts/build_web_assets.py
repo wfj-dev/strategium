@@ -91,6 +91,34 @@ def build_map_icons() -> None:
     print(f"Built {len(centers)} classification icons in {output.relative_to(ROOT)}")
 
 
+def build_planet_art() -> dict[str, list[str]]:
+    geography = json.loads((ROOT / "data" / "reach_geography.json").read_text(encoding="utf-8"))
+    bodies = {body["name"]: body for body in geography["bodies"] if body.get("biome")}
+    grouped: dict[str, list[Path]] = {}
+    for source in sorted((ASSETS / "galactic map planets").rglob("*.png")):
+        name = source.stem.partition(" _ ")[2].partition(" - ")[0].strip()
+        if name not in bodies:
+            raise ValueError(f"No classified world matches planet artwork: {source.name}")
+        body = bodies[name]
+        world = body["kind"].removesuffix("_world")
+        if world == "civilized":
+            world = "civilised"
+        grouped.setdefault(f"{world}|{body['biome']}", []).append(source)
+    output = WEB / "planets"
+    output.mkdir(parents=True, exist_ok=True)
+    manifest = {}
+    for setting, sources in sorted(grouped.items()):
+        filenames = []
+        for variant, source in enumerate(sources, 1):
+            filename = f"{setting.replace('|', '-')}-{variant}.webp"
+            _save(source, output / filename, max_size=(512, 512), quality=90)
+            filenames.append(filename)
+        manifest[setting] = filenames
+    (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(f"Built {sum(map(len, manifest.values()))} planet portraits for {len(manifest)} world/biome pairings")
+    return manifest
+
+
 def build_galactic_assets() -> dict:
     import numpy as np
     import cv2
@@ -160,8 +188,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--galactic-map-only", action="store_true")
     parser.add_argument("--map-icons-only", action="store_true")
+    parser.add_argument("--planet-art-only", action="store_true")
     parser.add_argument("--pauldron", help="Build only the named Chapter pauldron thumbnail")
     args = parser.parse_args()
+    if args.planet_art_only:
+        build_planet_art()
+        return
     if args.pauldron:
         build_pauldron(args.pauldron)
         return
@@ -171,6 +203,7 @@ def main() -> None:
     if args.galactic_map_only:
         build_galactic_assets()
         return
+    build_planet_art()
     for source in pauldron_sources():
         _save(source, WEB / "pauldrons" / f"{source.stem}.webp", max_size=(192, 192))
     for source in sorted((ASSETS / "Ranks").glob("*.png")):

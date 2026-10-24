@@ -863,6 +863,15 @@
   .modal-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 23px; color: var(--white); margin: 0 0 14px; overflow-wrap: anywhere; }
   .modal-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); color: var(--green-dim); }
   .modal-row span:last-child { color: var(--white); }
+  .geography-body-row { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(0, 1.5fr); gap: 12px; align-items: center; }
+  .geography-body-row > span:first-child { display: flex; align-items: center; }
+  .geography-body-row > span { min-width: 0; overflow-wrap: anywhere; }
+  .geography-body-row > span:last-child { text-align: right; }
+  .geography-objectives { padding: 5px 0 12px; border-bottom: 1px solid var(--border-dim); font-size: 12px; color: var(--green-dim); }
+  .geography-objectives summary { cursor: pointer; padding: 4px 0; }
+  .geography-objectives h4 { margin: 12px 0 4px; font: inherit; color: var(--white); }
+  .geography-objectives ul { margin: 0; padding-left: 20px; columns: 2 180px; }
+  .geography-objectives li { break-inside: avoid; padding: 3px 0; overflow-wrap: anywhere; }
   .modal-link {
     background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: var(--gold);
     border-bottom: 1px dotted var(--gold-dim); transition: color 0.15s, border-color 0.15s;
@@ -5663,7 +5672,9 @@ async function loadWar() {
     const response = await fetch(apiUrl(`/api/war?planet=${encodeURIComponent(warView.planet)}`), { credentials: "include", cache: "no-store" });
     const result = await response.json();
     if (sequence !== warView.requestSequence) return;
-    if (!response.ok) throw new Error(result.message || result.error || "Campaign relay unavailable");
+    if (!response.ok) throw new Error(result.error === "war_unavailable"
+      ? "Campaign connection unavailable. Map browsing is still available."
+      : result.message || result.error || "Campaign relay unavailable");
     warView.data = result;
     warView.error = "";
     for (const sector of state.geography?.sectors || []) {
@@ -6245,8 +6256,63 @@ const STELLAR_TYPES = {
   M: { name: "Orange-Red Star (M Class)", color: "#dd835b" }
 };
 
+const GEOGRAPHY_WORLD_TYPES = {
+  hive_world: "hive", forge_world: "forge", agri_world: "agri", civilized_world: "civilised",
+  feral_world: "feral", feudal_world: "feudal", death_world: "death", dead_world: "dead",
+  cemetery_world: "cemetery", research_world: "research", research_station: "research"
+};
+const GEOGRAPHY_BIOMES = {
+  jungle: "Jungle", desert: "Desert", ice: "Ice", industrial: "Industrial",
+  warzone: "Wasteland / Warzone", underhive: "Underhive", starship: "Starship / Space Hulk", asteroid: "Lifeless / Asteroid"
+};
+
+function geographyBodyLabel(body) {
+  if (body.kind === "star") return STELLAR_TYPES[body.stellarClass || "G"].name;
+  const kind = body.kind === "agri_world" ? "Agri-World" : titleCase(body.kind);
+  const classification = state.geography?.worldClasses?.[GEOGRAPHY_WORLD_TYPES[body.kind]];
+  const label = kind + (classification ? ` / ${classification.name} (${classification.symbol}-class)` : "");
+  return label + (GEOGRAPHY_BIOMES[body.biome] ? ` / ${GEOGRAPHY_BIOMES[body.biome]}` : "");
+}
+
+function geographyCompatibleObjectives(body, catalog) {
+  const world = GEOGRAPHY_WORLD_TYPES[body.kind];
+  if (!world || !GEOGRAPHY_BIOMES[body.biome] || !catalog) return null;
+  const setting = `${world}|${body.biome}`;
+  const seen = new Set();
+  return catalog.objectives.filter(objective => {
+    if (seen.has(objective.id) || !objective.settings.includes(setting)) return false;
+    seen.add(objective.id);
+    return true;
+  });
+}
+
+function geographyObjectivesHtml(body) {
+  if (body.kind === "star") return "";
+  const objectives = geographyCompatibleObjectives(body, state.geography.objectiveCatalog);
+  const content = objectives === null ? "<p>Objective compatibility not recorded.</p>"
+    : objectives.length === 0 ? "<p>No authored objectives for this setting yet.</p>"
+    : ["general", "specialist"].map(category => {
+      const matches = objectives.filter(objective => objective.category === category);
+      if (!matches.length) return "";
+      return `<h4>${category === "general" ? "General" : "Specialist"}</h4><ul>${matches.map(objective => `<li>${escapeHtml(objective.name)}${objective.track ? ` &middot; ${escapeHtml(objective.track)}` : ""}</li>`).join("")}</ul>`;
+    }).join("");
+  return `<details class="geography-objectives"><summary aria-label="Objective types for ${escapeHtml(body.name)}">Objective Types${objectives === null ? "" : ` (${objectives.length})`}</summary>${content}</details>`;
+}
+
+function geographyBodyArtwork(body) {
+  if (!body || body.kind === "star") return "";
+  const world = body.kind === "research_station" ? "research_station" : GEOGRAPHY_WORLD_TYPES[body.kind] || body.world_type;
+  const variants = state.geography?.planetArt?.[`${world}|${body.biome}`];
+  if (!variants?.length) return "";
+  let variant = 0;
+  for (const character of String(body.id || "")) variant = (variant * 31 + character.charCodeAt(0)) >>> 0;
+  return `/assets/planets/${variants[variant % variants.length]}`;
+}
+
 function geographyBodyIcon(body) {
   if (!body || body.kind === "asteroid_belt") return "";
+  const artwork = geographyBodyArtwork(body);
+  if (artwork) return `<img class="map-body-icon map-body-portrait" src="${escapeHtml(artwork)}" alt="" aria-hidden="true" width="22" height="22">`;
   if (body.kind === "star") {
     const classification = body.stellarClass || "G";
     if (!STELLAR_TYPES[classification]) return "";
@@ -6269,7 +6335,7 @@ function openGeographySystem(systemId) {
     <div class="modal-rank">${escapeHtml(sector ? sector.name : "Uncharted Sector")} &middot; ${escapeHtml(titleCase(system.classification))}</div>
     <div class="modal-name">${escapeHtml(system.name)}</div>
     <div class="directive-section-label">System Bodies</div>
-    ${bodies.map(body => `<div class="modal-row"><span>${geographyBodyIcon(body)}${escapeHtml(body.name)}</span><span>${escapeHtml(body.kind === "star" ? STELLAR_TYPES[body.stellarClass || "G"].name : titleCase(body.kind))}${body.battleEligible ? " &middot; Battle eligible" : ""}</span></div>`).join("")}
+    ${bodies.map(body => `<div class="modal-row geography-body-row"><span>${geographyBodyIcon(body)}${escapeHtml(body.name)}</span><span>${escapeHtml(geographyBodyLabel(body))}${body.battleEligible ? " &middot; Battle eligible" : ""}</span></div>${geographyObjectivesHtml(body)}`).join("")}
     <div class="directive-section-label">Charted Warp Routes</div>
     <div class="modal-row"><span>Connections</span><span>${routes.length}</span></div>`;
   const overlay = document.getElementById("planet-modal");
@@ -6864,6 +6930,22 @@ function setupGeographyCanvas() {
   }
 
   function drawPlanetBody(body, bodyScreen, radius, ratio, hovered, now) {
+    const artwork = geographyBodyArtwork(body);
+    const image = artwork && reachArtImage(artwork, artwork);
+    if (image) {
+      const scale = radius * 2 / Math.max(image.naturalWidth, image.naturalHeight);
+      const width = image.naturalWidth * scale;
+      const height = image.naturalHeight * scale;
+      context.drawImage(image, bodyScreen.x - width / 2, bodyScreen.y - height / 2, width, height);
+      if (hovered) {
+        context.strokeStyle = "#4fd67a";
+        context.lineWidth = 1;
+        context.beginPath();
+        context.arc(bodyScreen.x, bodyScreen.y, radius + 2, 0, Math.PI * 2);
+        context.stroke();
+      }
+      return;
+    }
     const seed = hashStr(body.id);
     const base = planetColor(body.kind);
     if (body.kind === "special") {
@@ -6938,7 +7020,7 @@ function setupGeographyCanvas() {
       }
       return;
     }
-    if (body.kind === "orbital_station" || body.kind === "space_hulk") {
+    if (body.kind === "orbital_station" || body.kind === "research_station" || body.kind === "space_hulk") {
       context.save();
       context.translate(bodyScreen.x, bodyScreen.y);
       context.rotate((seed % 360) * Math.PI / 180);
@@ -6957,7 +7039,7 @@ function setupGeographyCanvas() {
       context.closePath();
       context.fill();
       context.stroke();
-      if (body.kind === "orbital_station") {
+      if (body.kind === "orbital_station" || body.kind === "research_station") {
         context.beginPath(); context.moveTo(-radius * 1.3, 0); context.lineTo(radius * 1.3, 0); context.stroke();
       }
       context.restore();
@@ -7430,7 +7512,7 @@ function setupGeographyCanvas() {
             target = {
               kind: "body", id: body.id, systemId: system.id, sectorId: system.sectorId,
               name: body.name,
-              meta: `${titleCase(body.kind)}${body.battleEligible ? " · Battle eligible" : ""}`,
+              meta: `${geographyBodyLabel(body)}${body.battleEligible ? " · Battle eligible" : ""}`,
               body,
               worldX: position.x, worldY: position.y, distance
             };
@@ -7717,7 +7799,7 @@ function geographySystemDirectoryHtml(sectorId) {
       return playable ? `<button class="war-world-select" type="button" data-war-planet="${escapeHtml(world.id)}" aria-pressed="${world.id === warView.planet}">${geographyBodyIcon(world)}<span>${escapeHtml(world.name)} / ${escapeHtml(titleCase(world.kind))}</span></button>` : `<div class="war-world-select">${geographyBodyIcon(world)}<span>${escapeHtml(world.name)} / ${escapeHtml(titleCase(world.kind))}</span></div>`;
     }).join("")}<span class="aar-upload-hint">${state.geography.routes.filter(route => route.sourceSystemId === system.id || route.targetSystemId === system.id).length} charted warp routes</span></div>` : ""}`;
   }).join("");
-  return `<section class="war-system-directory" aria-label="Systems in ${escapeHtml(sector.name)}"><h3>Systems and worlds (${systems.length})</h3>${systemCards || `<p class="aar-empty">No charted systems in this sector.</p>`}</section>`;
+  return `<section class="war-system-directory" aria-label="Systems in ${escapeHtml(sector.name)}"><h3>Systems (${systems.length})</h3>${systemCards || `<p class="aar-empty">No charted systems in this sector.</p>`}</section>`;
 }
 
 function geographySectorPanelHtml(sectorId, selectedSystemId) {
@@ -7729,7 +7811,7 @@ function geographySectorPanelHtml(sectorId, selectedSystemId) {
       <div>
         <div class="reach-sector-panel-kicker">${selectedSystem ? "Selected system" : `Sector ${String(sector.number).padStart(2, "0")} // ${systems.length} systems`}</div>
         <h2 class="reach-sector-panel-title">${escapeHtml(selectedSystem?.name || sector.name)}</h2>
-        <div class="reach-sector-panel-meta">${escapeHtml(sector.status === "critical" ? "Contested" : titleCase(sector.status))} · ${selectedSystem ? "Planetary system" : "Charted systems and worlds"}</div>
+        <div class="reach-sector-panel-meta">${escapeHtml(sector.status === "critical" ? "Contested" : titleCase(sector.status))} · ${selectedSystem ? "Planetary system" : "Charted systems"}</div>
       </div>
       <div class="reach-sector-panel-actions">
         <button class="reach-sector-panel-back reach-mobile-map-back" type="button" data-mobile-map-focus>&uarr; Map</button>

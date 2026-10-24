@@ -700,6 +700,11 @@ def _static_asset_path(path: str) -> Path | None:
     }
     if path in fixed:
         return _existing(fixed[path])
+    if path.startswith("/assets/planets/"):
+        filename = path.removeprefix("/assets/planets/")
+        if not re.fullmatch(r"(?:hive|forge|agri|civilised|feral|feudal|death|dead|cemetery|research|research_station)-(?:jungle|desert|ice|industrial|warzone|underhive|starship|asteroid)-(?:[1-9]|1[0-9]|20)\.webp", filename):
+            return None
+        return _existing(WEB_ASSETS_DIR / "planets" / filename)
     if path.startswith("/assets/galactic-map/"):
         filename = path.removeprefix("/assets/galactic-map/")
         if filename not in {"base.webp", "sectors.png", "leviathan-tendril.webp"} and not re.fullmatch(r"(?:[1-9]|1[0-9]|2[0-9])-(?:secure|critical|lost)\.webp", filename):

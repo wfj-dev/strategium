@@ -8,6 +8,7 @@ import json
 import math
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -18,10 +19,81 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from geography import validate_geography
+from geography import validate_geography, validate_objective_catalog, WORLD_CLASSES
 
 DEFAULT_SOURCE = ROOT.parent / "discord-bots" / "op-scribe-servitor" / "reference" / "jericho_reach_graph.json"
 DEFAULT_OUTPUT = ROOT / "data" / "reach_geography.json"
+OBJECTIVES_PATH = ROOT / "data" / "reach_objectives.json"
+SECTOR_29_SYSTEMS = (
+    ("Solenne Crown", (
+        ("Vhaloris", "hive_world", "underhive"),
+        ("Kael Tertius", "forge_world", "industrial"),
+        ("Edris", "civilized_world", "desert"),
+        ("Namarra", "agri_world", "jungle"),
+        ("Sepulcris", "cemetery_world", "warzone"),
+    )),
+    ("Viridian Tides", (
+        ("Theryn", "agri_world", "jungle"),
+        ("Pelagos", "civilized_world", "jungle"),
+        ("Morvael", "death_world", "jungle"),
+        ("Syllex", "research_world", "industrial"),
+    )),
+    ("Adamant Chain", (
+        ("Gathron", "hive_world", "industrial"),
+        ("Kryden", "forge_world", "industrial"),
+        ("Isolen", "civilized_world", "ice"),
+        ("Varos IX", "dead_world", "asteroid"),
+    )),
+    ("Penumbral Choir", (
+        ("Sancta Liora", "civilized_world", "desert"),
+        ("Kethrys", "feral_world", "warzone"),
+        ("Calyx", "research_station", "ice"),
+    )),
+    ("Duskward Verge", (
+        ("Orthan", "feral_world", "desert"),
+        ("Ysmera", "civilized_world", "warzone"),
+        ("Nhalis", "death_world", "ice"),
+    )),
+)
+
+
+def import_objectives(atlas: str) -> dict[str, Any]:
+    class CardsParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.active = False
+            self.chunks = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "script" and dict(attrs).get("id") == "cards-data":
+                self.active = True
+
+        def handle_endtag(self, tag):
+            if tag == "script":
+                self.active = False
+
+        def handle_data(self, data):
+            if self.active:
+                self.chunks.append(data)
+
+    parser = CardsParser()
+    parser.feed(atlas)
+    cards = json.loads("".join(parser.chunks))["cards"]
+    tracks = {"blades": "Hall of Blades", "chap": "Reclusiam", "apoth": "Apothecarion",
+              "lib": "Librarius", "forge": "Armory", "hunt": "Black Vault"}
+    objectives = []
+    for card in cards:
+        objective = {
+            "id": card["id"], "name": card["name"],
+            "category": "specialist" if card["spec"] else "general",
+            "settings": sorted({setting for expression in card["expressions"] for setting in expression["settings"]}),
+        }
+        if card["spec"]:
+            objective["track"] = tracks[card["track"]]
+        objectives.append(objective)
+    return validate_objective_catalog({"schemaVersion": 1, "objectives": objectives})
+
+
 MAP_ASSETS = ROOT / "assets" / "web" / "galactic-map"
 ART_SCALE = 5.0
 ORBIT_BASE = 5.0
@@ -175,9 +247,10 @@ def _generate_outer_sector_systems(sectors: list[dict[str, Any]], sector_mask: n
         for index, (pixel_x, pixel_y) in enumerate(chosen, start=1):
             system_id = f"sector_{number:02d}_system_{index:02d}"
             star_id = f"{system_id}_star"
-            world_count = 3 + (number + index) % 3
+            authored = SECTOR_29_SYSTEMS[index - 1] if number == 29 else None
+            world_count = len(authored[1]) if authored else 3 + (number + index) % 3
             systems.append({
-                "id": system_id, "name": f"Sector {number:02d} System {index:02d}",
+                "id": system_id, "name": f"{authored[0]} System" if authored else f"Sector {number:02d} System {index:02d}",
                 "sectorId": sector["id"], "x": pixel_x * ART_SCALE, "y": pixel_y * ART_SCALE,
                 "classification": "charted_system", "primaryBodyId": star_id,
                 "source": "homebrew", "tags": ["generated_sector", "provisional_names"],
@@ -197,6 +270,9 @@ def _generate_outer_sector_systems(sectors: list[dict[str, Any]], sector_mask: n
                     "kind": "planet", "orbitIndex": world_index, "orbitAngle": seed % 360,
                     "displayRadius": 5, "battleEligible": True, "source": "homebrew",
                 })
+                if authored:
+                    name, kind, biome = authored[1][world_index - 1]
+                    bodies[-1].update(name=name, kind=kind, biome=biome)
     return systems, bodies
 
 
@@ -207,7 +283,7 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
     sectors = [{
         "id": "jericho_reach" if region["number"] == 1 else f"sector_{region['number']:02d}",
         "number": region["number"],
-        "name": "Jericho Reach" if region["number"] == 1 else f"Sector {region['number']:02d}",
+        "name": {1: "Jericho Reach", 29: "The Canticle Reach"}.get(region["number"], f"Sector {region['number']:02d}"),
         "status": "secure", "boundary": [_point(point) for point in region["boundary"]],
         "label": _point(region["label"]),
     } for region in regions]
@@ -386,6 +462,9 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
         "chartBoundary": [_point(point) for point in boundary], "sectors": sectors, "subregions": [],
         "systems": systems, "bodies": bodies, "routes": list(routes_by_pair.values()),
         "landmarks": {"fortressBodyId": FORTRESS_BODY_ID, "eriochBodyId": "erioch"},
+        "objectiveCatalog": json.loads(OBJECTIVES_PATH.read_text(encoding="utf-8")),
+        "worldClasses": WORLD_CLASSES,
+        "planetArt": json.loads((ROOT / "assets" / "web" / "planets" / "manifest.json").read_text(encoding="utf-8")),
     })
 
 
@@ -445,8 +524,19 @@ def main() -> None:
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--import-objectives", type=Path, help="Import authored objective settings from an atlas HTML export")
     parser.add_argument("--war-definition", type=Path, help="Prepare war adjacency and provisional gameplay terrain without changing canonical geography")
     args = parser.parse_args()
+    if args.import_objectives:
+        catalog = import_objectives(args.import_objectives.read_text(encoding="utf-8"))
+        print(f"Validated {len(catalog['objectives'])} objective types.")
+        if args.write:
+            temporary = OBJECTIVES_PATH.with_suffix(".tmp")
+            temporary.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+            temporary.replace(OBJECTIVES_PATH)
+        else:
+            print("Dry run only. Re-run with --write to update the objective catalogue.")
+        return
     if args.war_definition:
         geography = validate_geography(json.loads(args.output.read_text(encoding="utf-8")))
         definition = json.loads(args.war_definition.read_text(encoding="utf-8"))

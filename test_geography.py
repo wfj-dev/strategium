@@ -5,7 +5,7 @@ import re
 import pytest
 from pathlib import Path
 
-from geography import load_geography, shortest_route, validate_geography
+from geography import load_geography, shortest_route, validate_geography, validate_objective_catalog, WORLD_CLASSES
 from scripts.build_reach_geography import (
     DEFAULT_SOURCE,
     MOON_ORBIT_BASE,
@@ -24,10 +24,130 @@ from scripts.build_reach_geography import (
     STELLAR_CLASSES,
     build_geography,
     build_war_definition,
+    import_objectives,
 )
 
 
 GEOGRAPHY_PATH = Path(__file__).resolve().parent / "data" / "reach_geography.json"
+
+
+def test_planet_art_groups_by_pairing_preserves_alpha_and_keeps_variants(tmp_path, monkeypatch):
+    from PIL import Image
+    from scripts import build_web_assets as builder
+
+    assets = tmp_path / "assets"
+    source_dir = assets / "galactic map planets"
+    source_dir.mkdir(parents=True)
+    (tmp_path / "data").mkdir()
+    bodies = [
+        {"name": "First", "kind": "agri_world", "biome": "jungle"},
+        {"name": "Second", "kind": "agri_world", "biome": "jungle"},
+        {"name": "Station", "kind": "research_station", "biome": "ice"},
+    ]
+    (tmp_path / "data" / "reach_geography.json").write_text(json.dumps({"bodies": bodies}))
+    for index, body in enumerate(bodies, 1):
+        image = Image.new("RGBA", (800, 600), (0, 0, 0, 0))
+        image.paste((50 * index, 100, 200, 255), (200, 100, 600, 500))
+        image.save(source_dir / f"01-0{index} _ {body['name']} - ignored.png")
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    monkeypatch.setattr(builder, "ASSETS", assets)
+    monkeypatch.setattr(builder, "WEB", assets / "web")
+    manifest = builder.build_planet_art()
+    assert manifest == {
+        "agri|jungle": ["agri-jungle-1.webp", "agri-jungle-2.webp"],
+        "research_station|ice": ["research_station-ice-1.webp"],
+    }
+    for filenames in manifest.values():
+        for filename in filenames:
+            with Image.open(builder.WEB / "planets" / filename) as image:
+                assert image.size == (512, 384)
+                assert image.getpixel((0, 0))[3] == 0
+                assert image.getpixel((256, 192))[3] == 255
+    Image.new("RGBA", (10, 10)).save(source_dir / "01-04 _ Unknown - planet.png")
+    with pytest.raises(ValueError, match="No classified world matches"):
+        builder.build_planet_art()
+
+
+def test_planet_art_validation_preserves_pairings_and_rejects_untrusted_paths():
+    payload = _sample_geography()
+    payload["planetArt"] = {"hive|underhive": ["hive-underhive-1.webp"]}
+    assert validate_geography(payload)["planetArt"] == payload["planetArt"]
+    for invalid in ({"hive|ocean": ["hive-ocean-1.webp"]}, {"hive|underhive": ["../secret.webp"]}, {"hive|underhive": []}, {"hive|underhive": ["hive-underhive-2.webp"]}):
+        payload["planetArt"] = invalid
+        with pytest.raises(ValueError, match="planetArt"):
+            validate_geography(payload)
+
+
+def test_biome_and_objective_catalog_survive_validation():
+    payload = _sample_geography()
+    payload["bodies"][0]["biome"] = "ice"
+    payload["objectiveCatalog"] = {"schemaVersion": 1, "objectives": [
+        {"id": "purge", "name": "Purge", "category": "general", "settings": ["research|ice"]},
+        {"id": "study", "name": "Study", "category": "specialist", "track": "Librarius", "settings": []},
+    ]}
+    result = validate_geography(payload)
+    assert result["bodies"][0]["biome"] == "ice"
+    assert "biome" not in result["bodies"][1]
+    assert result["objectiveCatalog"] == payload["objectiveCatalog"]
+
+
+def test_imperial_world_classes_survive_validation():
+    payload = _sample_geography()
+    payload["worldClasses"] = WORLD_CLASSES
+    result = validate_geography(payload)
+    assert result["worldClasses"] == WORLD_CLASSES
+    assert result["worldClasses"]["death"] == {"name": "Delta Tau", "symbol": "\u03b4\u03c4"}
+    assert result["worldClasses"]["feral"] == {"name": "Phi Lambda", "symbol": "\u03c6\u03bb"}
+    payload["worldClasses"] = {"hive": {"name": "Alpha", "symbol": "wrong"}}
+    with pytest.raises(ValueError, match="Imperial world classifications"):
+        validate_geography(payload)
+
+
+def test_objective_import_uses_only_authored_expression_settings():
+    cards = [
+        {"id": "purge", "name": "Purge", "spec": False, "expressions": [
+            {"settings": ["hive|ice", "research|ice"]}, {"settings": ["hive|ice"]},
+        ]},
+        {"id": "study", "name": "Study", "spec": True, "track": "lib", "rank": "Ignored", "expressions": []},
+    ]
+    atlas = '<script>throw new Error("must not execute")</script><script type="application/json" id="cards-data">' + json.dumps({"cards": cards}) + '</script>'
+    assert import_objectives(atlas) == {"schemaVersion": 1, "objectives": [
+        {"id": "purge", "name": "Purge", "category": "general", "settings": ["hive|ice", "research|ice"]},
+        {"id": "study", "name": "Study", "category": "specialist", "track": "Librarius", "settings": []},
+    ]}
+
+
+@pytest.mark.parametrize("biome", [None, [], "", "unknown", "Wasteland/Warzone"])
+def test_biome_rejects_invalid_values(biome):
+    payload = _sample_geography()
+    payload["bodies"][0]["biome"] = biome
+    with pytest.raises(ValueError, match="invalid biome"):
+        validate_geography(payload)
+
+
+def test_biome_rejected_on_stars():
+    payload = _sample_geography()
+    payload["bodies"][0].update(kind="star", biome="ice")
+    with pytest.raises(ValueError, match="invalid biome"):
+        validate_geography(payload)
+
+
+@pytest.mark.parametrize("changes", [
+    {"settings": ["hive|ocean"]}, {"settings": ["hive|ice", "hive|ice"]},
+    {"settings": [None]}, {"settings": "hive|ice"}, {"settings": ["hive|ice"] * 81},
+    {"category": "unknown"}, {"category": "specialist"}, {"name": ""},
+])
+def test_objective_catalog_rejects_invalid_entries(changes):
+    objective = {"id": "purge", "name": "Purge", "category": "general", "settings": ["hive|ice"], **changes}
+    with pytest.raises((ValueError, TypeError)):
+        validate_objective_catalog({"schemaVersion": 1, "objectives": [objective]})
+
+
+def test_objective_catalog_rejects_duplicates_and_oversized_catalogs():
+    objective = {"id": "purge", "name": "Purge", "category": "general", "settings": []}
+    for objectives in ([objective] * 2, [objective] * 101):
+        with pytest.raises(ValueError):
+            validate_objective_catalog({"schemaVersion": 1, "objectives": objectives})
 
 
 def test_war_setup_uses_artwork_adjacency_and_preserves_manual_terrain():
@@ -347,6 +467,55 @@ def test_validate_geography_rejects_invalid_sector_status(status) -> None:
 
 def test_geography_build_is_deterministic() -> None:
     assert build_geography(json.loads(DEFAULT_SOURCE.read_text())) == load_geography(GEOGRAPHY_PATH)
+
+
+def test_sector_29_has_the_authored_systems_world_types_and_biomes():
+    geography = load_geography(GEOGRAPHY_PATH)
+    assert next(sector for sector in geography["sectors"] if sector["id"] == "sector_29")["name"] == "The Canticle Reach"
+    expected = [
+        ("Solenne Crown System", [
+            ("Vhaloris", "hive_world", "underhive"), ("Kael Tertius", "forge_world", "industrial"),
+            ("Edris", "civilized_world", "desert"), ("Namarra", "agri_world", "jungle"),
+            ("Sepulcris", "cemetery_world", "warzone"),
+        ]),
+        ("Viridian Tides System", [
+            ("Theryn", "agri_world", "jungle"), ("Pelagos", "civilized_world", "jungle"),
+            ("Morvael", "death_world", "jungle"), ("Syllex", "research_world", "industrial"),
+        ]),
+        ("Adamant Chain System", [
+            ("Gathron", "hive_world", "industrial"), ("Kryden", "forge_world", "industrial"),
+            ("Isolen", "civilized_world", "ice"), ("Varos IX", "dead_world", "asteroid"),
+        ]),
+        ("Penumbral Choir System", [
+            ("Sancta Liora", "civilized_world", "desert"), ("Kethrys", "feral_world", "warzone"),
+            ("Calyx", "research_station", "ice"),
+        ]),
+        ("Duskward Verge System", [
+            ("Orthan", "feral_world", "desert"), ("Ysmera", "civilized_world", "warzone"),
+            ("Nhalis", "death_world", "ice"),
+        ]),
+    ]
+    systems = [system for system in geography["systems"] if system["sectorId"] == "sector_29"]
+    assert len(systems) == 5
+    for index, (system, (name, worlds)) in enumerate(zip(systems, expected), 1):
+        assert system["id"] == f"sector_29_system_{index:02d}"
+        assert system["name"] == name
+        bodies = sorted((body for body in geography["bodies"] if body["systemId"] == system["id"] and body["kind"] != "star"), key=lambda body: body["orbitIndex"])
+        assert [(body["name"], body["kind"], body["biome"]) for body in bodies] == worlds
+        assert [body["orbitIndex"] for body in bodies] == list(range(1, len(worlds) + 1))
+
+
+def test_checked_in_objective_catalog_is_complete_and_contains_no_generated_gates():
+    catalog = json.loads((GEOGRAPHY_PATH.parent / "reach_objectives.json").read_text())
+    assert validate_objective_catalog(catalog) == catalog
+    assert len(catalog["objectives"]) == 29
+    assert sum(objective["category"] == "general" for objective in catalog["objectives"]) == 10
+    assert sum(objective["category"] == "specialist" for objective in catalog["objectives"]) == 19
+    for objective in catalog["objectives"]:
+        assert "rank" not in objective
+        assert "gate" not in objective
+        assert objective["settings"] == sorted(set(objective["settings"]))
+    assert load_geography(GEOGRAPHY_PATH)["objectiveCatalog"] == catalog
 
 
 def test_pruned_worlds_have_no_orphaned_routes() -> None:

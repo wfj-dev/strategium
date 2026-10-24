@@ -20,6 +20,61 @@ _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_]{0,79}$")
 _SOURCES = {"canon", "local_reference", "homebrew"}
 _ROUTE_STATUSES = {"open", "restricted", "closed"}
 _RISKS = {"low", "moderate", "high", "extreme"}
+BIOMES = frozenset({"jungle", "desert", "ice", "industrial", "warzone", "underhive", "starship", "asteroid"})
+WORLD_TYPES = frozenset({"hive", "forge", "agri", "civilised", "feral", "feudal", "death", "dead", "cemetery", "research"})
+WORLD_CLASSES = {
+    "agri": {"name": "Alpha", "symbol": "\u03b1"},
+    "civilised": {"name": "Gamma", "symbol": "\u03b3"},
+    "dead": {"name": "Delta", "symbol": "\u03b4"},
+    "death": {"name": "Delta Tau", "symbol": "\u03b4\u03c4"},
+    "cemetery": {"name": "Epsilon", "symbol": "\u03b5"},
+    "hive": {"name": "Eta", "symbol": "\u03b7"},
+    "feudal": {"name": "Mu", "symbol": "\u03bc"},
+    "research": {"name": "Rho", "symbol": "\u03c1"},
+    "forge": {"name": "Phi", "symbol": "\u03c6"},
+    "feral": {"name": "Phi Lambda", "symbol": "\u03c6\u03bb"},
+}
+
+
+def validate_planet_art(payload: Any) -> dict[str, list[str]]:
+    if not isinstance(payload, dict) or len(payload) > 88:
+        raise ValueError("planetArt must be a bounded pairing catalogue")
+    result = {}
+    for setting, filenames in payload.items():
+        if not isinstance(setting, str) or setting not in {f"{world}|{biome}" for world in WORLD_TYPES | {"research_station"} for biome in BIOMES}:
+            raise ValueError("Invalid planetArt pairing")
+        if not isinstance(filenames, list) or not 1 <= len(filenames) <= 20:
+            raise ValueError("Invalid planetArt variants")
+        prefix = setting.replace("|", "-")
+        if filenames != [f"{prefix}-{variant}.webp" for variant in range(1, len(filenames) + 1)]:
+            raise ValueError("Invalid planetArt filenames")
+        result[setting] = filenames.copy()
+    return result
+
+
+def validate_objective_catalog(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict) or payload.get("schemaVersion") != 1:
+        raise ValueError("objectiveCatalog must have schemaVersion 1")
+    objectives = []
+    identities: set[str] = set()
+    for raw in _objects(payload.get("objectives"), 100, "objectives"):
+        identity = _unique_id(raw, identities, "objective")
+        category = raw.get("category")
+        if category not in {"general", "specialist"}:
+            raise ValueError(f"objective {identity} has invalid category")
+        settings = raw.get("settings")
+        if not isinstance(settings, list) or len(settings) > 80:
+            raise ValueError(f"objective {identity} has invalid settings")
+        seen: set[str] = set()
+        for setting in settings:
+            if not isinstance(setting, str) or setting not in {f"{world}|{biome}" for world in WORLD_TYPES for biome in BIOMES} or setting in seen:
+                raise ValueError(f"objective {identity} has invalid or duplicate setting")
+            seen.add(setting)
+        objective = {"id": identity, "name": _text(raw.get("name"), "objective name"), "category": category, "settings": settings.copy()}
+        if category == "specialist":
+            objective["track"] = _text(raw.get("track"), "objective track", 60)
+        objectives.append(objective)
+    return {"schemaVersion": 1, "objectives": objectives}
 
 
 def _objects(value: Any, limit: int, label: str) -> list[dict[str, Any]]:
@@ -161,6 +216,11 @@ def validate_geography(payload: Any) -> dict[str, Any]:
             "source": source,
         })
         body_system[body_id] = system_id
+        if "biome" in raw:
+            biome = raw["biome"]
+            if raw.get("kind") == "star" or not isinstance(biome, str) or biome not in BIOMES:
+                raise ValueError(f"body {body_id} has invalid biome")
+            bodies[-1]["biome"] = biome
         if "stellarClass" in raw:
             stellar_class = raw["stellarClass"]
             if raw.get("kind") != "star" or not isinstance(stellar_class, str) or stellar_class not in {"O", "B", "A", "F", "G", "K", "M"}:
@@ -275,6 +335,14 @@ def validate_geography(payload: Any) -> dict[str, Any]:
             "width": _number(art.get("width"), "mapArt.width", minimum=1, maximum=4096),
             "height": _number(art.get("height"), "mapArt.height", minimum=1, maximum=4096),
         }
+    if "objectiveCatalog" in payload:
+        result["objectiveCatalog"] = validate_objective_catalog(payload["objectiveCatalog"])
+    if "worldClasses" in payload:
+        if payload["worldClasses"] != WORLD_CLASSES:
+            raise ValueError("Invalid Imperial world classifications")
+        result["worldClasses"] = {world: dict(classification) for world, classification in WORLD_CLASSES.items()}
+    if "planetArt" in payload:
+        result["planetArt"] = validate_planet_art(payload["planetArt"])
     return result
 
 

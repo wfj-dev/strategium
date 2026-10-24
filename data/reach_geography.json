@@ -11553,7 +11553,7 @@
     },
     {
       "id": "sector_29",
-      "name": "Sector 29",
+      "name": "The Canticle Reach",
       "boundary": [
         [
           6035.0,
@@ -13536,7 +13536,7 @@
     },
     {
       "id": "sector_29_system_01",
-      "name": "Sector 29 System 01",
+      "name": "Solenne Crown System",
       "sectorId": "sector_29",
       "x": 5950.0,
       "y": 1515.0,
@@ -13550,7 +13550,7 @@
     },
     {
       "id": "sector_29_system_02",
-      "name": "Sector 29 System 02",
+      "name": "Viridian Tides System",
       "sectorId": "sector_29",
       "x": 6430.0,
       "y": 1850.0,
@@ -13564,7 +13564,7 @@
     },
     {
       "id": "sector_29_system_03",
-      "name": "Sector 29 System 03",
+      "name": "Adamant Chain System",
       "sectorId": "sector_29",
       "x": 5515.0,
       "y": 1400.0,
@@ -13578,7 +13578,7 @@
     },
     {
       "id": "sector_29_system_04",
-      "name": "Sector 29 System 04",
+      "name": "Penumbral Choir System",
       "sectorId": "sector_29",
       "x": 6010.0,
       "y": 1940.0,
@@ -13592,7 +13592,7 @@
     },
     {
       "id": "sector_29_system_05",
-      "name": "Sector 29 System 05",
+      "name": "Duskward Verge System",
       "sectorId": "sector_29",
       "x": 6025.0,
       "y": 1155.0,
@@ -20576,37 +20576,66 @@
       "id": "sector_29_system_01_world_01",
       "systemId": "sector_29_system_01",
       "parentBodyId": null,
-      "name": "Sector 29 World 01-01",
-      "kind": "planet",
+      "name": "Vhaloris",
+      "kind": "hive_world",
       "orbitIndex": 1,
       "orbitAngle": 31.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "underhive"
     },
     {
       "id": "sector_29_system_01_world_02",
       "systemId": "sector_29_system_01",
       "parentBodyId": null,
-      "name": "Sector 29 World 01-02",
-      "kind": "planet",
+      "name": "Kael Tertius",
+      "kind": "forge_world",
       "orbitIndex": 2,
       "orbitAngle": 32.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "industrial"
     },
     {
       "id": "sector_29_system_01_world_03",
       "systemId": "sector_29_system_01",
       "parentBodyId": null,
-      "name": "Sector 29 World 01-03",
-      "kind": "planet",
+      "name": "Edris",
+      "kind": "civilized_world",
       "orbitIndex": 3,
       "orbitAngle": 33.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "desert"
+    },
+    {
+      "id": "sector_29_system_01_world_04",
+      "systemId": "sector_29_system_01",
+      "parentBodyId": null,
+      "name": "Namarra",
+      "kind": "agri_world",
+      "orbitIndex": 4,
+      "orbitAngle": 34.0,
+      "displayRadius": 5.0,
+      "battleEligible": true,
+      "source": "homebrew",
+      "biome": "jungle"
+    },
+    {
+      "id": "sector_29_system_01_world_05",
+      "systemId": "sector_29_system_01",
+      "parentBodyId": null,
+      "name": "Sepulcris",
+      "kind": "cemetery_world",
+      "orbitIndex": 5,
+      "orbitAngle": 35.0,
+      "displayRadius": 5.0,
+      "battleEligible": true,
+      "source": "homebrew",
+      "biome": "warzone"
     },
     {
       "id": "sector_29_system_02_star",
@@ -20625,49 +20654,53 @@
       "id": "sector_29_system_02_world_01",
       "systemId": "sector_29_system_02",
       "parentBodyId": null,
-      "name": "Sector 29 World 02-01",
-      "kind": "planet",
+      "name": "Theryn",
+      "kind": "agri_world",
       "orbitIndex": 1,
       "orbitAngle": 41.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "jungle"
     },
     {
       "id": "sector_29_system_02_world_02",
       "systemId": "sector_29_system_02",
       "parentBodyId": null,
-      "name": "Sector 29 World 02-02",
-      "kind": "planet",
+      "name": "Pelagos",
+      "kind": "civilized_world",
       "orbitIndex": 2,
       "orbitAngle": 42.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "jungle"
     },
     {
       "id": "sector_29_system_02_world_03",
       "systemId": "sector_29_system_02",
       "parentBodyId": null,
-      "name": "Sector 29 World 02-03",
-      "kind": "planet",
+      "name": "Morvael",
+      "kind": "death_world",
       "orbitIndex": 3,
       "orbitAngle": 43.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "jungle"
     },
     {
       "id": "sector_29_system_02_world_04",
       "systemId": "sector_29_system_02",
       "parentBodyId": null,
-      "name": "Sector 29 World 02-04",
-      "kind": "planet",
+      "name": "Syllex",
+      "kind": "research_world",
       "orbitIndex": 4,
       "orbitAngle": 44.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "industrial"
     },
     {
       "id": "sector_29_system_03_star",
@@ -20686,61 +20719,53 @@
       "id": "sector_29_system_03_world_01",
       "systemId": "sector_29_system_03",
       "parentBodyId": null,
-      "name": "Sector 29 World 03-01",
-      "kind": "planet",
+      "name": "Gathron",
+      "kind": "hive_world",
       "orbitIndex": 1,
       "orbitAngle": 51.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "industrial"
     },
     {
       "id": "sector_29_system_03_world_02",
       "systemId": "sector_29_system_03",
       "parentBodyId": null,
-      "name": "Sector 29 World 03-02",
-      "kind": "planet",
+      "name": "Kryden",
+      "kind": "forge_world",
       "orbitIndex": 2,
       "orbitAngle": 52.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "industrial"
     },
     {
       "id": "sector_29_system_03_world_03",
       "systemId": "sector_29_system_03",
       "parentBodyId": null,
-      "name": "Sector 29 World 03-03",
-      "kind": "planet",
+      "name": "Isolen",
+      "kind": "civilized_world",
       "orbitIndex": 3,
       "orbitAngle": 53.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "ice"
     },
     {
       "id": "sector_29_system_03_world_04",
       "systemId": "sector_29_system_03",
       "parentBodyId": null,
-      "name": "Sector 29 World 03-04",
-      "kind": "planet",
+      "name": "Varos IX",
+      "kind": "dead_world",
       "orbitIndex": 4,
       "orbitAngle": 54.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
-    },
-    {
-      "id": "sector_29_system_03_world_05",
-      "systemId": "sector_29_system_03",
-      "parentBodyId": null,
-      "name": "Sector 29 World 03-05",
-      "kind": "planet",
-      "orbitIndex": 5,
-      "orbitAngle": 55.0,
-      "displayRadius": 5.0,
-      "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "asteroid"
     },
     {
       "id": "sector_29_system_04_star",
@@ -20759,37 +20784,40 @@
       "id": "sector_29_system_04_world_01",
       "systemId": "sector_29_system_04",
       "parentBodyId": null,
-      "name": "Sector 29 World 04-01",
-      "kind": "planet",
+      "name": "Sancta Liora",
+      "kind": "civilized_world",
       "orbitIndex": 1,
       "orbitAngle": 61.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "desert"
     },
     {
       "id": "sector_29_system_04_world_02",
       "systemId": "sector_29_system_04",
       "parentBodyId": null,
-      "name": "Sector 29 World 04-02",
-      "kind": "planet",
+      "name": "Kethrys",
+      "kind": "feral_world",
       "orbitIndex": 2,
       "orbitAngle": 62.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "warzone"
     },
     {
       "id": "sector_29_system_04_world_03",
       "systemId": "sector_29_system_04",
       "parentBodyId": null,
-      "name": "Sector 29 World 04-03",
-      "kind": "planet",
+      "name": "Calyx",
+      "kind": "research_station",
       "orbitIndex": 3,
       "orbitAngle": 63.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "ice"
     },
     {
       "id": "sector_29_system_05_star",
@@ -20808,49 +20836,40 @@
       "id": "sector_29_system_05_world_01",
       "systemId": "sector_29_system_05",
       "parentBodyId": null,
-      "name": "Sector 29 World 05-01",
-      "kind": "planet",
+      "name": "Orthan",
+      "kind": "feral_world",
       "orbitIndex": 1,
       "orbitAngle": 71.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "desert"
     },
     {
       "id": "sector_29_system_05_world_02",
       "systemId": "sector_29_system_05",
       "parentBodyId": null,
-      "name": "Sector 29 World 05-02",
-      "kind": "planet",
+      "name": "Ysmera",
+      "kind": "civilized_world",
       "orbitIndex": 2,
       "orbitAngle": 72.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "warzone"
     },
     {
       "id": "sector_29_system_05_world_03",
       "systemId": "sector_29_system_05",
       "parentBodyId": null,
-      "name": "Sector 29 World 05-03",
-      "kind": "planet",
+      "name": "Nhalis",
+      "kind": "death_world",
       "orbitIndex": 3,
       "orbitAngle": 73.0,
       "displayRadius": 5.0,
       "battleEligible": true,
-      "source": "homebrew"
-    },
-    {
-      "id": "sector_29_system_05_world_04",
-      "systemId": "sector_29_system_05",
-      "parentBodyId": null,
-      "name": "Sector 29 World 05-04",
-      "kind": "planet",
-      "orbitIndex": 4,
-      "orbitAngle": 74.0,
-      "displayRadius": 5.0,
-      "battleEligible": true,
-      "source": "homebrew"
+      "source": "homebrew",
+      "biome": "ice"
     }
   ],
   "routes": [
@@ -21927,5 +21946,714 @@
     "scale": 5.0,
     "width": 1672.0,
     "height": 941.0
+  },
+  "objectiveCatalog": {
+    "schemaVersion": 1,
+    "objectives": [
+      {
+        "id": "purge",
+        "name": "Cleansing Flame",
+        "category": "general",
+        "settings": [
+          "agri|asteroid",
+          "agri|starship",
+          "agri|underhive",
+          "cemetery|jungle",
+          "cemetery|warzone",
+          "civilised|industrial",
+          "civilised|jungle",
+          "dead|desert",
+          "dead|ice",
+          "dead|jungle",
+          "dead|starship",
+          "death|jungle",
+          "death|warzone",
+          "feral|asteroid",
+          "feral|underhive",
+          "feral|warzone",
+          "feudal|jungle",
+          "feudal|warzone",
+          "forge|desert",
+          "forge|ice",
+          "forge|jungle",
+          "hive|jungle",
+          "hive|starship",
+          "hive|underhive"
+        ]
+      },
+      {
+        "id": "specimen",
+        "name": "The Severed Root",
+        "category": "general",
+        "settings": [
+          "agri|desert",
+          "agri|ice",
+          "agri|starship",
+          "cemetery|asteroid",
+          "cemetery|desert",
+          "cemetery|industrial",
+          "cemetery|underhive",
+          "civilised|asteroid",
+          "civilised|ice",
+          "civilised|industrial",
+          "civilised|warzone",
+          "dead|industrial",
+          "dead|warzone",
+          "death|jungle",
+          "feral|jungle",
+          "feudal|industrial",
+          "feudal|jungle",
+          "feudal|underhive",
+          "forge|ice",
+          "forge|starship",
+          "hive|desert",
+          "hive|warzone",
+          "research|ice",
+          "research|industrial",
+          "research|jungle"
+        ]
+      },
+      {
+        "id": "relic",
+        "name": "Reliquia Aeterna",
+        "category": "general",
+        "settings": [
+          "agri|jungle",
+          "agri|underhive",
+          "cemetery|starship",
+          "cemetery|warzone",
+          "civilised|desert",
+          "civilised|jungle",
+          "civilised|starship",
+          "civilised|underhive",
+          "dead|ice",
+          "dead|jungle",
+          "death|asteroid",
+          "feral|asteroid",
+          "feral|desert",
+          "feral|industrial",
+          "feral|warzone",
+          "feudal|ice",
+          "feudal|jungle",
+          "feudal|underhive",
+          "hive|desert",
+          "hive|ice",
+          "hive|industrial",
+          "research|desert",
+          "research|jungle",
+          "research|underhive"
+        ]
+      },
+      {
+        "id": "decap",
+        "name": "Kingslayer",
+        "category": "general",
+        "settings": [
+          "agri|asteroid",
+          "agri|warzone",
+          "cemetery|underhive",
+          "civilised|asteroid",
+          "civilised|warzone",
+          "death|starship",
+          "death|underhive",
+          "feral|asteroid",
+          "feral|jungle",
+          "feral|starship",
+          "feudal|asteroid",
+          "feudal|desert",
+          "feudal|ice",
+          "feudal|industrial",
+          "forge|asteroid",
+          "forge|ice",
+          "forge|industrial",
+          "forge|warzone",
+          "hive|asteroid",
+          "hive|jungle",
+          "hive|starship",
+          "hive|warzone",
+          "research|jungle",
+          "research|starship",
+          "research|warzone"
+        ]
+      },
+      {
+        "id": "hold",
+        "name": "Last Signal",
+        "category": "general",
+        "settings": [
+          "agri|industrial",
+          "agri|starship",
+          "cemetery|asteroid",
+          "cemetery|ice",
+          "cemetery|jungle",
+          "cemetery|starship",
+          "civilised|desert",
+          "civilised|starship",
+          "civilised|underhive",
+          "dead|desert",
+          "dead|starship",
+          "dead|underhive",
+          "death|warzone",
+          "feral|ice",
+          "feral|warzone",
+          "forge|industrial",
+          "forge|underhive",
+          "forge|warzone",
+          "hive|ice",
+          "hive|warzone",
+          "research|asteroid",
+          "research|ice",
+          "research|starship",
+          "research|warzone"
+        ]
+      },
+      {
+        "id": "escort",
+        "name": "Sealed Orders",
+        "category": "general",
+        "settings": [
+          "agri|jungle",
+          "agri|warzone",
+          "cemetery|asteroid",
+          "cemetery|industrial",
+          "civilised|asteroid",
+          "civilised|underhive",
+          "civilised|warzone",
+          "dead|asteroid",
+          "dead|desert",
+          "death|desert",
+          "death|starship",
+          "feral|ice",
+          "feudal|desert",
+          "feudal|starship",
+          "feudal|underhive",
+          "forge|industrial",
+          "hive|desert",
+          "hive|industrial",
+          "hive|starship",
+          "research|asteroid",
+          "research|ice",
+          "research|industrial",
+          "research|starship",
+          "research|underhive"
+        ]
+      },
+      {
+        "id": "sabotage",
+        "name": "Melta Dawn",
+        "category": "general",
+        "settings": [
+          "agri|asteroid",
+          "agri|ice",
+          "agri|jungle",
+          "cemetery|starship",
+          "civilised|ice",
+          "civilised|jungle",
+          "dead|underhive",
+          "death|asteroid",
+          "death|industrial",
+          "death|jungle",
+          "feral|industrial",
+          "feudal|asteroid",
+          "feudal|ice",
+          "feudal|starship",
+          "feudal|warzone",
+          "forge|asteroid",
+          "forge|industrial",
+          "forge|jungle",
+          "forge|starship",
+          "forge|warzone",
+          "hive|asteroid",
+          "hive|industrial",
+          "hive|starship",
+          "research|industrial",
+          "research|underhive"
+        ]
+      },
+      {
+        "id": "exterminatus",
+        "name": "Exterminatus",
+        "category": "general",
+        "settings": [
+          "agri|desert",
+          "agri|warzone",
+          "cemetery|desert",
+          "cemetery|ice",
+          "cemetery|industrial",
+          "cemetery|underhive",
+          "civilised|industrial",
+          "civilised|starship",
+          "dead|asteroid",
+          "dead|industrial",
+          "death|desert",
+          "death|ice",
+          "death|industrial",
+          "death|starship",
+          "death|underhive",
+          "feral|desert",
+          "feudal|starship",
+          "feudal|warzone",
+          "forge|asteroid",
+          "forge|desert",
+          "forge|underhive",
+          "hive|asteroid",
+          "hive|ice",
+          "research|desert",
+          "research|warzone"
+        ]
+      },
+      {
+        "id": "auspex",
+        "name": "Augur Array",
+        "category": "general",
+        "settings": [
+          "agri|desert",
+          "agri|industrial",
+          "agri|underhive",
+          "dead|asteroid",
+          "dead|industrial",
+          "dead|jungle",
+          "dead|underhive",
+          "dead|warzone",
+          "death|asteroid",
+          "death|ice",
+          "death|jungle",
+          "death|underhive",
+          "feral|desert",
+          "feral|ice",
+          "feral|industrial",
+          "feral|starship",
+          "feral|underhive",
+          "feudal|asteroid",
+          "feudal|desert",
+          "feudal|industrial",
+          "forge|desert",
+          "forge|starship",
+          "forge|underhive",
+          "hive|underhive",
+          "hive|warzone"
+        ]
+      },
+      {
+        "id": "lost",
+        "name": "No Brother Lost",
+        "category": "general",
+        "settings": [
+          "agri|ice",
+          "agri|industrial",
+          "agri|warzone",
+          "cemetery|desert",
+          "cemetery|ice",
+          "cemetery|jungle",
+          "cemetery|warzone",
+          "civilised|desert",
+          "civilised|ice",
+          "dead|ice",
+          "dead|starship",
+          "dead|warzone",
+          "death|desert",
+          "death|ice",
+          "death|industrial",
+          "death|warzone",
+          "feral|jungle",
+          "feral|starship",
+          "feral|underhive",
+          "forge|jungle",
+          "hive|jungle",
+          "hive|underhive",
+          "research|asteroid",
+          "research|desert"
+        ]
+      },
+      {
+        "id": "vanguard",
+        "name": "Tip of the Spear",
+        "category": "specialist",
+        "settings": [
+          "agri|asteroid",
+          "agri|jungle",
+          "cemetery|jungle",
+          "civilised|asteroid",
+          "dead|asteroid",
+          "death|warzone",
+          "feral|jungle",
+          "forge|ice"
+        ],
+        "track": "Hall of Blades"
+      },
+      {
+        "id": "champion",
+        "name": "Trial of Champions",
+        "category": "specialist",
+        "settings": [
+          "civilised|desert",
+          "dead|underhive",
+          "dead|warzone",
+          "death|desert",
+          "feudal|desert",
+          "feudal|underhive",
+          "hive|industrial",
+          "hive|underhive",
+          "hive|warzone"
+        ],
+        "track": "Hall of Blades"
+      },
+      {
+        "id": "forlorn",
+        "name": "The Last Wall",
+        "category": "specialist",
+        "settings": [
+          "agri|desert",
+          "civilised|industrial",
+          "death|industrial",
+          "death|underhive",
+          "feral|industrial",
+          "feudal|desert",
+          "forge|industrial"
+        ],
+        "track": "Hall of Blades"
+      },
+      {
+        "id": "judgment",
+        "name": "Blade of Judgement",
+        "category": "specialist",
+        "settings": [
+          "cemetery|asteroid",
+          "cemetery|desert",
+          "cemetery|warzone",
+          "dead|jungle",
+          "death|desert",
+          "feral|warzone",
+          "feudal|industrial"
+        ],
+        "track": "Hall of Blades"
+      },
+      {
+        "id": "rally",
+        "name": "Litania Fidei",
+        "category": "specialist",
+        "settings": [
+          "agri|ice",
+          "civilised|industrial",
+          "civilised|jungle",
+          "civilised|warzone",
+          "feudal|warzone",
+          "forge|underhive",
+          "forge|warzone"
+        ],
+        "track": "Reclusiam"
+      },
+      {
+        "id": "unbowed",
+        "name": "Fides Invicta",
+        "category": "specialist",
+        "settings": [
+          "cemetery|ice",
+          "cemetery|starship",
+          "cemetery|warzone",
+          "civilised|ice",
+          "feudal|ice",
+          "feudal|starship",
+          "hive|starship",
+          "research|warzone"
+        ],
+        "track": "Reclusiam"
+      },
+      {
+        "id": "corruption",
+        "name": "Excommunicatus",
+        "category": "specialist",
+        "settings": [
+          "agri|industrial",
+          "agri|underhive",
+          "cemetery|industrial",
+          "civilised|underhive",
+          "death|industrial",
+          "feudal|industrial",
+          "forge|underhive"
+        ],
+        "track": "Reclusiam"
+      },
+      {
+        "id": "vivisection",
+        "name": "Vivisectio",
+        "category": "specialist",
+        "settings": [
+          "agri|desert",
+          "dead|starship",
+          "death|jungle",
+          "forge|ice",
+          "research|ice",
+          "research|starship",
+          "research|underhive",
+          "research|warzone"
+        ],
+        "track": "Apothecarion"
+      },
+      {
+        "id": "geneseed",
+        "name": "Seed of the Fallen",
+        "category": "specialist",
+        "settings": [
+          "cemetery|desert",
+          "cemetery|ice",
+          "dead|desert",
+          "dead|underhive",
+          "death|asteroid",
+          "death|ice",
+          "death|warzone",
+          "hive|desert"
+        ],
+        "track": "Apothecarion"
+      },
+      {
+        "id": "contagion",
+        "name": "Plague Ward",
+        "category": "specialist",
+        "settings": [
+          "agri|jungle",
+          "agri|starship",
+          "agri|underhive",
+          "civilised|starship",
+          "death|starship",
+          "feudal|jungle",
+          "research|jungle"
+        ],
+        "track": "Apothecarion"
+      },
+      {
+        "id": "psyhunt",
+        "name": "Warp's Eye",
+        "category": "specialist",
+        "settings": [
+          "civilised|starship",
+          "dead|ice",
+          "death|jungle",
+          "feral|jungle",
+          "feudal|starship",
+          "research|ice",
+          "research|jungle"
+        ],
+        "track": "Librarius"
+      },
+      {
+        "id": "archive",
+        "name": "Forbidden Lore",
+        "category": "specialist",
+        "settings": [
+          "cemetery|underhive",
+          "civilised|asteroid",
+          "civilised|underhive",
+          "dead|starship",
+          "death|starship",
+          "feudal|underhive",
+          "hive|underhive",
+          "research|asteroid"
+        ],
+        "track": "Librarius"
+      },
+      {
+        "id": "veil",
+        "name": "Shadow in the Warp",
+        "category": "specialist",
+        "settings": [
+          "cemetery|jungle",
+          "cemetery|starship",
+          "dead|asteroid",
+          "feral|asteroid",
+          "feral|ice",
+          "hive|asteroid",
+          "research|asteroid"
+        ],
+        "track": "Librarius"
+      },
+      {
+        "id": "salvage",
+        "name": "Machine Rite",
+        "category": "specialist",
+        "settings": [
+          "agri|asteroid",
+          "agri|ice",
+          "agri|warzone",
+          "dead|industrial",
+          "dead|warzone",
+          "forge|asteroid",
+          "forge|desert",
+          "forge|jungle",
+          "hive|industrial"
+        ],
+        "track": "Armory"
+      },
+      {
+        "id": "archeo",
+        "name": "Gift of Mars",
+        "category": "specialist",
+        "settings": [
+          "cemetery|asteroid",
+          "civilised|ice",
+          "dead|ice",
+          "dead|industrial",
+          "forge|warzone",
+          "hive|ice",
+          "research|desert"
+        ],
+        "track": "Armory"
+      },
+      {
+        "id": "awaken",
+        "name": "Iron Sleeper",
+        "category": "specialist",
+        "settings": [
+          "cemetery|industrial",
+          "cemetery|underhive",
+          "civilised|warzone",
+          "forge|industrial",
+          "forge|starship",
+          "hive|starship"
+        ],
+        "track": "Armory"
+      },
+      {
+        "id": "knife",
+        "name": "Nightfall",
+        "category": "specialist",
+        "settings": [
+          "feral|ice",
+          "feral|industrial",
+          "feudal|warzone",
+          "forge|desert",
+          "hive|warzone",
+          "research|desert",
+          "research|industrial"
+        ],
+        "track": "Black Vault"
+      },
+      {
+        "id": "net",
+        "name": "Killbox",
+        "category": "specialist",
+        "settings": [
+          "agri|warzone",
+          "dead|desert",
+          "death|ice",
+          "death|underhive",
+          "feral|desert",
+          "feral|underhive",
+          "feudal|asteroid",
+          "feudal|ice"
+        ],
+        "track": "Black Vault"
+      },
+      {
+        "id": "capture",
+        "name": "The Leash",
+        "category": "specialist",
+        "settings": [
+          "death|asteroid",
+          "feral|asteroid",
+          "feral|desert",
+          "feral|warzone",
+          "feudal|jungle",
+          "research|starship",
+          "research|underhive"
+        ],
+        "track": "Black Vault"
+      }
+    ]
+  },
+  "worldClasses": {
+    "agri": {
+      "name": "Alpha",
+      "symbol": "\u03b1"
+    },
+    "civilised": {
+      "name": "Gamma",
+      "symbol": "\u03b3"
+    },
+    "dead": {
+      "name": "Delta",
+      "symbol": "\u03b4"
+    },
+    "death": {
+      "name": "Delta Tau",
+      "symbol": "\u03b4\u03c4"
+    },
+    "cemetery": {
+      "name": "Epsilon",
+      "symbol": "\u03b5"
+    },
+    "hive": {
+      "name": "Eta",
+      "symbol": "\u03b7"
+    },
+    "feudal": {
+      "name": "Mu",
+      "symbol": "\u03bc"
+    },
+    "research": {
+      "name": "Rho",
+      "symbol": "\u03c1"
+    },
+    "forge": {
+      "name": "Phi",
+      "symbol": "\u03c6"
+    },
+    "feral": {
+      "name": "Phi Lambda",
+      "symbol": "\u03c6\u03bb"
+    }
+  },
+  "planetArt": {
+    "agri|jungle": [
+      "agri-jungle-1.webp",
+      "agri-jungle-2.webp"
+    ],
+    "cemetery|warzone": [
+      "cemetery-warzone-1.webp"
+    ],
+    "civilised|desert": [
+      "civilised-desert-1.webp",
+      "civilised-desert-2.webp"
+    ],
+    "civilised|ice": [
+      "civilised-ice-1.webp"
+    ],
+    "civilised|jungle": [
+      "civilised-jungle-1.webp"
+    ],
+    "civilised|warzone": [
+      "civilised-warzone-1.webp"
+    ],
+    "dead|asteroid": [
+      "dead-asteroid-1.webp"
+    ],
+    "death|ice": [
+      "death-ice-1.webp"
+    ],
+    "death|jungle": [
+      "death-jungle-1.webp"
+    ],
+    "feral|desert": [
+      "feral-desert-1.webp"
+    ],
+    "feral|warzone": [
+      "feral-warzone-1.webp"
+    ],
+    "forge|industrial": [
+      "forge-industrial-1.webp",
+      "forge-industrial-2.webp"
+    ],
+    "hive|industrial": [
+      "hive-industrial-1.webp"
+    ],
+    "hive|underhive": [
+      "hive-underhive-1.webp"
+    ],
+    "research_station|ice": [
+      "research_station-ice-1.webp"
+    ],
+    "research|industrial": [
+      "research-industrial-1.webp"
+    ]
   }
 }
