@@ -657,6 +657,10 @@
   .war-strike { min-width: 0; border: 1px solid var(--border-dim); border-radius: 4px; padding: 12px; }
   .war-strike h3 { font-size: 14px; overflow-wrap: anywhere; }
   .war-strike p { font-size: 12px; overflow-wrap: anywhere; }
+  .war-recipe { min-width: 0; max-width: 100%; font-size: 12px; overflow-wrap: anywhere; }
+  .war-recipe p, .war-recipe ul { margin: 8px 0; }
+  .war-recipe ul { padding-left: 18px; }
+  .war-recipe details { margin: 8px 0; }
   .war-pools { display: flex; gap: 8px; margin-bottom: 14px; }
   .war-pools [aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(207,174,104,.1); }
   #war-console { margin: 0; }
@@ -3666,7 +3670,7 @@ const AAR_MAX_SCREENSHOTS = 10;
 const AAR_MAX_IMAGE_BYTES = 32 * 1024 * 1024;
 const AAR_MAX_TOTAL_IMAGE_BYTES = 32 * 1024 * 1024;
 const aarDraft = {
-  strikeId: "", strikeSuccess: "success",
+  strikeId: "",
   mode: "ops_strat", mission: "pve_inferno", difficulty: "@Ruthless", rank: "A", armoryData: "0",
   waves: "10", kia: "0", geneSeed: "unknown", geneCarrier: "", pvpMap: "Cathedrum",
   pvpMode: "Seize Ground", pvpResult: "W", brothers: new Set(), inductees: new Set(), tags: new Set(), files: [], memberFilter: "",
@@ -4053,7 +4057,6 @@ function renderSubmitAar() {
           <div class="aar-fields">
             ${aarSelectField("aar-mode", "Report Type", modeOptions, aarDraft.mode, true)}
             <label class="aar-field"><span class="field-label">Strike ID (optional)</span><input id="aar-strike-id" class="field-input" value="${escapeHtml(aarDraft.strikeId)}" maxlength="35" pattern="GW-[a-f0-9]{32}" autocomplete="off"${managementEdit ? " readonly" : ""}></label>
-            ${aarDraft.strikeId ? aarSelectField("aar-strike-result", "Strike Result", [["success", "Success"], ["failure", "Failure"]], aarDraft.strikeSuccess, true) : ""}
             ${fields}${carrierField}
           </div>
         </section>
@@ -4148,7 +4151,6 @@ function renderSubmitAar() {
   };
   const readDraftFields = () => {
     aarDraft.strikeId = document.getElementById("aar-strike-id")?.value.trim() || "";
-    aarDraft.strikeSuccess = document.getElementById("aar-strike-result")?.value || "success";
     aarDraft.brothers = new Set([...form.querySelectorAll("[data-aar-brother]:checked")].map(input => input.value));
     aarDraft.inductees = new Set([...form.querySelectorAll("[data-aar-inductee]:checked")].map(input => input.value).filter(id => aarDraft.brothers.has(id)));
     aarDraft.tags = new Set([...form.querySelectorAll("[data-aar-tag]:checked")].map(input => input.value));
@@ -4166,9 +4168,6 @@ function renderSubmitAar() {
   };
   document.getElementById("aar-strike-id")?.addEventListener("change", () => {
     readDraftFields(); invalidateIdempotencyKey(); renderSubmitAar();
-  });
-  document.getElementById("aar-strike-result")?.addEventListener("change", () => {
-    readDraftFields(); invalidateIdempotencyKey();
   });
   document.getElementById("aar-phone-start")?.addEventListener("click", async () => {
     if (aarPhoneHandoff.busy || aarDraft.submitting) return;
@@ -4320,7 +4319,6 @@ function renderSubmitAar() {
     }
     const payload = {
       strike_id: aarDraft.strikeId || null,
-      strike_success: aarDraft.strikeId ? aarDraft.strikeSuccess === "success" : null,
       mode: aarDraft.mode,
       mission: aarDraft.mission,
       difficulty: aarDraft.difficulty,
@@ -4441,7 +4439,6 @@ function beginAarManagementEdit(detail, memberProposal = false) {
   aarDraft.memberProposal = memberProposal;
   aarDraft.originalRecordHash = detail.original_record_hash || "";
   aarDraft.strikeId = submission.strike_id || "";
-  aarDraft.strikeSuccess = submission.strike_success === false ? "failure" : "success";
   aarDraft.mode = submission.mode || "ops_strat";
   aarDraft.mission = submission.mission || "pve_inferno";
   aarDraft.difficulty = submission.difficulty || AAR_SUBMISSION_MODES[aarDraft.mode]?.difficulty || "@Ruthless";
@@ -4605,7 +4602,7 @@ function aarEditProposalChangesHtml(item) {
     if (Array.isArray(value)) return value.map(identity => item.participant_names?.[identity] || AAR_SUBMISSION_TAGS.find(([tag]) => tag === identity)?.[1] || identity).join(", ");
     if (key === "mission") return AAR_PVE_MISSIONS.find(([identity]) => identity === value)?.[1] || value;
     if (key === "mode") return AAR_SUBMISSION_MODES[value]?.label || value;
-    if (key === "strike_success") return value ? "Success" : "Failure";
+    if (key === "strike_success") return value ? "Completed" : "Not completed (legacy)";
     return String(value);
   };
   return Object.keys({...previous, ...proposed}).filter(key => JSON.stringify(previous[key] ?? null) !== JSON.stringify(proposed[key] ?? null)).map(key =>
@@ -4645,7 +4642,7 @@ function aarReportPreviewHtml(detail) {
     ["Mission tags", (report.tags || []).map(tag => AAR_SUBMISSION_TAGS.find(([key]) => key === tag)?.[1] || tag).join(", ")],
     ...(mode?.waves ? [["Waves", report.waves]] : []), ...(mode?.kia ? [["Killed in Action", report.kia]] : []),
     ...(mode?.pvp ? [["Map", report.pvp_map], ["Game mode", report.pvp_game_mode], ["Result", report.pvp_result]] : []),
-    ...(report.strike_id ? [["Strike ID", report.strike_id], ["Strike result", report.strike_success ? "Success" : "Failure"]] : [])
+    ...(report.strike_id ? [["Strike ID", report.strike_id], ["Completion", report.strike_success === false ? "Not completed (legacy)" : "Completed"]] : [])
   ];
   return `<h3>${escapeHtml(mission)}</h3><span class="aar-upload-hint">AAR ${escapeHtml(detail.id)}</span><dl class="aar-report-fields">${fields.filter(([, value]) => value !== null && value !== undefined && value !== "").map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl><h4>Mission evidence</h4><div class="aar-review-evidence">${(detail.screenshots || []).map((image, index) => String(image.url || "").startsWith("https://") ? `<button type="button" data-aar-evidence="${index}" title="Open full-size screenshot"><img src="${escapeHtml(image.url)}" alt="Mission screenshot ${index + 1}"><span>${escapeHtml(image.filename || `Screenshot ${index + 1}`)}</span></button>` : "").join("") || `<p class="aar-empty">No screenshot preview is available.</p>`}</div>`;
 }
@@ -5663,13 +5660,13 @@ async function loadReach() {
   await loadWar();
 }
 
-const warView = { data: null, error: "", busy: false, planet: "", subsector: "", pool: "vanilla", requestSequence: 0 };
+const warView = { data: null, error: "", busy: false, planet: "", subsector: "", pool: "vanilla", sandboxId: "", requestSequence: 0 };
 
 async function loadWar() {
   const sequence = ++warView.requestSequence;
   if (!state.auth.authenticated) { warView.data = null; return; }
   try {
-    const response = await fetch(apiUrl(`/api/war?planet=${encodeURIComponent(warView.planet)}`), { credentials: "include", cache: "no-store" });
+    const response = await fetch(apiUrl(`/api/war?planet=${encodeURIComponent(warView.planet)}${warView.sandboxId ? `&sandbox=${encodeURIComponent(warView.sandboxId)}` : ""}`), { credentials: "include", cache: "no-store" });
     const result = await response.json();
     if (sequence !== warView.requestSequence) return;
     if (!response.ok) throw new Error(result.error === "war_unavailable"
@@ -5691,10 +5688,11 @@ function warConsoleHtml() {
   const war = warView.data;
   const sectorId = warView.subsector || state.selectedSector || state.geography?.sectors[0]?.id || "";
   if (!state.auth.authenticated) return `<section id="war-console"><p>Sign in to access the Galactic War.</p>${geographySystemDirectoryHtml(sectorId)}</section>`;
-  if (!war) return `<section id="war-console"><p role="status">${escapeHtml(warView.error || "Loading campaign permissions...")}</p><button class="btn-dossier-action" type="button" data-war-retry>Retry campaign connection</button>${geographySystemDirectoryHtml(sectorId)}</section>`;
+  if (!war) return `<section id="war-console"><p role="status">${escapeHtml(warView.error || "Loading campaign permissions...")}</p><button class="btn-dossier-action" type="button" data-war-retry>Retry campaign connection</button>${warView.sandboxId ? `<button class="btn-dossier-action" type="button" data-war-live>Return to live campaign</button>` : ""}${geographySystemDirectoryHtml(sectorId)}</section>`;
   const campaign = war.campaigns[sectorId];
   const roles = new Set(war.actor.roles);
-  const master = roles.has("Watch Master");
+  const testing = war.sandbox?.viewing === true;
+  const master = roles.has("Watch Master") || testing;
   const commander = master || roles.has("Watch Captain") || roles.has("Watch Lieutenant");
   const canInvade = master || roles.has("Forgemaster");
   const company = war.actor.company_id;
@@ -5707,11 +5705,19 @@ function warConsoleHtml() {
   const commitments = Object.entries(war.commitments).filter(([, target]) => target === sectorId);
   const pool = warView.pool === "omega" ? "omega" : "vanilla";
   const board = (war.boards[warView.planet] || []).filter(offer => (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === pool);
-  const staff = war.actor.can_review || master || roles.has("Forgemaster");
-  const canParticipate = war.actor.watch_brother === true && war.actor.active !== false;
+  const staff = !testing && (war.actor.can_review || master || roles.has("Forgemaster"));
+  const canParticipate = !testing && war.actor.watch_brother === true && war.actor.active !== false;
   const selectedPlanet = (state.geography?.bodies || []).find(body => body.id === warView.planet);
+  const recipeHtml = recipe => recipe ? `<div class="war-recipe" aria-label="Assigned stratagems">
+    <p><span class="field-label">Positive</span><br>${escapeHtml(recipe.positive)}</p>
+    <span class="field-label">Three negatives</span><ul>${(recipe.negatives || []).map(name => `<li>${escapeHtml(name)}</li>`).join("")}</ul>
+    ${recipe.forced?.length ? `<p><span class="field-label">Mandatory faction conversion / additional</span><br>${recipe.forced.map(name => escapeHtml(name)).join(", ")}</p>` : ""}
+    <p>${testing ? "TEST / Simulated completions only. No real AARs or rewards." : "Evidence: stratagem selection and operation result. Independent staff approval required."}</p>
+    <details><summary>Vanilla adaptation / revision ${escapeHtml(recipe.version)}</summary>${(recipe.notes || []).map(note => `<p>${escapeHtml(note)}</p>`).join("")}</details>
+  </div>` : "";
   const reviewPanel = staff ? `<section aria-label="Strike evidence review"><h3 class="tier-label">Evidence review</h3>
     ${(war.reviews || []).map(review => `<div class="reach-toolbar"><span>${escapeHtml(review.mission)} / AAR ${escapeHtml(review.aar_id)} / ${escapeHtml(review.reason)}</span>
+      ${recipeHtml(review.recipe)}
       ${review.receipt_url?.startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(review.receipt_url)}" target="_blank" rel="noopener noreferrer">Evidence receipt</a>` : ""}
       ${review.status === "pending" && !review.participants.includes(war.actor.id) ? `<label>Review reason<input class="reach-select" data-war-review-reason="${escapeHtml(review.strike_id)}" maxlength="500"></label>${button("review", "Approve", `data-strike="${escapeHtml(review.strike_id)}" data-decision="approve" `)}${button("review", "Reject", `data-strike="${escapeHtml(review.strike_id)}" data-decision="reject" `)}` : `<span>${review.status === "approved" ? "Approved / archive processing" : "Independent reviewer required"}</span>`}
     </div>`).join("") || `<p>No reports awaiting review.</p>`}
@@ -5721,8 +5727,11 @@ function warConsoleHtml() {
     <div class="reach-toolbar">
       ${select("subsector_id", "Subsector", (state.geography?.sectors || []).map(sector => option(sector.id, sector.name, sector.id === sectorId)).join(""))}
       ${campaign ? `<span>${campaign.resolution_pending ? "Awaiting on-time reports" : escapeHtml(titleCase(campaign.status))} / Tyranids / ${Number(campaign.balance).toFixed(2)}%</span><progress max="100" value="${Number(campaign.balance)}" aria-label="Deathwatch balance of power"></progress><span>${escapeHtml(new Date(campaign.deadline).toLocaleString())}</span>` : `<span>Secure</span>`}
-      ${canInvade && campaign?.status !== "contested" ? button("invade", "Declare Tyranid invasion") : ""}
+      ${canInvade && !testing && campaign?.status !== "contested" ? button("invade", "Declare Tyranid invasion") : ""}
     </div>
+    ${canInvade ? `<details class="war-command-tools"${testing ? " open" : ""}><summary>Invasion testing${testing ? " / TEST / NO REAL REWARDS" : ""}</summary>
+      <div class="reach-toolbar">${war.sandbox ? `${testing ? `<span>Test clock: ${escapeHtml(new Date(war.sandbox.clock).toLocaleString())}</span>${button("exit_test_view", "Return to live campaign")}${select("test_hours", "Advance test clock", [1, 24, 72, 336].map(hours => option(hours, `${hours} hours`)).join(""))}${button("advance_test_time", "Advance test time")}${button("send_test_notice", "Send Test Notice")}${button("revert_test_invasion", "Revert Test Invasion")}` : button("enter_test_view", "Resume Test Invasion")}` : button("start_test_invasion", "Start Test Invasion")}</div>
+    </details>` : ""}
     ${commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant") ? `<details class="war-command-tools"><summary>Company command and system assignment</summary>` : ""}
     <div class="reach-toolbar">
       ${commitments.map(([identity]) => `<span class="status-tag">Company ${escapeHtml(COMPANY_NAMES[identity] || identity)}</span>`).join("") || "No companies committed"}
@@ -5744,12 +5753,13 @@ function warConsoleHtml() {
       <button class="btn-dossier-action" type="button" data-war-pool="omega" aria-pressed="${pool === "omega"}"${warView.busy ? " disabled" : ""}>Omega</button>
     </div>
     <div class="war-board-status" aria-label="Selected strike board status">${warView.planet ? `<span>${board.filter(offer => offer.status === "available").length} available</span><span>${board.filter(offer => offer.status === "recruiting").length} recruiting</span><span>${board.filter(offer => ["locked", "deployed"].includes(offer.status)).length} locked</span><span>${board.filter(offer => offer.status === "review_pending").length} awaiting review</span>` : "No planet selected"}</div>
-    ${!canParticipate ? `<p class="aar-upload-hint">The Watch Brother role and active membership are required for strike signup.</p>` : ""}
-    <div class="war-strike-grid">${board.map(offer => `<article class="war-strike"><span class="field-label">Game mission</span><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p><p><span class="field-label">Briefing theme</span><br>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${escapeHtml(offer.briefing)}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
+    ${!testing && !canParticipate ? `<p class="aar-upload-hint">The Watch Brother role and active membership are required for strike signup.</p>` : ""}
+    <div class="war-strike-grid">${board.map(offer => `<article class="war-strike"><span class="field-label">Game mission</span><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p>${recipeHtml(offer.recipe)}<p><span class="field-label">Briefing theme</span><br>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${escapeHtml(offer.briefing)}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
       <ul>${offer.participants.map(identity => `<li>${escapeHtml(war.participant_names?.[identity] || identity)}${offer.specialist_id === identity ? " (required specialist)" : ""}</li>`).join("")}</ul>
       ${offer.attempt_id && ["locked", "deployed"].includes(offer.status) ? `<p>Strike ID: <code>${escapeHtml(offer.attempt_id)}</code></p>` : ""}<div class="tools">
-      ${["available", "recruiting"].includes(offer.status) && (canParticipate || offer.participants.includes(war.actor.id)) ? button(offer.participants.includes(war.actor.id) ? "leave" : "join", offer.participants.includes(war.actor.id) ? "Withdraw" : "Join strike", `data-strike="${escapeHtml(offer.id)}" `) : ""}
-      ${["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", "Submit AAR", `data-strike="${escapeHtml(offer.id)}" `) : ""}
+      ${!testing && ["available", "recruiting"].includes(offer.status) && (canParticipate || offer.participants.includes(war.actor.id)) ? button(offer.participants.includes(war.actor.id) ? "leave" : "join", offer.participants.includes(war.actor.id) ? "Withdraw" : "Join strike", `data-strike="${escapeHtml(offer.id)}" `) : ""}
+      ${!testing && ["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", "Report Completion", `data-strike="${escapeHtml(offer.id)}" `) : ""}
+      ${testing && offer.status === "available" ? button("simulate_completion", "Simulate Completion", `data-strike="${escapeHtml(offer.id)}" `) : ""}
     </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("") || (warView.planet ? `<p class="aar-empty">No strikes on this board.</p>` : "")}</div>
     ${reviewPanel ? `<details class="war-review-tools"><summary>Evidence review and credit corrections</summary>${reviewPanel}</details>` : ""}
     <div role="status" aria-live="polite">${escapeHtml(warView.error)}</div>
@@ -5832,6 +5842,7 @@ document.addEventListener("click", async event => {
     return;
   }
   if (event.target.closest("[data-war-retry]")?.dataset.warRetry !== undefined) { await loadWar(); refreshWarConsole(); return; }
+  if (event.target.closest("[data-war-live]")?.dataset.warLive !== undefined) { warView.sandboxId = ""; await loadWar(); refreshWarConsole(); return; }
   const worldButton = event.target.closest("[data-war-planet]");
   if (worldButton?.dataset.warPlanet && !warView.busy) {
     warView.planet = worldButton.dataset.warPlanet;
@@ -5851,7 +5862,24 @@ document.addEventListener("click", async event => {
   }
   const button = event.target.closest("[data-war-action]");
   if (!button || warView.busy || !warView.data) return;
+  if (["enter_test_view", "exit_test_view"].includes(button.dataset.warAction)) {
+    warView.sandboxId = button.dataset.warAction === "enter_test_view" ? warView.data.sandbox?.id || "" : "";
+    if (warView.sandboxId) {
+      warView.subsector = warView.data.sandbox.subsector_id;
+      state.selectedSector = warView.subsector;
+      state.selectedSystem = "";
+      warView.planet = "";
+    }
+    warView.busy = true;
+    try { await loadWar(); } finally {
+      warView.busy = false; refreshWarConsole();
+      if (typeof updateGeographySectorPanel === "function") updateGeographySectorPanel();
+    }
+    return;
+  }
+  if (["send_test_notice", "revert_test_invasion"].includes(button.dataset.warAction) && !globalThis.confirm?.(button.dataset.warAction === "send_test_notice" ? "Send an unpinged TEST invasion notice to the campaign Discord channel?" : "Discard this test invasion? Live campaigns and rewards will not change.")) return;
   if (button.dataset.warAction === "report") {
+    if (warView.sandboxId) return;
     const offer = (warView.data.boards[warView.planet] || []).find(item => item.id === button.dataset.strike);
     if (!offer?.attempt_id) return;
     aarDraft.strikeId = offer.attempt_id;
@@ -5865,16 +5893,17 @@ document.addEventListener("click", async event => {
     aarDraft.managementRecordId = "";
     aarDraft.memberProposal = false;
     aarDraft.existingScreenshots = [];
-    aarDraft.strikeSuccess = "success";
     aarDraft.idempotencyKey = "";
     aarDraft.reviewing = false;
     await setPage("submit-aar", true);
     return;
   }
   const payload = { action: button.dataset.warAction, version: warView.data.version, planet_id: warView.planet };
+  if (warView.sandboxId) payload.sandbox_id = warView.sandboxId;
   document.querySelectorAll("[data-war-field]").forEach(field => { payload[field.dataset.warField] = field.value; });
   if (button.dataset.strike) payload.strike_id = button.dataset.strike;
   if (button.dataset.proposal) payload.proposal_id = button.dataset.proposal;
+  if (payload.action === "advance_test_time") payload.hours = Number(payload.test_hours);
   if (payload.action === "review") {
     payload.decision = button.dataset.decision;
     payload.reason = [...document.querySelectorAll("[data-war-review-reason]")].find(input => input.dataset.warReviewReason === payload.strike_id)?.value.trim() || "";
@@ -5906,6 +5935,7 @@ document.addEventListener("click", async event => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || result.error || "Campaign action failed");
     warView.data = result;
+    warView.sandboxId = result.sandbox?.viewing ? result.sandbox.id : "";
     warView.error = "";
     for (const sector of state.geography?.sectors || []) {
       const campaign = result.campaigns[sector.id];

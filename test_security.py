@@ -1617,10 +1617,11 @@ const handlers = {};
 const navigation = [];
 const consoleElement = {outerHTML:''};
 const offer = {id: 'offer', attempt_id: 'GW-' + 'a'.repeat(32), name: 'Psychic Hunt', briefing: 'Support the operation', aar_mission: 'Inferno', aar_mission_value: 'pve_inferno', aar_mode: 'omega', aar_difficulty: '@Omega', status: 'locked', capacity: 5, required_rank: 'Watch Librarian', specialist_id: '43', participants: ['42','43','44','45','46']};
+const recipe = {id:'cemetery|desert|geneseed',version:1,positive:'Come Prepared',negatives:['Corrupted Relic','Summoner','Hyperopia'],forced:['Intelligence Lapse'],notes:['Recovery support, not a custom task.','<img src=x onerror=alert(1)>']};
 const context = {
     state: {auth: {authenticated: true}, selectedSector: 'alpha', geography: {sectors: [{id:'alpha',name:'Alpha'}],systems: []}},
-    warView: {busy: false, error: '', planet: 'world', subsector: 'alpha', pool: 'omega', data: {version: 1, actor: {id: '42', roles: ['Watch Captain'], company_id: '1'}, campaigns: {}, commitments: {}, kill_teams: [], proposals: [], planets: [{id: 'world', name:'World',subsector_id:'alpha'}], boards: {world: [offer, {...offer,id:'vanilla-offer',name:'Vanilla only',aar_mode:'ops_strat',pool:'vanilla',capacity:3}]}, content: {objectives:29}, participant_names: {'42':'Captain','43':'Librarian'}}},
-    COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? ''), titleCase: value=>value, geographySystemDirectoryHtml:()=>'',
+    warView: {busy: false, error: '', planet: 'world', subsector: 'alpha', pool: 'omega', data: {version: 1, actor: {id: '42', roles: ['Watch Captain'], company_id: '1'}, campaigns: {}, commitments: {}, kill_teams: [], proposals: [], planets: [{id: 'world', name:'World',subsector_id:'alpha'}], boards: {world: [offer, {...offer,id:'vanilla-offer',name:'Vanilla only',aar_mode:'ops_strat',pool:'vanilla',capacity:3,recipe}]}, content: {objectives:29}, participant_names: {'42':'Captain','43':'Librarian'}}},
+    COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'), titleCase: value=>value, geographySystemDirectoryHtml:()=>'',
     aarDraft: {memberDirectory:new Map(), managementRecordId:'old', idempotencyKey:'old', reviewing:true},
     document: {addEventListener:(name,callback)=>{handlers[name]=callback;},getElementById:()=>consoleElement,querySelectorAll:()=>[]},
     setPage:async (...args)=>navigation.push(args), renderReach:()=>{throw new Error('Canvas must stay mounted');},
@@ -1641,9 +1642,16 @@ assert.match(markup,/Game mission/);
 assert.match(markup,/Briefing theme/);
 assert.doesNotMatch(markup,/briefing types/);
 assert.doesNotMatch(markup,/aria-label="Strike evidence review"/);
+assert.doesNotMatch(markup,/Assigned stratagems/);
 context.warView.data.actor.can_review=true;
-context.warView.data.reviews=[{mission:'Inferno',aar_id:'99',reason:'Evidence reused',status:'pending',participants:['43'],strike_id:'held',receipt_url:'https://discord.com/channels/1/2/99'}];
+context.warView.data.reviews=[{mission:'Inferno',aar_id:'99',reason:'Evidence reused',status:'pending',participants:['43'],strike_id:'held',receipt_url:'https://discord.com/channels/1/2/99',recipe}];
 assert.match(context.warConsoleHtml(),/data-war-action="review"/);
+assert.match(context.warConsoleHtml(),/Come Prepared/);
+assert.match(context.warConsoleHtml(),/Corrupted Relic/);
+assert.match(context.warConsoleHtml(),/Intelligence Lapse/);
+assert.match(context.warConsoleHtml(),/Mandatory faction conversion \/ additional/);
+assert.doesNotMatch(context.warConsoleHtml(),/<img src=x/);
+assert.match(context.warConsoleHtml(),/&lt;img src=x/);
 assert.match(context.warConsoleHtml(),/data-war-action="reverse"/);
 assert.match(context.warConsoleHtml(),/Settled strike to reverse/);
 context.warView.data.actor.can_review=false;
@@ -1651,13 +1659,31 @@ for(const [role,invade,commit] of [['Forgemaster',true,false],['Watch Master',tr
     context.warView.data.actor.roles=[role];
     const controls=context.warConsoleHtml();
     assert.equal(controls.includes('data-war-action="invade"'),invade,role);
+    assert.equal(controls.includes('data-war-action="start_test_invasion"'),invade,role);
     assert.equal(controls.includes('data-war-action="commit"'),commit,role);
 }
 context.warView.data.actor.roles=['Watch Captain'];
+context.warView.data.actor.roles=['Forgemaster'];
+context.warView.data.sandbox={id:'a'.repeat(32),viewing:true,clock:'2026-10-24T00:00:00Z',subsector_id:'alpha'};
+context.warView.pool='vanilla';
+context.warView.data.boards.world[1].status='available';
+assert.match(context.warConsoleHtml(),/TEST \/ NO REAL REWARDS/);
+assert.match(context.warConsoleHtml(),/data-war-action="simulate_completion"/);
+assert.match(context.warConsoleHtml(),/data-war-action="revert_test_invasion"/);
+assert.match(context.warConsoleHtml(),/data-war-action="send_test_notice"/);
+assert.doesNotMatch(context.warConsoleHtml(),/The Watch Brother role and active membership are required/);
+assert.doesNotMatch(context.warConsoleHtml(),/data-war-action="join"|data-war-action="report"|data-war-action="invade"/);
+context.warView.data.sandbox=null;
+context.warView.data.boards.world[1].status='locked';
+context.warView.data.actor.roles=['Watch Captain'];
+context.warView.pool='omega';
+assert.doesNotMatch(html,/aar-strike-result|strikeSuccess/);
 (async()=>{
     await handlers.click({target:{closest:()=>({dataset:{warPool:'vanilla'}})}});
     assert.equal(context.warView.pool,'vanilla');
     assert.match(consoleElement.outerHTML,/Vanilla only/);
+    assert.match(consoleElement.outerHTML,/Independent staff approval required/);
+    assert.match(consoleElement.outerHTML,/Vanilla adaptation \/ revision 1/);
     await handlers.change({target:{closest:()=>({dataset:{warField:'planet_id'},value:'world'})}});
     assert.match(consoleElement.outerHTML,/war-console/);
     await handlers.change({target:{closest:()=>({dataset:{warField:'subsector_id'},value:'alpha'})}});

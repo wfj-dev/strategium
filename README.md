@@ -20,6 +20,13 @@ selected world shows its description, Vanilla/Omega pools and strike roster. Com
 command forms and moderation controls expand only when needed. Counts describe the selected
 planet's current pool, while cards distinguish the game mission from its briefing
 theme. Changing selections or refreshing campaign data keeps the map canvas mounted.
+New Vanilla offers show their assigned Hard-Stratagem recipe: one positive, three
+negatives, and additional mandatory Intelligence Lapse on Chaos-only maps. Adaptation
+notes distinguish the actual vanilla map/task from the Atlas setting, including ice
+and asteroid proxies and Vortex's unchanged Mutalith boss. Recipe reports require
+evidence of the selected stratagems and operation result; independent staff compare
+the saved recipe with the receipt before credit and AAR rewards are applied. Existing
+offers without recipes and the Omega pool retain their original contracts.
 Campaign polling continues while controls are focused; form values, text selection
 and keyboard focus are preserved when the console updates.
 
@@ -37,12 +44,24 @@ and specialists. The bot verifies the role ID at signup and rechecks the full ro
 before locking; the interface hides signup controls when that permission is absent.
 
 There are no Ready, Deploy or coordinator controls. Once all slots are filled, the
-roster locks automatically; a recorded cancellation or failure releases it. Normal
-AARs accept an optional locked strike ID and success/failure result. Submit AAR from
+roster locks automatically; a recorded cancellation releases an uncompleted roster.
+Normal AARs accept an optional locked strike ID and report completions only. Report Completion from
 the map prefills the actual vanilla operation, difficulty and signed-up players. Renown
 displays four rolling tiers at 4/8/28/56 credited completions per formation member;
 Captain/LT scores average their company's KTs equally. Personal lifetime laurels are
 separate. Legacy Ordo Xenos standing is no longer displayed.
+
+Active Watch Masters and Forge Masters have a collapsed Invasion testing section.
+Their owner-private sandbox uses separate scratch state: start a test invasion,
+commit a company, assign a KT to a system, and simulate completions or advance test
+time. Test view hides real signup/AAR actions and is labelled TEST / NO REAL REWARDS.
+Return to live campaign leaves the sandbox resumable; Revert Test Invasion discards
+test progress without changing live campaigns, orders or awards. Test notices are
+opt-in, confirmed and unpinged; a sent test notice gets a matching reverted notice.
+Permissions and session ownership are rechecked by the bot, not trusted from the UI.
+
+Authored system labels use bare proper names, such as Solenne Crown, without a
+trailing System suffix. Stable system/body IDs and campaign assignments are unchanged.
 
 This is an implementation branch, not a live migration. The bot's `GALACTIC_WAR.md`
 documents configuration, specialist requirement probabilities and remaining rollout gates.

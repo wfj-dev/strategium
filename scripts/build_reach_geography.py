@@ -250,7 +250,7 @@ def _generate_outer_sector_systems(sectors: list[dict[str, Any]], sector_mask: n
             authored = SECTOR_29_SYSTEMS[index - 1] if number == 29 else None
             world_count = len(authored[1]) if authored else 3 + (number + index) % 3
             systems.append({
-                "id": system_id, "name": f"{authored[0]} System" if authored else f"Sector {number:02d} System {index:02d}",
+                "id": system_id, "name": authored[0] if authored else f"Sector {number:02d} System {index:02d}",
                 "sectorId": sector["id"], "x": pixel_x * ART_SCALE, "y": pixel_y * ART_SCALE,
                 "classification": "charted_system", "primaryBodyId": star_id,
                 "source": "homebrew", "tags": ["generated_sector", "provisional_names"],
@@ -320,7 +320,7 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
         display_name = DISPLAY_NAMES.get(name, name)
         kind = "watch_fortress" if is_fortress else "death_world" if name == "Herisor" else node["type"]
         systems.append({
-            "id": system_id, "name": f"{display_name} System", "sectorId": "jericho_reach",
+            "id": system_id, "name": display_name, "sectorId": "jericho_reach",
             "x": pixel_x * ART_SCALE, "y": pixel_y * ART_SCALE,
             "classification": "watch_fortress_system" if is_fortress else "charted_system",
             "primaryBodyId": f"{system_id}_star", "source": source,
@@ -351,7 +351,7 @@ def build_geography(graph: dict[str, Any]) -> dict[str, Any]:
         center_x = sum(location["x"] for location in group) / len(group)
         center_y = sum(location["y"] for location in group) / len(group)
         grouped_systems.append({
-            "id": system_id, "name": f"{star_name} System", "sectorId": "jericho_reach",
+            "id": system_id, "name": star_name, "sectorId": "jericho_reach",
             "x": center_x, "y": center_y, "classification": "charted_system",
             "primaryBodyId": f"{system_id}_star", "source": "homebrew",
             "tags": ["modeled_system", "provisional_names"] + (["fortress"] if system_id == FORTRESS_SYSTEM_ID else ["watch_station"] if system_id == "erioch" else []),

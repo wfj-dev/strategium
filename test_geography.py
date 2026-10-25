@@ -473,24 +473,24 @@ def test_sector_29_has_the_authored_systems_world_types_and_biomes():
     geography = load_geography(GEOGRAPHY_PATH)
     assert next(sector for sector in geography["sectors"] if sector["id"] == "sector_29")["name"] == "The Canticle Reach"
     expected = [
-        ("Solenne Crown System", [
+        ("Solenne Crown", [
             ("Vhaloris", "hive_world", "underhive"), ("Kael Tertius", "forge_world", "industrial"),
             ("Edris", "civilized_world", "desert"), ("Namarra", "agri_world", "jungle"),
             ("Sepulcris", "cemetery_world", "warzone"),
         ]),
-        ("Viridian Tides System", [
+        ("Viridian Tides", [
             ("Theryn", "agri_world", "jungle"), ("Pelagos", "civilized_world", "jungle"),
             ("Morvael", "death_world", "jungle"), ("Syllex", "research_world", "industrial"),
         ]),
-        ("Adamant Chain System", [
+        ("Adamant Chain", [
             ("Gathron", "hive_world", "industrial"), ("Kryden", "forge_world", "industrial"),
             ("Isolen", "civilized_world", "ice"), ("Varos IX", "dead_world", "asteroid"),
         ]),
-        ("Penumbral Choir System", [
+        ("Penumbral Choir", [
             ("Sancta Liora", "civilized_world", "desert"), ("Kethrys", "feral_world", "warzone"),
             ("Calyx", "research_station", "ice"),
         ]),
-        ("Duskward Verge System", [
+        ("Duskward Verge", [
             ("Orthan", "feral_world", "desert"), ("Ysmera", "civilized_world", "warzone"),
             ("Nhalis", "death_world", "ice"),
         ]),

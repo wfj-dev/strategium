@@ -11952,7 +11952,7 @@
   "systems": [
     {
       "id": "erioch",
-      "name": "Vigil Lux System",
+      "name": "Vigil Lux",
       "sectorId": "jericho_reach",
       "x": 3425.0,
       "y": 2780.0,
@@ -11967,7 +11967,7 @@
     },
     {
       "id": "watch_fortress_jericho_system",
-      "name": "Vespera System",
+      "name": "Vespera",
       "sectorId": "jericho_reach",
       "x": 3035.0,
       "y": 3030.0,
@@ -11982,7 +11982,7 @@
     },
     {
       "id": "the_warp_gate",
-      "name": "Nacreus System",
+      "name": "Nacreus",
       "sectorId": "jericho_reach",
       "x": 3040.0,
       "y": 2765.0,
@@ -11996,7 +11996,7 @@
     },
     {
       "id": "castolel",
-      "name": "Luminara System",
+      "name": "Luminara",
       "sectorId": "jericho_reach",
       "x": 3240.0,
       "y": 2710.0,
@@ -12010,7 +12010,7 @@
     },
     {
       "id": "skapula",
-      "name": "Caldris System",
+      "name": "Caldris",
       "sectorId": "jericho_reach",
       "x": 3255.0,
       "y": 3130.0,
@@ -13536,7 +13536,7 @@
     },
     {
       "id": "sector_29_system_01",
-      "name": "Solenne Crown System",
+      "name": "Solenne Crown",
       "sectorId": "sector_29",
       "x": 5950.0,
       "y": 1515.0,
@@ -13550,7 +13550,7 @@
     },
     {
       "id": "sector_29_system_02",
-      "name": "Viridian Tides System",
+      "name": "Viridian Tides",
       "sectorId": "sector_29",
       "x": 6430.0,
       "y": 1850.0,
@@ -13564,7 +13564,7 @@
     },
     {
       "id": "sector_29_system_03",
-      "name": "Adamant Chain System",
+      "name": "Adamant Chain",
       "sectorId": "sector_29",
       "x": 5515.0,
       "y": 1400.0,
@@ -13578,7 +13578,7 @@
     },
     {
       "id": "sector_29_system_04",
-      "name": "Penumbral Choir System",
+      "name": "Penumbral Choir",
       "sectorId": "sector_29",
       "x": 6010.0,
       "y": 1940.0,
@@ -13592,7 +13592,7 @@
     },
     {
       "id": "sector_29_system_05",
-      "name": "Duskward Verge System",
+      "name": "Duskward Verge",
       "sectorId": "sector_29",
       "x": 6025.0,
       "y": 1155.0,

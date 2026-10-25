@@ -1135,6 +1135,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 return
         else:
             payload = {"action": "snapshot", "planet_id": (query.get("planet") or [""])[0][:80]}
+            sandbox_id = (query.get("sandbox") or [""])[0]
+            if sandbox_id:
+                if not re.fullmatch(r"[a-f0-9]{32}", sandbox_id):
+                    self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_test_session"})
+                    return
+                payload["sandbox_id"] = sandbox_id
         response = _war_request(str(user["id"]), payload)
         if response is None:
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "war_unavailable"})
