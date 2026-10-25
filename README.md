@@ -124,15 +124,14 @@ IDs: Exterminatus is ANNIHILATION, Tip of the Spear is ASSAULT, and Cleansing Fl
 is PURIFICATION. Catalogue regeneration preserves the optional tag field; older
 catalogues use a readable general/specialist fallback. Board generation is unchanged.
 
-The strike panel puts the primary Join/Withdraw/Report action and filled-slot count
-first, followed by a fixed three- or five-place roster. Positive, negative and mandatory
-faction-conversion modifiers have separate labelled groups and canonical effects.
-On desktop, the selected strike's title, Atlas tag, operation, difficulty and briefing
-sit over the left-side artwork, with a compact modifier-name summary near its lower
-edge. Detailed strike art is dimmed by 20% with additional text-edge gradients;
-planet overview stays undimmed. Phones place the same briefing below the image.
-Full modifier effects and all participation/report controls remain in the panel,
-without repeating the briefing paragraph.
+The strike's title, Atlas tag, operation, difficulty and briefing sit over the left-side
+artwork, with the primary Join/Withdraw/Report action and filled-slot count between
+the briefing and a compact modifier-name summary. Detailed strike art is dimmed by
+20% with additional text-edge gradients; planet overview stays undimmed. Phones place
+the same briefing and action below the image. The right panel is reserved for the
+fixed three- or five-place roster, specialist status, full canonical modifier effects
+and evidence details. It does not repeat the action, briefing or return-to-planet link.
+Positive, negative and mandatory faction-conversion modifiers have separate labelled groups.
 Briefing/evidence/adaptation/reference/cancellation are secondary. Available actions
 and specialist coverage are provided by the bot using the same validator as actual
 signup, which is rechecked transactionally. A blocked slot explains why; Join and

@@ -56,22 +56,22 @@ def test_strike_region_manifest_and_region_paths_are_constrained(local_site):
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
-def test_strike_signup_is_first_and_atlas_tags_modifiers_and_roster_are_clear():
+def test_strike_scene_owns_signup_and_panel_keeps_roster_and_modifiers_clear():
     source = r"""
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync(process.argv[1],'utf8'),geo=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 const offer={id:'one',planet_id:'world',name:'Exterminatus',objective_id:'exterminatus',briefing:'Complete the assigned operation.',aar_mission:'Ballistic Engine',aar_difficulty:'@Hard-Stratagem',pool:'vanilla',capacity:3,status:'available',participants:[],required_rank:'',viewer_signup:{can_join:true,reason:''},recipe:{positive:'Surplus',negatives:['Tsunami','Detonation Risk','Myopia'],forced:['Intelligence Lapse'],notes:['Adaptation notes.']}};
-const c={state:{auth:{authenticated:true},reachMapLevel:'strike',selectedSector:'alpha',selectedSystem:'system',geography:{...geo,sectors:[{id:'alpha',name:'Alpha'}],systems:[{id:'system',name:'Solenne Crown',sectorId:'alpha'}],bodies:[{id:'world',name:'Vhaloris',systemId:'system'}]}},warView:{busy:false,error:'',subsector:'alpha',planet:'world',strike:'one',pool:'vanilla',data:{actor:{id:'42',roles:['Watch Brother'],company_id:'1',active:true,watch_brother:true},campaigns:{},commitments:{},assignments:{},kill_teams:[],proposals:[],planets:[{id:'world',system_id:'system'}],boards:{world:[offer]},participant_names:{'42':'Brother Tester'},content:{stratagems:{Surplus:{description:'Carry twice as much Equipment.'}}}}},COMPANY_NAMES:{'1':'Primus'},escapeHtml:value=>String(value??''),titleCase:value=>value};
+const c={state:{auth:{authenticated:true},reachMapLevel:'strike',geographyStatus:'live',selectedSector:'alpha',selectedSystem:'system',geography:{...geo,sectors:[{id:'alpha',name:'Alpha'}],systems:[{id:'system',name:'Solenne Crown',sectorId:'alpha'}],bodies:[{id:'world',name:'Vhaloris',systemId:'system'}]}},warView:{busy:false,error:'',subsector:'alpha',planet:'world',strike:'one',pool:'vanilla',data:{actor:{id:'42',roles:['Watch Brother'],company_id:'1',active:true,watch_brother:true},campaigns:{},commitments:{},assignments:{},kill_teams:[],proposals:[],planets:[{id:'world',system_id:'system'}],boards:{world:[offer]},participant_names:{'42':'Brother Tester'},content:{stratagems:{Surplus:{description:'Carry twice as much Equipment.'}}}}},COMPANY_NAMES:{'1':'Primus'},escapeHtml:value=>String(value??''),titleCase:value=>value};
 vm.createContext(c);
 vm.runInContext(html.slice(html.indexOf('function objectiveDisplayTag('),html.indexOf('function showPlanetStrikePreview(')),c);
-vm.runInContext(html.slice(html.indexOf('function strikeSceneBriefingHtml('),html.indexOf('function strikeRegionArtwork(')),c);
+vm.runInContext(html.slice(html.indexOf('function strikeActionBarHtml('),html.indexOf('function strikeRegionArtwork(')),c);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('function refreshWarConsole()')),c);
 assert.equal(c.objectiveDisplayTag(offer),'ANNIHILATION');
 assert.equal(c.objectiveDisplayTag({objective_id:'vanguard'}),'ASSAULT');
 assert.equal(c.objectiveDisplayTag({objective_id:'unknown'}),'General objective');
 let markup=c.warConsoleHtml();
-assert(markup.indexOf('data-war-action="join"')<markup.indexOf('aria-label="Strike roster"'));
 assert(markup.indexOf('aria-label="Strike roster"')<markup.indexOf('aria-label="Strike modifiers"'));
+assert.doesNotMatch(markup,/data-war-action="join"|data-strike-back/);
 assert.equal((markup.match(/strike-slot-number/g)||[]).length,3);
 assert.match(markup,/Positive \/ 1/);assert.match(markup,/Negative \/ 3/);assert.match(markup,/Mandatory faction conversion \/ additional/);
 assert.match(markup,/Carry twice as much Equipment/);assert.doesNotMatch(markup,/Complete the assigned operation/);
@@ -79,17 +79,21 @@ const briefing=c.strikeSceneBriefingHtml(offer,{name:'Vhaloris'});
 assert.match(briefing,/ANNIHILATION/);assert.match(briefing,/Exterminatus/);
 assert.match(briefing,/Complete the assigned operation/);assert.match(briefing,/Tsunami \/ Detonation Risk \/ Myopia/);
 assert.doesNotMatch(briefing,/Carry twice as much Equipment/);
-const sceneHost={hidden:true,innerHTML:''},stage={dataset:{}};
-c.document={getElementById:identity=>identity==='strike-scene-briefing'?sceneHost:stage};
+const sceneHost={hidden:true,innerHTML:'',querySelector:()=>({before(node){sceneHost.action=node;}})},stage={dataset:{}};
+c.document={getElementById:identity=>identity==='strike-scene-briefing'?sceneHost:stage,createElement:tag=>({tag,className:'',innerHTML:''})};
 c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,false);assert.equal(stage.dataset.view,'strike');
+assert.equal(sceneHost.action.className,'strike-scene-command');assert.match(sceneHost.action.innerHTML,/data-war-action="join"/);
+assert.equal((sceneHost.action.innerHTML.match(/data-war-action=/g)||[]).length,1);
+assert.match(sceneHost.action.innerHTML,/0 \/ 3 joined/);assert.doesNotMatch(sceneHost.action.innerHTML,/Carry twice as much Equipment/);
 c.state.reachMapLevel='planet';c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(sceneHost.innerHTML,'');assert.equal(stage.dataset.view,'planet');
 c.state.reachMapLevel='strike';c.warView.strike='removed';c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(sceneHost.innerHTML,'');
 c.warView.strike='one';const savedWar=c.warView.data;c.warView.data=null;c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(stage.dataset.view,'planet');c.warView.data=savedWar;
 offer.viewer_signup={can_join:false,reason:'The remaining slot must fulfill the required rank',specialist_fulfilled:false};offer.required_rank='Bladeguard';
-markup=c.warConsoleHtml();assert.match(markup,/data-war-action="join"[^>]*disabled/);assert.match(markup,/remaining slot/);
+let action=c.strikeActionBarHtml(offer);assert.match(action,/data-war-action="join"[^>]*disabled/);assert.match(action,/remaining slot/);
 offer.viewer_signup={can_join:true,reason:'',specialist_fulfilled:true};markup=c.warConsoleHtml();assert.match(markup,/Covered/);assert.doesNotMatch(markup,/Open \/ Bladeguard requirement/);
 offer.capacity=5;assert.equal((c.warConsoleHtml().match(/strike-slot-number/g)||[]).length,5);
-offer.status='locked';offer.participants=['42','43','44','45','46'];markup=c.warConsoleHtml();assert.match(markup,/data-war-action="report"/);assert.doesNotMatch(markup,/data-war-action="join"/);assert.match(markup,/Brother Tester \(You\)/);
+offer.status='locked';offer.participants=['42','43','44','45','46'];markup=c.warConsoleHtml();action=c.strikeActionBarHtml(offer);assert.match(action,/data-war-action="report"/);assert.doesNotMatch(markup,/data-war-action="report"|data-war-action="join"/);assert.match(markup,/Brother Tester \(You\)/);
+offer.status='available';offer.participants=[];c.state.geographyStatus='error';assert.match(c.warConsoleHtml(),/data-war-action="join"/);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html"), str(server.ROOT / "data" / "reach_geography.json")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
@@ -1747,11 +1751,12 @@ const context = {
     warView: {busy: false, error: '', planet: 'world', subsector: 'alpha', pool: 'omega', data: {version: 1, actor: {id: '42', roles: ['Watch Captain'], company_id: '1'}, campaigns: {}, commitments: {}, kill_teams: [], proposals: [], planets: [{id: 'world', name:'World',subsector_id:'alpha'}], boards: {world: [offer, {...offer,id:'vanilla-offer',name:'Vanilla only',aar_mode:'ops_strat',pool:'vanilla',capacity:3,recipe}]}, content: {objectives:29}, participant_names: {'42':'Captain','43':'Librarian'}}},
     COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'), titleCase: value=>value, geographySystemDirectoryHtml:()=>'', geographyBodyIcon:()=>'', geographyBodyLabel:body=>body.name, geographyObjectivesHtml:()=>'', geographySystemOverviewHtml:()=>'',
     aarDraft: {memberDirectory:new Map(), managementRecordId:'old', idempotencyKey:'old', reviewing:true},
-    document: {addEventListener:(name,callback)=>{handlers[name]=callback;},getElementById:()=>consoleElement,querySelectorAll:()=>[]},
+    document: {addEventListener:(name,callback)=>{handlers[name]=callback;},getElementById:id=>id==='war-console'?consoleElement:null,querySelectorAll:()=>[]},
     setPage:async (...args)=>navigation.push(args), renderReach:()=>{throw new Error('Canvas must stay mounted');},
     loadWar:async()=>{},showSectorLevel:identity=>{context.state.selectedSector=identity;}
 };
 vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function strikeActionBarHtml('),html.indexOf('function strikeRegionArtwork(')),context);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
 const markup = context.warConsoleHtml();
 assert.match(markup,/Roster locked/);
@@ -1863,6 +1868,7 @@ context.geographyObjectivesHtml=()=>'';
 context.openPlanetView=id=>{context.warView.planet=id;context.state.reachMapLevel='planet';context.state.reachCanvasCamera.focusBody(id);};
 context.selectPlanetStrike=id=>{context.warView.strike=id;context.openPlanetView(context.warView.data.boards['world-b'].find(offer=>offer.id===id).planet_id);context.state.reachMapLevel='strike';context.refreshWarConsole();};
 vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function strikeActionBarHtml('),html.indexOf('function strikeRegionArtwork(')),context);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
 let markup=context.warConsoleHtml();
 assert.match(markup,/data-war-strike="a"/);assert.match(markup,/data-war-strike="b"/);

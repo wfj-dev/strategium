@@ -752,11 +752,13 @@
   .reach-planet-stage[data-view="strike"] .planet-stage-heading, .reach-planet-stage[data-view="strike"] .planet-stage-target { visibility: hidden; }
   .strike-scene-briefing { position: absolute; z-index: 6; inset: 22px calc(min(460px, 48%) + 22px) 76px 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-width: 0; pointer-events: none; }
   .strike-scene-briefing[hidden] { display: none; }
-  .strike-scene-briefing > div { min-height: 0; overflow: auto; pointer-events: auto; overscroll-behavior: contain; }
+  .strike-scene-briefing > div:first-child { min-height: 0; overflow: auto; pointer-events: auto; overscroll-behavior: contain; }
+  .strike-scene-command { order: 1; flex-shrink: 0; padding: 9px 0; border-top: 1px solid rgba(79,214,122,.3); border-bottom: 1px solid rgba(79,214,122,.3); background: rgba(2,8,5,.78); pointer-events: auto; }
+  .strike-scene-command .strike-action-bar { position: static; grid-template-columns: minmax(0,1fr) auto; padding: 0; border: 0; background: transparent; }
   .strike-scene-title { margin: 8px 0; font: 700 26px 'Cinzel', serif; color: var(--white); overflow-wrap: anywhere; text-shadow: 0 2px 6px #000; }
   .strike-scene-mission { margin: 8px 0; color: var(--gold); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
   .strike-scene-copy { max-width: 48ch; margin: 10px 0; color: #e3e9e4; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; text-shadow: 0 1px 4px #000; }
-  .strike-scene-summary { display: grid; flex-shrink: 0; gap: 9px; margin: 0; }
+  .strike-scene-summary { order: 2; display: grid; flex-shrink: 0; gap: 9px; margin: 0; }
   .strike-scene-summary div { display: grid; grid-template-columns: 78px minmax(0,1fr); gap: 10px; align-items: start; }
   .strike-scene-summary dt { color: var(--green); font-size: 10px; line-height: 1.6; }
   .strike-scene-summary .negative dt { color: #e1aa8f; }
@@ -5785,6 +5787,25 @@ const warView = { data: null, error: "", busy: false, planet: "", strike: "", su
 
 const planetView = {id: "", controller: null, generation: 0, module: null, selectionVersion: 0, regionManifest: null, loading: null, finishLoad: null};
 
+function strikeActionBarHtml(offer) {
+    const war = warView.data;
+    const joined = offer.participants.includes(war.actor.id);
+    const recruiting = ["available", "recruiting"].includes(offer.status);
+    const locked = ["locked", "deployed"].includes(offer.status);
+    const testing = war.sandbox?.viewing === true;
+    const canParticipate = !testing && war.actor.watch_brother === true && war.actor.active !== false;
+    const signup = offer.viewer_signup;
+    const canJoin = canParticipate && (signup ? signup.can_join === true : true);
+    const button = (action, label, extra = "", disabled = false) => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy || disabled ? " disabled" : ""}>${label}</button>`;
+    let primary = "";
+    if (testing && offer.status === "available") primary = button("simulate_completion", "Simulate completion", `data-strike="${escapeHtml(offer.id)}" `);
+    else if (!testing && recruiting && joined) primary = button("leave", "Withdraw", `data-strike="${escapeHtml(offer.id)}" `);
+    else if (!testing && recruiting) primary = button("join", "Join strike", `data-strike="${escapeHtml(offer.id)}" `, !canJoin);
+    else if (!testing && locked && joined) primary = button("report", "Report completion", `data-strike="${escapeHtml(offer.id)}" `);
+    const reason = testing ? "Test simulation / no real rewards" : recruiting && !joined ? signup?.reason || (!canParticipate ? "Active membership and the Watch Brother role are required." : "") : offer.status === "review_pending" ? "Evidence awaiting independent review." : locked ? "Roster locked" : "";
+    return `<div class="strike-action-bar">${primary || `<span class="strike-context">${escapeHtml(titleCase(offer.status))}</span>`}<span class="strike-capacity">${offer.participants.length} / ${offer.capacity} joined</span>${reason ? `<p class="strike-action-reason">${escapeHtml(reason)}</p>` : ""}</div>`;
+}
+
 function strikeSceneBriefingHtml(offer, body) {
   const recipe = offer.recipe;
   return `<div><span class="field-label">${escapeHtml(body.name)} / ${escapeHtml(objectiveDisplayTag(offer))}</span><h2 class="strike-scene-title">${escapeHtml(offer.name)}</h2><p class="strike-scene-mission">${escapeHtml(offer.aar_mission || "")} / ${escapeHtml(offer.aar_difficulty || "")}</p>${offer.briefing ? `<p class="strike-scene-copy">${escapeHtml(offer.briefing)}</p>` : ""}</div>${recipe ? `<dl class="strike-scene-summary" aria-label="Modifier summary"><div class="positive"><dt>Positive</dt><dd>${escapeHtml(recipe.positive)}</dd></div><div class="negative"><dt>Negatives</dt><dd>${recipe.negatives.map(name => escapeHtml(name)).join(" / ")}</dd></div>${recipe.forced?.length ? `<div class="forced"><dt>Mandatory</dt><dd>${recipe.forced.map(name => escapeHtml(name)).join(" / ")}</dd></div>` : ""}</dl>` : ""}`;
@@ -5798,7 +5819,14 @@ function refreshStrikeSceneBriefing() {
   if (stage) stage.dataset.view = offer ? "strike" : "planet";
   if (!host) return;
   host.hidden = !offer;
-  host.innerHTML = offer ? strikeSceneBriefingHtml(offer, body) : "";
+  if (!offer) { host.innerHTML = ""; return; }
+  host.innerHTML = strikeSceneBriefingHtml(offer, body);
+  const command = document.createElement("div");
+  command.className = "strike-scene-command";
+  command.innerHTML = strikeActionBarHtml(offer);
+  const summary = host.querySelector(".strike-scene-summary");
+  if (summary) summary.before(command);
+  else host.append(command);
 }
 
 function strikeRegionArtwork(planetId, offer, manifest) {
@@ -6055,22 +6083,17 @@ function warConsoleHtml() {
     const offer = selectedStrike;
     if (!offer) return `<section id="war-console" aria-label="Strike deployment"><button type="button" class="btn-dossier-action strike-panel-back" data-strike-back>Return to planet</button><p>This strike is no longer available.</p></section>`;
     const joined = offer.participants.includes(war.actor.id);
-    const recruiting = ["available", "recruiting"].includes(offer.status);
     const locked = ["locked", "deployed"].includes(offer.status);
     const signup = offer.viewer_signup;
-    const canJoin = canParticipate && (signup ? signup.can_join === true : true);
-    let primary = "";
-    if (testing && offer.status === "available") primary = button("simulate_completion", "Simulate completion", `data-strike="${escapeHtml(offer.id)}" `);
-    else if (!testing && recruiting && joined) primary = button("leave", "Withdraw", `data-strike="${escapeHtml(offer.id)}" `);
-    else if (!testing && recruiting) primary = button("join", "Join strike", `data-strike="${escapeHtml(offer.id)}" `, !canJoin);
-    else if (!testing && locked && joined) primary = button("report", "Report completion", `data-strike="${escapeHtml(offer.id)}" `);
-    const reason = testing ? "Test simulation / no real rewards" : recruiting && !joined ? signup?.reason || (!canParticipate ? "Active membership and the Watch Brother role are required." : "") : offer.status === "review_pending" ? "Evidence awaiting independent review." : locked ? "Roster locked" : "";
+    const sceneAction = state.geographyStatus === "live" && !!state.geography;
+    const actionFallback = sceneAction ? "" : strikeActionBarHtml(offer);
+    const backFallback = sceneAction ? "" : `<button type="button" class="btn-dossier-action strike-panel-back" data-strike-back>Return to planet</button>`;
     const recipe = offer.recipe;
     const modifier = name => `<div class="strike-modifier-row"><strong>${escapeHtml(name)}</strong>${war.content?.stratagems?.[name]?.description ? `<p>${escapeHtml(war.content.stratagems[name].description)}</p>` : ""}</div>`;
     const specialistCovered = !!offer.specialist_id || signup?.specialist_fulfilled === true;
     const specialist = offer.required_rank ? `<p class="strike-context">Required specialist: <strong>${escapeHtml(offer.required_rank)}</strong>${specialistCovered ? " / Covered" : " / Needed"}</p>` : "";
-    return `<section id="war-console" aria-label="Strike deployment"><button type="button" class="btn-dossier-action strike-panel-back" data-strike-back>Return to planet</button><article class="strike-detail">
-      <div class="strike-action-bar">${primary || `<span class="strike-context">${escapeHtml(titleCase(offer.status))}</span>`}<span class="strike-capacity">${offer.participants.length} / ${offer.capacity} joined</span>${reason ? `<p class="strike-action-reason">${escapeHtml(reason)}</p>` : ""}</div>
+    return `<section id="war-console" aria-label="Strike deployment">${backFallback}<article class="strike-detail">
+      ${actionFallback}
       <section class="strike-section" aria-label="Strike roster"><h3>Roster</h3>${specialist}<ol class="strike-roster">${Array.from({length: offer.capacity}, (_, index) => {
         const identity = offer.participants[index];
         return identity ? `<li><span class="strike-slot-number">${index + 1}</span><span>${escapeHtml(war.participant_names?.[identity] || identity)}${identity === war.actor.id ? " (You)" : ""}${offer.specialist_id === identity ? `<small>Required specialist</small>` : ""}</span></li>` : `<li class="empty"><span class="strike-slot-number">${index + 1}</span><span>${offer.required_rank && !specialistCovered && index === offer.capacity - 1 ? `Open / ${escapeHtml(offer.required_rank)} requirement` : "Open slot"}</span></li>`;
@@ -8364,7 +8387,7 @@ function geographySectorPanelHtml(sectorId, selectedSystemId) {
       </div>
       <div class="reach-sector-panel-actions">
         <button class="reach-sector-panel-back reach-mobile-map-back" type="button" data-mobile-map-focus>&uarr; Map</button>
-        ${strikeBody ? `<button class="reach-sector-panel-back" type="button" data-strike-back>Planet strikes</button>` : selectedBody ? `<button class="reach-sector-panel-back" type="button" data-planet-return>System overview</button>` : selectedSystem ? `<button class="reach-sector-panel-back" type="button" data-sector-panel-back>Sector systems</button>` : ""}
+        ${strikeBody ? "" : selectedBody ? `<button class="reach-sector-panel-back" type="button" data-planet-return>System overview</button>` : selectedSystem ? `<button class="reach-sector-panel-back" type="button" data-sector-panel-back>Sector systems</button>` : ""}
         <button class="reach-sector-panel-close" type="button" data-sector-panel-close aria-label="Close sector panel" title="Close sector panel">&times;</button>
       </div>
     </div>
