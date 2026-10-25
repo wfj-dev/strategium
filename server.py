@@ -691,6 +691,8 @@ def _static_asset_path(path: str) -> Path | None:
         INQUISITORIAL_ROSETTE_WEBP_URL: INQUISITORIAL_ROSETTE_WEBP_PATH,
         DISCORD_MARK_URL: DISCORD_MARK_PATH,
         OXBLOOD_CURSOR_URL: OXBLOOD_CURSOR_PATH,
+        "/assets/planet-view.mjs": WEB_ASSETS_DIR / "planet-view.mjs",
+        "/assets/vendor/three.module.min.js": WEB_ASSETS_DIR / "vendor" / "three.module.min.js",
         FORTRESS_MAP_URL: FORTRESS_MAP_PATH,
         FORTRESS_MAP_WEBP_URL: FORTRESS_MAP_WEBP_PATH,
         REACH_BACKGROUND_WEBP_URL: REACH_BACKGROUND_WEBP_PATH,
@@ -1047,7 +1049,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if path is None:
             self.send_error(HTTPStatus.NOT_FOUND)
             return
-        mime = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".mp3": "audio/mpeg"}[path.suffix]
+        mime = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".mp3": "audio/mpeg", ".mjs": "text/javascript", ".js": "text/javascript"}[path.suffix]
         stat = path.stat()
         modified = int(stat.st_mtime)
         try:
@@ -1135,6 +1137,12 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                 return
         else:
             payload = {"action": "snapshot", "planet_id": (query.get("planet") or [""])[0][:80]}
+            board_system_id = (query.get("system") or [""])[0]
+            if board_system_id:
+                if len(board_system_id) > 80:
+                    self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_board_system"})
+                    return
+                payload["board_system_id"] = board_system_id
             sandbox_id = (query.get("sandbox") or [""])[0]
             if sandbox_id:
                 if not re.fullmatch(r"[a-f0-9]{32}", sandbox_id):

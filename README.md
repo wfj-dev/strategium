@@ -16,10 +16,38 @@ the collapsible subsector navigator on phones. Authenticated campaign permission
 load before the first map render. Role actions and systems are visible immediately;
 selecting a star or world keeps the same panel and selected-sector context rather
 than opening a separate modal. System worlds use the existing map imagery, and a
-selected world shows its description, Vanilla/Omega pools and strike roster. Company
-command forms and moderation controls expand only when needed. Counts describe the selected
-planet's current pool, while cards distinguish the game mission from its briefing
-theme. Changing selections or refreshing campaign data keeps the map canvas mounted.
+selected system shows one compact list of every world's strikes, with separate
+Vanilla/Omega pools. Selecting a strike focuses its orbiting planet on the map and
+opens one detail view without filtering away the rest of the system. Counts describe
+the selected system's current pool, while details distinguish the game mission from
+its briefing theme. Changing selections or refreshing campaign data keeps the map
+canvas mounted and preserves the strike-list scroll position.
+
+The right panel replaces its contents by map level instead of stacking directories.
+In System overview, the right-side panel summarizes every planet:
+existing art, type/biome, description when authored, deployment eligibility, both
+format counts, recruiting/locked counts and objective mix. Expand a planet's strike
+assignments to open a particular deployment; those expansions survive polling.
+There is no separate below-map briefing. Clicking a planet in the panel, its dropdown
+or the map itself opens that planet's 3D model directly, without waiting for campaign
+board data. Returning to System overview restores the planet summaries in the panel.
+Static system and planet details also remain visible while signed out, during loading
+or when the campaign bridge is unavailable. In those states, live strike counts and
+KT assignments are marked unavailable rather than falsely reported as zero/none;
+campaign actions remain unavailable until the authenticated connection recovers.
+Subsector view lists systems and company orders only, without planet selectors or
+strike details. System view has a system dropdown limited to the current subsector
+and a planet dropdown limited to that system, plus KT orders and the system strike
+list. Planet selection focuses the map and updates the detail without removing the
+system list; back navigation returns to the systems-only subsector view.
+
+Company commitment and kill-team assignment are separate contextual order sections. Company
+selection filters eligible KTs; destination systems come only from that company's
+committed subsector. Dropdowns have explicit placeholders, current commitment and
+assignment are shown, and unavailable or unchanged commands are disabled. Covering
+officers must enter a reason. Pending commitment proposals cannot be resubmitted.
+Open order sections, valid selected values, draft reasons and focus survive polling;
+changing the company or KT clears dependent targets and the previous cover reason.
 New Vanilla offers show their assigned Hard-Stratagem recipe: one positive, three
 negatives, and additional mandatory Intelligence Lapse on Chaos-only maps. Adaptation
 notes distinguish the actual vanilla map/task from the Atlas setting, including ice
@@ -62,6 +90,30 @@ Permissions and session ownership are rechecked by the bot, not trusted from the
 
 Authored system labels use bare proper names, such as Solenne Crown, without a
 trailing System suffix. Stable system/body IDs and campaign assignments are unchanged.
+
+Selecting a planet opens a dedicated deployment globe rather than only enlarging
+the system chart. The globe uses that planet's existing selected WebP portrait,
+projected onto a Three.js sphere; no generic replacement texture is fetched. Blended
+front, flank and polar projections avoid stretching the portrait rim into a blurry
+belt; the central authored face is preserved and oblique sampling is improved.
+The unseen hemisphere still reuses the authored visible surface, so it is an art-derived
+approximation, not a newly authored global map. The unchanged portrait is the static
+fallback when WebGL or the module/image load is unavailable. Worlds without globe
+art retain their existing icon fallback rather than inventing a surface.
+
+Only that planet's Vanilla/Omega strikes appear in its panel. Hovering or keyboard
+focusing a strike rotates to its surface marker; click/tap selects its briefing and
+roster. Dragging and arrow keys rotate the globe. Deployment marker positions are
+deterministic per planet, format and slot, not claims about vanilla-map geography.
+Returning to System overview disposes the globe and restores the system chart,
+planet directory, star/route information and assignments. The hidden chart pauses
+drawing while the planet scene is open. Reduced motion snaps targeting instead of
+animating it; hidden tabs pause rendering, pixel ratio is capped at 1.5 and the globe
+renders at most 30fps. GPU resources are released on exit or context loss.
+
+Three.js `0.169.0` is vendored locally at `assets/web/vendor/three.module.min.js`
+with its MIT license in `THREE-LICENSE.txt`. The standalone `planet-view.mjs` module
+and this pinned dependency have explicit same-origin asset routes; no CDN is required.
 
 This is an implementation branch, not a live migration. The bot's `GALACTIC_WAR.md`
 documents configuration, specialist requirement probabilities and remaining rollout gates.

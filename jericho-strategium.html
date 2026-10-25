@@ -672,6 +672,19 @@
   #war-console [role="status"] { overflow-wrap: anywhere; }
   .war-board-status { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 14px; color: var(--green-dim); font-size: 11px; }
   .war-strike-grid { grid-template-columns: minmax(0, 1fr); }
+  .war-strike-list { display: grid; gap: 0; max-height: 330px; overflow-y: auto; overscroll-behavior: contain; margin: 12px 0; scrollbar-color: var(--green-dim) #060a06; }
+  .war-strike-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; width: 100%; padding: 12px 4px; border: 0; border-bottom: 1px solid var(--border-dim); background: transparent; color: var(--green); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+  .war-strike-row strong, .war-strike-row small { display: block; overflow-wrap: anywhere; }
+  .war-strike-row small { margin-top: 4px; color: var(--green-dim); font-size: 10px; }
+  .war-strike-row[aria-pressed="true"] { color: var(--gold); border-left: 2px solid var(--gold); padding-left: 10px; }
+  .war-strike-row:hover, .war-strike-row:focus-visible { background: rgba(79,214,122,.06); }
+  .war-order-section { padding: 12px 0; border-top: 1px solid var(--border-dim); }
+  .war-order-section h3 { margin: 0 0 10px; color: var(--gold); font-size: 12px; }
+  .war-order-current { margin: 8px 0; color: var(--green-dim); font-size: 11px; overflow-wrap: anywhere; }
+  #war-console select.reach-select { color-scheme: dark; min-height: 40px; padding: 8px 10px; font-size: 12px; letter-spacing: 0; text-overflow: ellipsis; cursor: pointer; }
+  #war-console select.reach-select option { background: #060a06; color: var(--green); }
+  #war-console select:focus-visible, #war-console button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  #war-console select:disabled, #war-console button:disabled { opacity: .45; cursor: not-allowed; }
   .war-pools > button { flex: 1; }
   .war-command-tools, .war-review-tools { margin: 10px 0; border-bottom: 1px solid var(--border-dim); }
   .war-command-tools > summary, .war-review-tools > summary { padding: 10px 0; color: var(--green); cursor: pointer; font-size: 11px; }
@@ -685,6 +698,52 @@
   .war-planet-overview > .map-body-icon { width: 72px; height: 72px; flex: 0 0 72px; object-fit: contain; }
   .war-planet-overview h3 { margin: 0 0 6px; color: var(--gold); font-size: 15px; }
   .war-planet-overview p { margin: 0; color: var(--green-dim); font-size: 11px; line-height: 1.6; }
+  .reach-planet-stage { position: absolute; z-index: 4; inset: 0 min(460px, 48%) 0 0; overflow: hidden; background: #020605; background-image: radial-gradient(ellipse at center, rgba(34,69,53,.2), transparent 70%); }
+  .reach-planet-stage[hidden] { display: none; }
+  .planet-globe-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  .planet-globe-canvas:active { cursor: grabbing; }
+  .planet-globe-canvas:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
+  .planet-art-fallback { position: absolute; width: 82%; height: 82%; object-fit: contain; left: 9%; top: 9%; }
+  .reach-planet-stage[data-renderer="three"] .planet-art-fallback { visibility: hidden; }
+  .planet-stage-heading { position: absolute; z-index: 2; top: 22px; left: 22px; right: 22px; pointer-events: none; }
+  .planet-stage-heading h2 { margin: 8px 0; color: var(--white); font: 700 26px 'Cinzel', serif; overflow-wrap: anywhere; text-shadow: 0 2px 4px #000; }
+  .planet-stage-heading p { margin: 0; color: var(--green-dim); font-size: 11px; }
+  .planet-stage-back { position: absolute; z-index: 3; bottom: 18px; left: 22px; }
+  .planet-stage-target { position: absolute; z-index: 2; bottom: 22px; right: 22px; max-width: calc(100% - 190px); color: var(--gold); font-size: 11px; text-align: right; overflow-wrap: anywhere; pointer-events: none; }
+  .war-system-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+  .war-system-facts div { min-width: 0; }
+  .war-system-facts dt { color: var(--green-dim); font-size: 10px; }
+  .war-system-facts dd { margin: 4px 0 0; color: var(--white); font-size: 12px; overflow-wrap: anywhere; }
+  .reach-map-shell.planet-mode .reach-controls, .reach-map-shell.planet-mode .reach-legend, .reach-map-shell.planet-mode .reach-map-level, .reach-map-shell.planet-mode .reach-canvas-status { visibility: hidden; }
+  @media (max-width: 760px) {
+    .reach-planet-stage { inset: 0; }
+    .planet-stage-heading { top: 14px; left: 14px; right: 14px; }
+    .planet-stage-heading h2 { font-size: 21px; }
+    .planet-stage-back { bottom: 12px; left: 14px; }
+    .planet-stage-target { bottom: 16px; right: 14px; font-size: 10px; }
+  }
+  .war-system-overview { padding: 14px 0; border-top: 1px solid var(--border-dim); }
+  .war-system-overview h3 { margin: 0 0 10px; color: var(--gold); font-size: 14px; }
+  .war-system-overview h4 { margin: 16px 0 6px; color: var(--gold-dim); font-size: 11px; }
+  .war-overview-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0 0 12px; font-size: 11px; }
+  .war-overview-facts div { min-width: 0; }
+  .war-overview-facts dt { color: var(--green-faint); font-size: 10px; }
+  .war-overview-facts dd { margin: 4px 0 0; color: var(--green); overflow-wrap: anywhere; }
+  .war-planet-directory { display: grid; }
+  .war-planet-directory .war-world-select { min-height: 62px; padding: 10px 0; border-bottom: 1px solid var(--border-dim); }
+  .war-planet-directory .map-body-icon { flex: 0 0 44px; width: 44px; height: 44px; object-fit: contain; }
+  .war-planet-directory strong, .war-planet-directory small { display: block; }
+  .war-planet-directory small { margin-top: 4px; color: var(--green-dim); font-size: 10px; line-height: 1.5; }
+  .war-planet-directory .war-world-select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .system-world-briefing { min-width: 0; padding: 14px 0 20px; border-top: 1px solid var(--border-dim); }
+  .system-world-briefing p { color: var(--green-dim); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+  .system-world-briefing .war-world-select { border: 0; padding-bottom: 6px; }
+  .system-world-briefing .map-body-icon { width: 64px; height: 64px; flex-basis: 64px; }
+  .system-strike-summary { display: grid; gap: 0; margin: 10px 0 0; padding: 0; list-style: none; }
+  .system-strike-summary button { display: block; width: 100%; padding: 8px 0; text-align: left; border: 0; border-top: 1px solid var(--border-dim); background: transparent; color: var(--green); font: inherit; font-size: 11px; cursor: pointer; overflow-wrap: anywhere; }
+  .system-strike-summary small { display: block; margin-top: 4px; color: var(--green-dim); font-size: 10px; line-height: 1.5; }
+  .system-strike-summary button:hover, .system-strike-summary button:focus-visible { color: var(--gold); }
+  .system-world-briefing summary { color: var(--gold-dim); font-size: 11px; cursor: pointer; padding: 8px 0; }
   .chapter-record-overlay { z-index: 64; align-items: center; padding: 20px; }
   #member-modal { z-index: 66; }
   .chapter-record-overlay .overlay-panel { max-width: 760px; }
@@ -5590,6 +5649,7 @@ async function setPage(page, push, originEl = null) {
   }
   if (push) recordNavigation(returnTargetFor(originEl));
   state.page = page;
+  if (page !== "reach" && typeof closePlanetView === "function") closePlanetView();
   if (page === "fortress") state.view = "strategium";
   if (page !== "blood") {
     state.selectedChapter = null;
@@ -5660,13 +5720,74 @@ async function loadReach() {
   await loadWar();
 }
 
-const warView = { data: null, error: "", busy: false, planet: "", subsector: "", pool: "vanilla", sandboxId: "", requestSequence: 0 };
+const warView = { data: null, error: "", busy: false, planet: "", strike: "", subsector: "", pool: "vanilla", sandboxId: "", requestSequence: 0, orderCompany: null, orderTeam: null, orderSystem: null };
+
+const planetView = {id: "", controller: null, generation: 0, module: null};
+
+function closePlanetView() {
+  planetView.generation++;
+  planetView.controller?.dispose();
+  planetView.controller = null;
+  planetView.id = "";
+  const host = document.getElementById("reach-planet-stage");
+  if (host) host.hidden = true;
+  host?.querySelectorAll("canvas").forEach(canvas => canvas.remove());
+  document.querySelector(".reach-map-shell")?.classList.remove("planet-mode");
+}
+
+async function syncPlanetView() {
+  const host = document.getElementById("reach-planet-stage");
+  const body = state.reachMapLevel === "planet" && state.geography?.bodies.find(item => item.id === warView.planet);
+  if (!host || !body) { if (planetView.id) closePlanetView(); return; }
+  const artwork = geographyBodyArtwork(body);
+  const offers = (warView.data?.boards[body.id] || []).filter(offer => (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === (warView.pool || "vanilla"));
+  host.hidden = false;
+  document.querySelector(".reach-map-shell")?.classList.add("planet-mode");
+  document.getElementById("planet-stage-name").textContent = body.name;
+  document.getElementById("planet-stage-class").textContent = [titleCase(body.kind), titleCase(body.biome || "")].filter(Boolean).join(" / ");
+  const target = offers.find(offer => offer.id === warView.strike);
+  document.getElementById("planet-stage-target").textContent = target?.name || `${offers.length} deployment sectors`;
+  if (planetView.id === body.id && planetView.controller) {
+    planetView.controller.update(offers);
+    if (warView.strike) planetView.controller.focus(warView.strike);
+    return;
+  }
+  closePlanetView(); host.hidden = false;
+  document.querySelector(".reach-map-shell")?.classList.add("planet-mode");
+  planetView.id = body.id;
+  const generation = ++planetView.generation;
+  host.dataset.renderer = "loading";
+  const fallback = host.querySelector(".planet-art-fallback");
+  fallback.src = artwork || "/assets/map-icons/planet.webp";
+  fallback.alt = body.name;
+  if (!artwork) { host.dataset.renderer = "fallback"; return; }
+  try {
+    planetView.module ||= import("/assets/planet-view.mjs");
+    const module = await planetView.module;
+    if (generation !== planetView.generation || !host.isConnected) return;
+    const controller = await module.createPlanetView(host, {planet: body, artwork, strikes: offers, onSelect: identity => {
+      warView.strike = identity; refreshWarConsole();
+    }});
+    if (generation !== planetView.generation || !host.isConnected) { controller.dispose(); return; }
+    planetView.controller = controller;
+    if (warView.strike) controller.focus(warView.strike);
+  } catch { if (generation === planetView.generation) host.dataset.renderer = "fallback"; }
+}
+
+function openPlanetView(bodyId) {
+  const body = state.geography?.bodies.find(item => item.id === bodyId && item.systemId === state.selectedSystem && item.kind !== "star");
+  if (!body) return;
+  warView.planet = body.id;
+  state.reachMapLevel = "planet";
+  updateGeographySectorPanel();
+  void syncPlanetView();
+}
 
 async function loadWar() {
   const sequence = ++warView.requestSequence;
   if (!state.auth.authenticated) { warView.data = null; return; }
   try {
-    const response = await fetch(apiUrl(`/api/war?planet=${encodeURIComponent(warView.planet)}${warView.sandboxId ? `&sandbox=${encodeURIComponent(warView.sandboxId)}` : ""}`), { credentials: "include", cache: "no-store" });
+    const response = await fetch(apiUrl(`/api/war?planet=${encodeURIComponent(warView.planet)}${state.selectedSystem ? `&system=${encodeURIComponent(state.selectedSystem)}` : ""}${warView.sandboxId ? `&sandbox=${encodeURIComponent(warView.sandboxId)}` : ""}`), { credentials: "include", cache: "no-store" });
     const result = await response.json();
     if (sequence !== warView.requestSequence) return;
     if (!response.ok) throw new Error(result.error === "war_unavailable"
@@ -5687,8 +5808,9 @@ async function loadWar() {
 function warConsoleHtml() {
   const war = warView.data;
   const sectorId = warView.subsector || state.selectedSector || state.geography?.sectors[0]?.id || "";
-  if (!state.auth.authenticated) return `<section id="war-console"><p>Sign in to access the Galactic War.</p>${geographySystemDirectoryHtml(sectorId)}</section>`;
-  if (!war) return `<section id="war-console"><p role="status">${escapeHtml(warView.error || "Loading campaign permissions...")}</p><button class="btn-dossier-action" type="button" data-war-retry>Retry campaign connection</button>${warView.sandboxId ? `<button class="btn-dossier-action" type="button" data-war-live>Return to live campaign</button>` : ""}${geographySystemDirectoryHtml(sectorId)}</section>`;
+  const selectedSystem = (state.geography?.systems || []).find(system => system.id === state.selectedSystem && system.sectorId === sectorId);
+  if (!state.auth.authenticated) return `<section id="war-console"><p>Sign in to access the Galactic War.</p>${geographySystemDirectoryHtml(sectorId)}${selectedSystem ? geographyBrowseDetailsHtml(selectedSystem) : ""}</section>`;
+  if (!war) return `<section id="war-console"><p role="status">${escapeHtml(warView.error || "Loading campaign permissions...")}</p><button class="btn-dossier-action" type="button" data-war-retry>Retry campaign connection</button>${warView.sandboxId ? `<button class="btn-dossier-action" type="button" data-war-live>Return to live campaign</button>` : ""}${geographySystemDirectoryHtml(sectorId)}${selectedSystem ? geographyBrowseDetailsHtml(selectedSystem) : ""}</section>`;
   const campaign = war.campaigns[sectorId];
   const roles = new Set(war.actor.roles);
   const testing = war.sandbox?.viewing === true;
@@ -5696,15 +5818,25 @@ function warConsoleHtml() {
   const commander = master || roles.has("Watch Captain") || roles.has("Watch Lieutenant");
   const canInvade = master || roles.has("Forgemaster");
   const company = war.actor.company_id;
-  const teams = war.kill_teams.filter(team => master || team.company_id === company);
+  const orderCompany = master ? warView.orderCompany ?? company : company;
+  const teams = war.kill_teams.filter(team => team.company_id === orderCompany && (commander || team.id === war.actor.kill_team_id));
+  const orderTeam = warView.orderTeam != null ? (teams.some(team => team.id === warView.orderTeam) ? warView.orderTeam : "") : teams.find(team => team.id === war.actor.kill_team_id)?.id || "";
+  const committedSector = war.commitments[orderCompany] || "";
+  const pendingCommitment = (war.proposals || []).some(proposal => proposal.company_id === orderCompany && proposal.subsector_id === sectorId);
+  const assignmentSystems = (state.geography?.systems || []).filter(system => system.sectorId === committedSector);
+  const orderSystem = warView.orderSystem != null ? (assignmentSystems.some(system => system.id === warView.orderSystem) ? warView.orderSystem : "") : [state.selectedSystem, war.assignments?.[orderTeam]].find(identity => identity && assignmentSystems.some(system => system.id === identity)) || "";
+  const coversSergeant = !!orderTeam && !(orderTeam === war.actor.kill_team_id && (roles.has("Watch Sergeant") || roles.has("Veteran Sergeant")));
   const systems = (state.geography?.systems || []).filter(system => system.sectorId === sectorId);
   const planets = war.planets.filter(planet => planet.subsector_id === sectorId);
-  const select = (name, label, options) => `<label>${label}<select class="reach-select" data-war-field="${name}" aria-label="${label}"${warView.busy ? " disabled" : ""}>${options}</select></label>`;
+  const select = (name, label, options, disabled = false) => `<label>${label}<select class="reach-select" data-war-field="${name}" aria-label="${label}"${warView.busy || disabled ? " disabled" : ""}>${options}</select></label>`;
   const option = (value, label, selected = false) => `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
-  const button = (action, label, extra = "") => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy ? " disabled" : ""}>${label}</button>`;
+  const button = (action, label, extra = "", disabled = false) => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy || disabled ? " disabled" : ""}>${label}</button>`;
   const commitments = Object.entries(war.commitments).filter(([, target]) => target === sectorId);
   const pool = warView.pool === "omega" ? "omega" : "vanilla";
-  const board = (war.boards[warView.planet] || []).filter(offer => (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === pool);
+  const systemPlanetIds = selectedSystem ? new Set(war.planets.filter(planet => (planet.system_id || planet.systemId || state.geography?.bodies?.find(body => body.id === planet.id)?.systemId) === selectedSystem.id).map(planet => planet.id)) : null;
+  const board = Object.entries(war.boards).flatMap(([planetId, offers]) => offers.map(offer => ({...offer, planet_id: offer.planet_id || planetId}))).filter(offer => (!systemPlanetIds || systemPlanetIds.has(offer.planet_id)) && (state.reachMapLevel !== "planet" || offer.planet_id === warView.planet) && (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === pool);
+  const selectedStrike = board.find(offer => offer.id === warView.strike) || (warView.planet ? board.find(offer => offer.planet_id === warView.planet) : board[0]);
+  const worldName = identity => (state.geography?.bodies || []).find(body => body.id === identity)?.name || war.planets.find(planet => planet.id === identity)?.name || identity;
   const staff = !testing && (war.actor.can_review || master || roles.has("Forgemaster"));
   const canParticipate = !testing && war.actor.watch_brother === true && war.actor.active !== false;
   const selectedPlanet = (state.geography?.bodies || []).find(body => body.id === warView.planet);
@@ -5725,42 +5857,48 @@ function warConsoleHtml() {
   </section>` : "";
   return `<section id="war-console" aria-label="Galactic War command">
     <div class="reach-toolbar">
-      ${select("subsector_id", "Subsector", (state.geography?.sectors || []).map(sector => option(sector.id, sector.name, sector.id === sectorId)).join(""))}
+      ${selectedSystem ? `<span>${escapeHtml(state.geography?.sectors.find(sector => sector.id === sectorId)?.name || sectorId)}</span>` : select("subsector_id", "Subsector", (state.geography?.sectors || []).map(sector => option(sector.id, sector.name, sector.id === sectorId)).join(""))}
       ${campaign ? `<span>${campaign.resolution_pending ? "Awaiting on-time reports" : escapeHtml(titleCase(campaign.status))} / Tyranids / ${Number(campaign.balance).toFixed(2)}%</span><progress max="100" value="${Number(campaign.balance)}" aria-label="Deathwatch balance of power"></progress><span>${escapeHtml(new Date(campaign.deadline).toLocaleString())}</span>` : `<span>Secure</span>`}
       ${canInvade && !testing && campaign?.status !== "contested" ? button("invade", "Declare Tyranid invasion") : ""}
     </div>
     ${canInvade ? `<details class="war-command-tools"${testing ? " open" : ""}><summary>Invasion testing${testing ? " / TEST / NO REAL REWARDS" : ""}</summary>
       <div class="reach-toolbar">${war.sandbox ? `${testing ? `<span>Test clock: ${escapeHtml(new Date(war.sandbox.clock).toLocaleString())}</span>${button("exit_test_view", "Return to live campaign")}${select("test_hours", "Advance test clock", [1, 24, 72, 336].map(hours => option(hours, `${hours} hours`)).join(""))}${button("advance_test_time", "Advance test time")}${button("send_test_notice", "Send Test Notice")}${button("revert_test_invasion", "Revert Test Invasion")}` : button("enter_test_view", "Resume Test Invasion")}` : button("start_test_invasion", "Start Test Invasion")}</div>
     </details>` : ""}
-    ${commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant") ? `<details class="war-command-tools"><summary>Company command and system assignment</summary>` : ""}
+    ${geographySystemDirectoryHtml(sectorId)}
+    ${(commander && !selectedSystem) || (selectedSystem && (commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant"))) ? `<details class="war-command-tools" data-war-section="${selectedSystem ? "team-orders" : "company-orders"}"><summary>${selectedSystem ? "Kill-team orders" : "Company orders"}</summary>` : ""}
+    ${!selectedSystem ? `
     <div class="reach-toolbar">
       ${commitments.map(([identity]) => `<span class="status-tag">Company ${escapeHtml(COMPANY_NAMES[identity] || identity)}</span>`).join("") || "No companies committed"}
-      ${commander ? select("company_id", "Company", Object.entries(COMPANY_NAMES).filter(([identity]) => master || identity === company).map(([identity, name]) => option(identity, name)).join("")) + button("commit", roles.has("Watch Lieutenant") && !master && !roles.has("Watch Captain") ? "Request commitment" : "Commit company") : ""}
     </div>
+    ${commander ? `<section class="war-order-section" aria-label="Company commitment"><h3>Company commitment</h3><div class="reach-toolbar">${select("company_id", "Company", option("", "Select company", !orderCompany) + Object.entries(COMPANY_NAMES).filter(([identity]) => master || identity === company).map(([identity, name]) => option(identity, name, identity === orderCompany)).join(""))}<span>Destination: ${escapeHtml(state.geography?.sectors.find(sector => sector.id === sectorId)?.name || sectorId)}</span>${button("commit", pendingCommitment ? "Awaiting approval" : roles.has("Watch Lieutenant") && !master && !roles.has("Watch Captain") ? "Request commitment" : committedSector && committedSector !== sectorId ? "Move company" : "Commit company", "", !orderCompany || campaign?.status !== "contested" || committedSector === sectorId || pendingCommitment)}</div><p class="war-order-current">Current commitment: ${escapeHtml(state.geography?.sectors.find(sector => sector.id === committedSector)?.name || (committedSector || "Uncommitted"))}</p></section>` : ""}
     ${(war.proposals || []).map(proposal => `<div class="reach-toolbar"><span>Company ${escapeHtml(COMPANY_NAMES[proposal.company_id])}: ${escapeHtml(state.geography?.sectors.find(sector => sector.id === proposal.subsector_id)?.name || proposal.subsector_id)}</span>${master || roles.has("Watch Captain") ? button("approve", "Approve", `data-proposal="${escapeHtml(proposal.id)}" `) + button("reject", "Reject", `data-proposal="${escapeHtml(proposal.id)}" `) : "Pending approval"}</div>`).join("")}
-    ${commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant") ? `<div class="reach-toolbar">
-      ${select("kill_team_id", "Kill team", teams.filter(team => commander || team.id === war.actor.kill_team_id).map(team => option(team.id, team.name)).join(""))}
-      ${select("system_id", "System", systems.map(system => option(system.id, system.name)).join(""))}
-      <label>Cover reason <input class="reach-select" data-war-field="reason" maxlength="300" aria-label="Cover reason"></label>
-      ${button("assign", "Assign system")}
-    </div>` : ""}
-    ${commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant") ? "</details>" : ""}
-    ${geographySystemDirectoryHtml(sectorId)}
-    <div class="reach-toolbar">${select("planet_id", "Planet", option("", "Select planet", !warView.planet) + planets.map(planet => option(planet.id, `${planet.name}${planet.terrain_provisional ? " [provisional terrain]" : ""}`, planet.id === warView.planet)).join(""))}</div>
-    ${selectedPlanet ? `<div class="war-planet-overview">${geographyBodyIcon(selectedPlanet)}<div><h3>${escapeHtml(selectedPlanet.name)}</h3><p>${escapeHtml(titleCase(selectedPlanet.kind))}${selectedPlanet.battleEligible ? " / Battle eligible" : ""}${selectedPlanet.description ? `<br>${escapeHtml(selectedPlanet.description)}` : ""}</p></div></div>` : ""}
+    ` : ""}
+    ${selectedSystem && (commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant")) ? `<section class="war-order-section" aria-label="Kill-team assignment"><h3>Kill-team assignment</h3><div class="reach-toolbar">
+      ${master ? select("company_id", "Company", option("", "Select company", !orderCompany) + Object.entries(COMPANY_NAMES).map(([identity, name]) => option(identity, name, identity === orderCompany)).join("")) : ""}
+      ${select("kill_team_id", "Kill team", option("", teams.length ? "Select kill team" : "No eligible kill teams", !orderTeam) + teams.map(team => option(team.id, team.name, team.id === orderTeam)).join(""), !teams.length)}
+      ${select("system_id", "System", option("", committedSector ? "Select destination system" : "Commit company first", !orderSystem) + assignmentSystems.map(system => option(system.id, system.name, system.id === orderSystem)).join(""), !committedSector || !orderTeam)}
+      ${coversSergeant ? `<label>Cover reason <input class="reach-select" data-war-field="reason" maxlength="300" aria-label="Cover reason" required></label>` : ""}
+      ${button("assign", war.assignments?.[orderTeam] ? "Reassign kill team" : "Assign system", "", !orderTeam || !orderSystem || war.assignments?.[orderTeam] === orderSystem)}
+    </div><p class="war-order-current">Current assignment: ${escapeHtml((state.geography?.systems || []).find(system => system.id === war.assignments?.[orderTeam])?.name || "Unassigned")}</p></section>` : ""}
+    ${(commander && !selectedSystem) || (selectedSystem && (commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant"))) ? "</details>" : ""}
+    ${selectedSystem ? `
+    ${selectedPlanet ? `<section aria-label="Planet details"><div class="war-planet-overview">${geographyBodyIcon(selectedPlanet)}<div><h3>${escapeHtml(selectedPlanet.name)}</h3><p>${escapeHtml(geographyBodyLabel(selectedPlanet))}${selectedPlanet.description ? `<br>${escapeHtml(selectedPlanet.description)}` : ""}</p></div></div><dl class="war-overview-facts"><div><dt>System</dt><dd>${escapeHtml(selectedSystem.name)}</dd></div><div><dt>Deployment</dt><dd>${selectedPlanet.battleEligible ? "Battle eligible" : "No strike board"}</dd></div>${Number.isFinite(selectedPlanet.orbitIndex) ? `<div><dt>Orbit</dt><dd>${selectedPlanet.orbitIndex}</dd></div>` : ""}<div><dt>Assigned strikes</dt><dd>${board.filter(offer => offer.planet_id === selectedPlanet.id).length} ${escapeHtml(pool === "omega" ? "Omega" : "Vanilla")}</dd></div></dl>${geographyObjectivesHtml(selectedPlanet)}</section>` : geographySystemOverviewHtml(selectedSystem, true)}
     <div class="war-pools" role="group" aria-label="Strike format">
       <button class="btn-dossier-action" type="button" data-war-pool="vanilla" aria-pressed="${pool === "vanilla"}"${warView.busy ? " disabled" : ""}>Vanilla</button>
       <button class="btn-dossier-action" type="button" data-war-pool="omega" aria-pressed="${pool === "omega"}"${warView.busy ? " disabled" : ""}>Omega</button>
     </div>
-    <div class="war-board-status" aria-label="Selected strike board status">${warView.planet ? `<span>${board.filter(offer => offer.status === "available").length} available</span><span>${board.filter(offer => offer.status === "recruiting").length} recruiting</span><span>${board.filter(offer => ["locked", "deployed"].includes(offer.status)).length} locked</span><span>${board.filter(offer => offer.status === "review_pending").length} awaiting review</span>` : "No planet selected"}</div>
+    <h3 class="tier-label">${selectedSystem ? `${escapeHtml(selectedSystem.name)} / ` : ""}Strikes</h3>
+    <div class="war-board-status" aria-label="Selected strike board status"><span>${board.filter(offer => offer.status === "available").length} available</span><span>${board.filter(offer => offer.status === "recruiting").length} recruiting</span><span>${board.filter(offer => ["locked", "deployed"].includes(offer.status)).length} locked</span><span>${board.filter(offer => offer.status === "review_pending").length} awaiting review</span></div>
+    <div class="war-strike-list" aria-label="System strikes">${board.map(offer => `<button type="button" class="war-strike-row" data-war-strike="${escapeHtml(offer.id)}" data-war-strike-planet="${escapeHtml(offer.planet_id)}" aria-pressed="${offer.id === selectedStrike?.id}"><span><strong>${escapeHtml(offer.name)}</strong><small>${escapeHtml(worldName(offer.planet_id))} / ${escapeHtml(offer.aar_mission)}${offer.required_rank ? ` / ${escapeHtml(offer.required_rank)}` : ""}</small></span><span>${escapeHtml(titleCase(offer.status))}<small>${offer.participants.length}/${offer.capacity}</small></span></button>`).join("") || `<p class="aar-empty">${selectedSystem ? "No strikes in this system." : "Select a system to view its strikes."}</p>`}</div>
     ${!testing && !canParticipate ? `<p class="aar-upload-hint">The Watch Brother role and active membership are required for strike signup.</p>` : ""}
-    <div class="war-strike-grid">${board.map(offer => `<article class="war-strike"><span class="field-label">Game mission</span><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p>${recipeHtml(offer.recipe)}<p><span class="field-label">Briefing theme</span><br>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${escapeHtml(offer.briefing)}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
+    <div class="war-strike-grid">${(selectedStrike ? [selectedStrike] : []).map(offer => `<article class="war-strike"><span class="field-label">Game mission</span><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p>${recipeHtml(offer.recipe)}<p><span class="field-label">Briefing theme</span><br>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${escapeHtml(offer.briefing)}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
       <ul>${offer.participants.map(identity => `<li>${escapeHtml(war.participant_names?.[identity] || identity)}${offer.specialist_id === identity ? " (required specialist)" : ""}</li>`).join("")}</ul>
       ${offer.attempt_id && ["locked", "deployed"].includes(offer.status) ? `<p>Strike ID: <code>${escapeHtml(offer.attempt_id)}</code></p>` : ""}<div class="tools">
       ${!testing && ["available", "recruiting"].includes(offer.status) && (canParticipate || offer.participants.includes(war.actor.id)) ? button(offer.participants.includes(war.actor.id) ? "leave" : "join", offer.participants.includes(war.actor.id) ? "Withdraw" : "Join strike", `data-strike="${escapeHtml(offer.id)}" `) : ""}
       ${!testing && ["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", "Report Completion", `data-strike="${escapeHtml(offer.id)}" `) : ""}
       ${testing && offer.status === "available" ? button("simulate_completion", "Simulate Completion", `data-strike="${escapeHtml(offer.id)}" `) : ""}
-    </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("") || (warView.planet ? `<p class="aar-empty">No strikes on this board.</p>` : "")}</div>
+    </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("") || (warView.planet ? `<p class="aar-empty">No strikes assigned to this planet.</p>` : "")}</div>
+    ` : ""}
     ${reviewPanel ? `<details class="war-review-tools"><summary>Evidence review and credit corrections</summary>${reviewPanel}</details>` : ""}
     <div role="status" aria-live="polite">${escapeHtml(warView.error)}</div>
   </section>`;
@@ -5770,7 +5908,10 @@ function refreshWarConsole() {
   const focused = document.activeElement;
   const field = focused?.dataset?.warField;
   const pool = focused?.dataset?.warPool;
+  const navigation = focused?.dataset?.warNav;
   const console = document.getElementById("war-console");
+  const strikeScroll = console?.querySelector?.(".war-strike-list")?.scrollTop || 0;
+  const openSections = [...(console?.querySelectorAll?.("details[open]") || [])].map(section => section.getAttribute("data-war-section") || section.getAttribute("data-world-intel") || section.querySelector("summary")?.textContent);
   const attributes = ["data-war-field", "data-war-review-reason", "data-war-cancel-reason", "data-war-reversal", "data-war-reversal-reason"];
   const drafts = [...(console?.querySelectorAll?.("input, textarea, select") || [])].map(control => ({
     attribute: attributes.find(name => control.hasAttribute(name)),
@@ -5778,15 +5919,20 @@ function refreshWarConsole() {
     value: control.value, focused: control === focused, start: control.selectionStart, end: control.selectionEnd
   }));
   if (console) console.outerHTML = warConsoleHtml();
-  if (field || pool) {
-    [...document.querySelectorAll("[data-war-field], [data-war-pool]")].find(control =>
-      field ? control.dataset.warField === field : control.dataset.warPool === pool
+  const strikeList = document.getElementById("war-console")?.querySelector?.(".war-strike-list");
+  if (strikeList) strikeList.scrollTop = strikeScroll;
+  document.getElementById("war-console")?.querySelectorAll?.("details").forEach(section => {
+    if (openSections.includes(section.getAttribute("data-war-section") || section.getAttribute("data-world-intel") || section.querySelector("summary")?.textContent)) section.open = true;
+  });
+  if (field || pool || navigation) {
+    [...document.querySelectorAll("[data-war-field], [data-war-pool], [data-war-nav]")].find(control =>
+      field ? control.dataset.warField === field : pool ? control.dataset.warPool === pool : control.dataset.warNav === navigation
     )?.focus({preventScroll: true});
   }
   const controls = [...(document.getElementById("war-console")?.querySelectorAll?.("input, textarea, select") || [])];
   drafts.forEach(draft => {
     if (!draft.attribute) return;
-    if (draft.attribute === "data-war-field" && ["subsector_id", "planet_id"].includes(draft.identity[0])) return;
+    if (draft.attribute === "data-war-field" && ["subsector_id", "planet_id", "company_id", "kill_team_id", "system_id"].includes(draft.identity[0])) return;
     const control = controls.find(element => attributes.every((name, index) => element.getAttribute(name) === draft.identity[index]));
     if (!control || (control.tagName === "SELECT" && ![...control.options].some(option => option.value === draft.value))) return;
     control.value = draft.value;
@@ -5807,9 +5953,26 @@ function refreshWarConsole() {
     const status = state.geography?.sectors.find(sector => sector.id === element.dataset.sectorStatus)?.status || "secure";
     element.textContent = status === "critical" ? "Contested" : titleCase(status);
   });
+  if (typeof syncPlanetView === "function") void syncPlanetView();
 }
 
 document.addEventListener("change", async event => {
+  const navigation = event.target.closest("[data-war-nav]");
+  if (navigation?.dataset.warNav && !warView.busy) {
+    if (navigation.dataset.warNav === "system") {
+      const system = state.geography?.systems.find(item => item.id === navigation.value && item.sectorId === state.selectedSector);
+      if (system) showSystemLevel(system.id);
+    } else if (navigation.dataset.warNav === "planet") {
+      const world = state.geography?.bodies.find(body => body.id === navigation.value && body.systemId === state.selectedSystem && body.kind !== "star");
+      if (navigation.value && !world) return;
+      warView.planet = world?.id || "";
+      warView.strike = "";
+      if (world) openPlanetView(world.id);
+      else { closePlanetView(); state.reachMapLevel = "system"; focusGeographySystemCamera(state.selectedSystem); }
+      refreshWarConsole();
+    }
+    return;
+  }
   const mobileSector = event.target.closest("[data-mobile-sector-select]");
   if (mobileSector?.dataset.mobileSectorSelect !== undefined) {
     if (mobileSector.value) showSectorLevel(mobileSector.value);
@@ -5818,9 +5981,21 @@ document.addEventListener("change", async event => {
   }
   const field = event.target.closest("[data-war-field]");
   if (!field || warView.busy) return;
-  if (field.dataset.warField === "subsector_id") {
+  if (["company_id", "kill_team_id", "system_id"].includes(field.dataset.warField)) {
+    if (field.dataset.warField === "company_id") {
+      warView.orderCompany = field.value; warView.orderTeam = null; warView.orderSystem = null;
+    } else if (field.dataset.warField === "kill_team_id") {
+      warView.orderTeam = field.value; warView.orderSystem = null;
+    } else warView.orderSystem = field.value;
+    if (field.dataset.warField !== "system_id") {
+      const reason = document.querySelector('[data-war-field="reason"]');
+      if (reason) reason.value = "";
+    }
+    refreshWarConsole();
+  } else if (field.dataset.warField === "subsector_id") {
     warView.subsector = field.value;
     warView.planet = "";
+    warView.strike = "";
     showSectorLevel(field.value);
     await loadWar(); refreshWarConsole();
   } else if (field.dataset.warField === "planet_id") {
@@ -5843,11 +6018,34 @@ document.addEventListener("click", async event => {
   }
   if (event.target.closest("[data-war-retry]")?.dataset.warRetry !== undefined) { await loadWar(); refreshWarConsole(); return; }
   if (event.target.closest("[data-war-live]")?.dataset.warLive !== undefined) { warView.sandboxId = ""; await loadWar(); refreshWarConsole(); return; }
+  if (event.target.closest("[data-planet-return]")?.dataset.planetReturn !== undefined) {
+    closePlanetView(); warView.planet = ""; warView.strike = "";
+    showSystemLevel(state.selectedSystem);
+    return;
+  }
+  const strikeButton = event.target.closest("[data-war-strike]");
+  if (strikeButton?.dataset.warStrike && !warView.busy) {
+    const offer = Object.values(warView.data?.boards || {}).flat().find(item => item.id === strikeButton.dataset.warStrike);
+    const planetId = offer?.planet_id || strikeButton.dataset.warStrikePlanet;
+    const world = offer && state.geography?.bodies?.find(body => body.id === planetId);
+    if (!world) return;
+    if (state.selectedSystem !== world.systemId) showSystemLevel(world.systemId);
+    warView.strike = offer.id;
+    warView.planet = world.id;
+    openPlanetView(world.id);
+    refreshWarConsole();
+    if (globalThis.matchMedia?.("(max-width: 760px)").matches) document.getElementById("reach-viewport")?.scrollIntoView({behavior: "smooth", block: "start"});
+    return;
+  }
   const worldButton = event.target.closest("[data-war-planet]");
   if (worldButton?.dataset.warPlanet && !warView.busy) {
+    const world = state.geography?.bodies?.find(body => body.id === worldButton.dataset.warPlanet && body.systemId === state.selectedSystem && body.kind !== "star");
+    if (!world) return;
     warView.planet = worldButton.dataset.warPlanet;
+    warView.strike = "";
+    openPlanetView(world.id);
     refreshWarConsole();
-    await loadWar(); refreshWarConsole();
+    if (globalThis.matchMedia?.("(max-width: 760px)").matches) document.getElementById("reach-viewport")?.scrollIntoView({behavior: "smooth", block: "start"});
     return;
   }
   if (event.target.closest("[data-war-clear-planet]")?.dataset.warClearPlanet !== undefined) {
@@ -5880,7 +6078,7 @@ document.addEventListener("click", async event => {
   if (["send_test_notice", "revert_test_invasion"].includes(button.dataset.warAction) && !globalThis.confirm?.(button.dataset.warAction === "send_test_notice" ? "Send an unpinged TEST invasion notice to the campaign Discord channel?" : "Discard this test invasion? Live campaigns and rewards will not change.")) return;
   if (button.dataset.warAction === "report") {
     if (warView.sandboxId) return;
-    const offer = (warView.data.boards[warView.planet] || []).find(item => item.id === button.dataset.strike);
+    const offer = Object.values(warView.data.boards).flat().find(item => item.id === button.dataset.strike);
     if (!offer?.attempt_id) return;
     aarDraft.strikeId = offer.attempt_id;
     aarDraft.mode = offer.aar_mode || (offer.capacity === 5 ? "omega" : "ops_strat");
@@ -5899,11 +6097,19 @@ document.addEventListener("click", async event => {
     return;
   }
   const payload = { action: button.dataset.warAction, version: warView.data.version, planet_id: warView.planet };
+  if (state.selectedSystem) payload.board_system_id = state.selectedSystem;
   if (warView.sandboxId) payload.sandbox_id = warView.sandboxId;
   document.querySelectorAll("[data-war-field]").forEach(field => { payload[field.dataset.warField] = field.value; });
   if (button.dataset.strike) payload.strike_id = button.dataset.strike;
   if (button.dataset.proposal) payload.proposal_id = button.dataset.proposal;
   if (payload.action === "advance_test_time") payload.hours = Number(payload.test_hours);
+  if (payload.action === "assign" && document.querySelector('[data-war-field="reason"]') && !payload.reason?.trim()) {
+    warView.error = "Enter a reason for covering the kill-team Sergeant.";
+    document.querySelector('[data-war-field="reason"]')?.focus();
+    const status = document.querySelector("#war-console [role='status']");
+    if (status) status.textContent = warView.error;
+    return;
+  }
   if (payload.action === "review") {
     payload.decision = button.dataset.decision;
     payload.reason = [...document.querySelectorAll("[data-war-review-reason]")].find(input => input.dataset.warReviewReason === payload.strike_id)?.value.trim() || "";
@@ -5944,6 +6150,18 @@ document.addEventListener("click", async event => {
   } catch (error) { warView.error = error.message; }
   finally { warView.busy = false; refreshWarConsole(); updateStatusBadge(); }
 });
+
+function previewPlanetStrike(event) {
+  if (state.reachMapLevel !== "planet") return;
+  const row = event.target.closest("[data-war-strike]");
+  if (!row) return;
+  planetView.controller?.focus(row.dataset.warStrike);
+  const offer = (warView.data?.boards[warView.planet] || []).find(item => item.id === row.dataset.warStrike);
+  const label = document.getElementById("planet-stage-target");
+  if (label && offer) label.textContent = offer.name;
+}
+document.addEventListener("pointerover", previewPlanetStrike);
+document.addEventListener("focusin", previewPlanetStrike);
 
 async function refreshReach() {
   if (state.page !== "reach" || document.visibilityState !== "visible") return;
@@ -6944,6 +7162,19 @@ function setupGeographyCanvas() {
     };
   }
 
+  function focusBody(bodyId) {
+    const body = geography.bodies.find(item => item.id === bodyId);
+    const system = body && systemsById.get(body.systemId);
+    if (!system) return false;
+    const camera = state.reachCanvasCamera;
+    const position = bodyPosition(system, body, performance.now());
+    const panelWidth = geographyPanelFocusWidth();
+    camera.targetZoom = camera.baseZoom * 120;
+    camera.targetX = position.x + panelWidth / (2 * camera.targetZoom);
+    camera.targetY = position.y;
+    return true;
+  }
+
   function planetColor(kind) {
     return ({
       death_world: "#6d9458",
@@ -7430,6 +7661,10 @@ function setupGeographyCanvas() {
       return;
     }
     if (needsResize) resizeCanvas();
+    if (state.reachMapLevel === "planet") {
+      animationFrame = requestAnimationFrame(drawFrame);
+      return;
+    }
     if (!visible || document.hidden) {
       // Hidden (e.g. the mobile navigator is shown instead); check back occasionally.
       window.setTimeout(() => { animationFrame = requestAnimationFrame(drawFrame); }, 500);
@@ -7720,10 +7955,8 @@ function setupGeographyCanvas() {
       }));
       if (nearestBody && nearestBody.distance < 18) {
         showSystemLevel(nearestBody.body.systemId);
-        if (warView.data?.planets.some(planet => planet.id === nearestBody.body.id)) {
-          warView.planet = nearestBody.body.id;
-          void loadWar().then(refreshWarConsole);
-        }
+        openPlanetView(nearestBody.body.id);
+        if (state.auth.authenticated) void loadWar().then(refreshWarConsole);
         return;
       }
     }
@@ -7779,6 +8012,7 @@ function setupGeographyCanvas() {
   });
 
   resizeCanvas();
+  state.reachCanvasCamera.focusBody = focusBody;
   cancelAnimationFrame(animationFrame);
   animationFrame = requestAnimationFrame(drawFrame);
 }
@@ -7811,25 +8045,57 @@ function geographySystemDirectoryHtml(sectorId) {
   if (!sector) return "";
   const systems = state.geography.systems.filter(system => system.sectorId === sector.id).sort((a, b) => a.name.localeCompare(b.name));
   const selectedSystem = systems.find(system => system.id === state.selectedSystem);
-  if (selectedSystem && warView.planet) {
-    const star = state.geography.bodies.find(body => body.systemId === selectedSystem.id && body.kind === "star");
-    const routes = state.geography.routes.filter(route => route.sourceSystemId === selectedSystem.id || route.targetSystemId === selectedSystem.id);
-    return `<section class="war-system-directory"><h3>${escapeHtml(selectedSystem.name)}</h3><p class="aar-upload-hint">${star?.stellarClass ? `Class ${escapeHtml(star.stellarClass)} star / ` : ""}${routes.length} charted warp routes</p><button class="btn-dossier-action" type="button" data-war-clear-planet>&larr; System worlds</button></section>`;
+  if (selectedSystem) {
+    const worlds = state.geography.bodies.filter(body => body.systemId === selectedSystem.id && body.kind !== "star").sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name));
+    return `<nav class="war-system-directory" aria-label="System and planet navigation"><div class="reach-toolbar">
+      <label>System<select class="reach-select" data-war-nav="system" aria-label="System in subsector"${warView.busy ? " disabled" : ""}>${systems.map(system => `<option value="${escapeHtml(system.id)}"${system.id === selectedSystem.id ? " selected" : ""}>${escapeHtml(system.name)}</option>`).join("")}</select></label>
+      <label>Planet<select class="reach-select" data-war-nav="planet" aria-label="Planet in system"${warView.busy ? " disabled" : ""}><option value=""${!warView.planet ? " selected" : ""}>System overview</option>${worlds.map(world => `<option value="${escapeHtml(world.id)}"${world.id === warView.planet ? " selected" : ""}>${escapeHtml(world.name)}</option>`).join("")}</select></label>
+    </div></nav>`;
   }
-  const systemCards = (selectedSystem ? [selectedSystem] : systems).map(system => {
+  const systemCards = systems.map(system => {
     const bodies = state.geography.bodies.filter(body => body.systemId === system.id);
     const star = bodies.find(body => body.kind === "star");
     const worlds = bodies.filter(body => body.kind !== "star").sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name));
-    const selected = system.id === selectedSystem?.id;
-    return `<button class="reach-sector-system" type="button" data-sector-system="${escapeHtml(system.id)}" aria-pressed="${selected}">
+    return `<button class="reach-sector-system" type="button" data-sector-system="${escapeHtml(system.id)}">
       <span class="reach-sector-system-name">${escapeHtml(system.name)}</span>
       <span class="reach-sector-system-meta">${worlds.length} worlds${star?.stellarClass ? ` · Class ${escapeHtml(star.stellarClass)} star` : ""} · Select to focus</span>
-    </button>${selected ? `<div class="war-system-worlds">${worlds.map(world => {
-      const playable = warView.data?.planets.some(planet => planet.id === world.id);
-      return playable ? `<button class="war-world-select" type="button" data-war-planet="${escapeHtml(world.id)}" aria-pressed="${world.id === warView.planet}">${geographyBodyIcon(world)}<span>${escapeHtml(world.name)} / ${escapeHtml(titleCase(world.kind))}</span></button>` : `<div class="war-world-select">${geographyBodyIcon(world)}<span>${escapeHtml(world.name)} / ${escapeHtml(titleCase(world.kind))}</span></div>`;
-    }).join("")}<span class="aar-upload-hint">${state.geography.routes.filter(route => route.sourceSystemId === system.id || route.targetSystemId === system.id).length} charted warp routes</span></div>` : ""}`;
+    </button>`;
   }).join("");
   return `<section class="war-system-directory" aria-label="Systems in ${escapeHtml(sector.name)}"><h3>Systems (${systems.length})</h3>${systemCards || `<p class="aar-empty">No charted systems in this sector.</p>`}</section>`;
+}
+
+function geographySystemOverviewHtml(system, expanded = false) {
+  if (!system) return "";
+  const bodies = state.geography?.bodies || [];
+  const star = bodies.find(body => body.systemId === system.id && body.kind === "star");
+  const worlds = bodies.filter(body => body.systemId === system.id && body.kind !== "star").sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name));
+  const routes = (state.geography?.routes || []).filter(route => route.sourceSystemId === system.id || route.targetSystemId === system.id);
+  const liveAvailable = state.auth.authenticated && !!warView.data;
+  const assignments = Object.entries(liveAvailable ? warView.data.assignments || {} : {}).filter(([, systemId]) => systemId === system.id).map(([identity]) => warView.data.kill_teams.find(team => team.id === identity)?.name || identity);
+  return `<section class="war-system-overview" aria-label="System overview"><h3>${escapeHtml(system.name)}</h3>
+    <dl class="war-overview-facts"><div><dt>Primary star</dt><dd>${star ? escapeHtml(star.name) + (star.stellarClass ? ` / Class ${escapeHtml(star.stellarClass)}` : "") : "Not recorded"}</dd></div><div><dt>Planets</dt><dd>${worlds.length} / ${worlds.filter(world => world.battleEligible).length} battle eligible</dd></div><div><dt>Warp routes</dt><dd>${routes.length}</dd></div><div><dt>Kill teams</dt><dd>${liveAvailable ? escapeHtml(assignments.join(", ") || "None assigned") : "Live assignments unavailable"}</dd></div></dl>
+    ${system.description ? `<p class="war-order-current">${escapeHtml(system.description)}</p>` : ""}
+    <h4>Planets (${worlds.length})</h4><div class="war-planet-directory">${worlds.map(world => {
+      const boardAvailable = liveAvailable && Object.prototype.hasOwnProperty.call(warView.data.boards || {}, world.id);
+      const offers = boardAvailable ? warView.data.boards[world.id] : [];
+      const vanilla = offers.filter(offer => (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === "vanilla");
+      const omega = offers.filter(offer => (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === "omega");
+      const available = offers.filter(offer => offer.status === "available").length;
+      const recruiting = offers.filter(offer => offer.status === "recruiting").length;
+      const locked = offers.filter(offer => ["locked", "deployed", "review_pending"].includes(offer.status)).length;
+      const counts = world.battleEligible ? boardAvailable ? `${vanilla.length} Vanilla / ${omega.length} Omega / ${available} available` : "Live strike information unavailable" : "No strike board";
+      const themes = [...new Set(offers.map(offer => offer.name))];
+      const planet = `<button class="war-world-select" type="button" data-war-planet="${escapeHtml(world.id)}" aria-label="Focus ${escapeHtml(world.name)}">${geographyBodyIcon(world)}<span><strong>${escapeHtml(world.name)}</strong><small>${escapeHtml(geographyBodyLabel(world))}${world.battleEligible ? " / Battle eligible" : ""}</small><small>${escapeHtml(counts)}</small></span></button>`;
+      if (!expanded) return planet;
+      return `<article class="system-world-briefing" aria-label="${escapeHtml(world.name)} briefing">${planet}${world.description ? `<p>${escapeHtml(world.description)}</p>` : ""}<p>${world.battleEligible ? boardAvailable ? `${recruiting} recruiting / ${locked} locked or awaiting review` : "Live deployment status unavailable" : "Non-combat location"}${Number.isFinite(world.orbitIndex) ? ` / Orbit ${world.orbitIndex}` : ""}</p>${themes.length ? `<p>Objectives: ${escapeHtml(themes.slice(0, 4).join(" / "))}${themes.length > 4 ? ` / +${themes.length - 4} more` : ""}</p>` : ""}${boardAvailable || !world.battleEligible ? `<details data-world-intel="${escapeHtml(world.id)}"><summary>${offers.length} strike assignments</summary><ul class="system-strike-summary">${offers.map(offer => `<li><button type="button" data-war-strike="${escapeHtml(offer.id)}" data-war-strike-planet="${escapeHtml(world.id)}"><strong>${escapeHtml(offer.name)}</strong><small>${escapeHtml(offer.aar_mission || "")} / ${escapeHtml(offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla"))} / ${escapeHtml(titleCase(offer.status))} / ${offer.participants.length}/${offer.capacity}${offer.required_rank ? ` / ${escapeHtml(offer.required_rank)}` : ""}</small></button></li>`).join("") || `<li><p>${world.battleEligible ? "No strikes currently issued." : "No deployments assigned."}</p></li>`}</ul></details>` : ""}</article>`;
+    }).join("") || `<p class="aar-empty">No planets recorded.</p>`}</div>
+  </section>`;
+}
+
+function geographyBrowseDetailsHtml(system) {
+  const body = state.geography?.bodies.find(item => item.id === warView.planet && item.systemId === system.id && item.kind !== "star");
+  if (!body) return geographySystemOverviewHtml(system, true);
+  return `<section aria-label="Planet details"><div class="war-planet-overview">${geographyBodyIcon(body)}<div><h3>${escapeHtml(body.name)}</h3><p>${escapeHtml(geographyBodyLabel(body))}</p></div></div>${body.description ? `<p class="war-order-current">${escapeHtml(body.description)}</p>` : ""}<dl class="war-overview-facts"><div><dt>System</dt><dd>${escapeHtml(system.name)}</dd></div><div><dt>Deployment</dt><dd>${body.battleEligible ? "Battle eligible" : "No strike board"}</dd></div>${Number.isFinite(body.orbitIndex) ? `<div><dt>Orbit</dt><dd>${body.orbitIndex}</dd></div>` : ""}</dl><p class="war-order-current">Live strike information unavailable</p>${geographyObjectivesHtml(body)}</section>`;
 }
 
 function geographySectorPanelHtml(sectorId, selectedSystemId) {
@@ -7837,15 +8103,16 @@ function geographySectorPanelHtml(sectorId, selectedSystemId) {
   if (!sector) return "";
   const systems = state.geography.systems.filter(system => system.sectorId === sector.id);
   const selectedSystem = systems.find(system => system.id === selectedSystemId);
+  const selectedBody = state.reachMapLevel === "planet" && state.geography.bodies.find(body => body.id === warView.planet && body.systemId === selectedSystem?.id);
   return `<div class="reach-sector-panel-head">
       <div>
-        <div class="reach-sector-panel-kicker">${selectedSystem ? "Selected system" : `Sector ${String(sector.number).padStart(2, "0")} // ${systems.length} systems`}</div>
-        <h2 class="reach-sector-panel-title">${escapeHtml(selectedSystem?.name || sector.name)}</h2>
+        <div class="reach-sector-panel-kicker">${selectedBody ? escapeHtml(selectedSystem.name) : selectedSystem ? "Selected system" : `Sector ${String(sector.number).padStart(2, "0")} // ${systems.length} systems`}</div>
+        <h2 class="reach-sector-panel-title">${escapeHtml(selectedBody?.name || selectedSystem?.name || sector.name)}</h2>
         <div class="reach-sector-panel-meta">${escapeHtml(sector.status === "critical" ? "Contested" : titleCase(sector.status))} · ${selectedSystem ? "Planetary system" : "Charted systems"}</div>
       </div>
       <div class="reach-sector-panel-actions">
         <button class="reach-sector-panel-back reach-mobile-map-back" type="button" data-mobile-map-focus>&uarr; Map</button>
-        ${selectedSystem ? `<button class="reach-sector-panel-back" type="button" data-sector-panel-back>Sector systems</button>` : ""}
+        ${selectedBody ? `<button class="reach-sector-panel-back" type="button" data-planet-return>System overview</button>` : selectedSystem ? `<button class="reach-sector-panel-back" type="button" data-sector-panel-back>Sector systems</button>` : ""}
         <button class="reach-sector-panel-close" type="button" data-sector-panel-close aria-label="Close sector panel" title="Close sector panel">&times;</button>
       </div>
     </div>
@@ -7913,6 +8180,7 @@ function renderReach() {
     <div class="reach-map-shell${selectedSector ? " has-sector-panel" : ""}">
       <div class="reach-viewport" id="reach-viewport">
         ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Galactic sector chart with the Jericho Reach at its center"></canvas>` : reachSvg(reach, directives)}
+        ${geographyLive ? `<section id="reach-planet-stage" class="reach-planet-stage" aria-label="Planet deployment view" hidden><img class="planet-art-fallback" alt=""><div class="planet-stage-heading"><span class="field-label">Deathwatch deployment theatre</span><h2 id="planet-stage-name"></h2><p id="planet-stage-class"></p></div><button class="btn-dossier-action planet-stage-back" type="button" data-planet-return>Return to system</button><span id="planet-stage-target" class="planet-stage-target" aria-live="polite"></span></section>` : ""}
         ${geographyLive ? `<div class="reach-map-level"><strong>Galactic Map</strong>Sector chart</div><div id="reach-canvas-status" class="reach-canvas-status">29 sectors / Secure</div><div id="reach-canvas-tooltip" class="reach-canvas-tooltip" hidden></div>` : ""}
         <div class="reach-controls">
           <button class="icon-btn" type="button" data-reach-zoom="in" aria-label="Zoom in">+</button>
@@ -7944,6 +8212,7 @@ function renderReach() {
     ])}
   `;
   setupReachViewport();
+  if (state.reachMapLevel === "planet") void syncPlanetView();
 }
 
 function reachFitWidth(rect) {
@@ -8159,6 +8428,7 @@ function resetGeographyCamera() {
 }
 
 function showReachLevel() {
+  if (typeof closePlanetView === "function") closePlanetView();
   state.reachMapLevel = "reach";
   state.selectedSector = null;
   state.selectedSystem = null;
@@ -8171,6 +8441,9 @@ function showReachLevel() {
 
 function showSectorLevel(sectorId) {
   if (!state.geography.sectors.some(sector => sector.id === sectorId)) return;
+  if (typeof closePlanetView === "function") closePlanetView();
+  warView.planet = "";
+  warView.strike = "";
   state.reachMapLevel = "sector";
   state.selectedSector = sectorId;
   state.selectedSystem = null;
@@ -8183,6 +8456,9 @@ function showSectorLevel(sectorId) {
 function showSystemLevel(systemId) {
   const system = state.geography.systems.find(item => item.id === systemId);
   if (!system) return;
+  if (typeof closePlanetView === "function") closePlanetView();
+  const changed = state.selectedSystem !== system.id;
+  warView.planet = ""; warView.strike = "";
   state.reachMapLevel = "system";
   state.selectedSector = system.sectorId;
   state.selectedSystem = system.id;
@@ -8190,6 +8466,7 @@ function showSystemLevel(systemId) {
   state.reachSemanticZoomAt = performance.now();
   if (!focusGeographySystemCamera(systemId) && !document.getElementById("reach-canvas")) renderReach();
   updateGeographySectorPanel();
+  if (changed && state.auth.authenticated) void loadWar().then(refreshWarConsole);
 }
 
 function showParentReachLevel() {

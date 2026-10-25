@@ -30,6 +30,40 @@ from server import (
 )
 
 
+@pytest.mark.parametrize("path", ["/assets/planet-view.mjs", "/assets/vendor/three.module.min.js"])
+def test_planet_renderer_modules_are_local_allowlisted_javascript(local_site, path):
+    with urllib.request.urlopen(local_site + path) as response:
+        assert response.headers.get_content_type() == "text/javascript"
+        assert len(response.read()) > 1000
+    assert server._static_asset_path("/assets/vendor/other.js") is None
+    assert server._static_asset_path("/assets/vendor/../server.py") is None
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
+def test_planet_strike_locations_are_stable_and_artwork_projection_is_retained():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const moduleSource=fs.readFileSync(process.argv[1],'utf8');
+const context={};vm.createContext(context);
+vm.runInContext(moduleSource.slice(moduleSource.indexOf('export function strikeLocation'),moduleSource.indexOf('export async')).replace('export ',''),context);
+const offer={id:'one',pool:'vanilla',slot:2};
+assert.deepEqual(context.strikeLocation('vhaloris',offer),context.strikeLocation('vhaloris',{...offer,id:'replacement'}));
+assert.notDeepEqual(context.strikeLocation('vhaloris',offer),context.strikeLocation('vhaloris',{...offer,pool:'omega'}));
+assert.notDeepEqual(context.strikeLocation('vhaloris',offer),context.strikeLocation('kael',offer));
+const points=Array.from({length:4},(_,slot)=>context.strikeLocation('vhaloris',{...offer,slot}));
+const vector=p=>[Math.cos(p.latitude)*Math.sin(p.longitude),Math.sin(p.latitude),Math.cos(p.latitude)*Math.cos(p.longitude)];
+for(let first=0;first<points.length;first++)for(let second=first+1;second<points.length;second++){
+ const a=vector(points[first]),b=vector(points[second]);assert(Math.acos(a.reduce((sum,value,index)=>sum+value*b[index],0))>.5);
+}
+assert.match(moduleSource,/loadAsync\(artwork\)/);assert.match(moduleSource,/texture2D\(portrait/);
+assert.match(moduleSource,/vec4 flank=texture2D/);assert.match(moduleSource,/vec4 pole=texture2D/);
+assert.match(moduleSource,/smoothstep\(\.38,\.76,abs\(normal.z\)\)/);
+assert.match(moduleSource,/renderer\.dispose\(\)/);assert.match(moduleSource,/texture\.dispose\(\)/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.WEB_ASSETS_DIR / "planet-view.mjs")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.fixture(autouse=True)
 def _clear_aar_access_cache():
     server._AAR_ACCESS_CACHE.clear()
@@ -1619,9 +1653,9 @@ const consoleElement = {outerHTML:''};
 const offer = {id: 'offer', attempt_id: 'GW-' + 'a'.repeat(32), name: 'Psychic Hunt', briefing: 'Support the operation', aar_mission: 'Inferno', aar_mission_value: 'pve_inferno', aar_mode: 'omega', aar_difficulty: '@Omega', status: 'locked', capacity: 5, required_rank: 'Watch Librarian', specialist_id: '43', participants: ['42','43','44','45','46']};
 const recipe = {id:'cemetery|desert|geneseed',version:1,positive:'Come Prepared',negatives:['Corrupted Relic','Summoner','Hyperopia'],forced:['Intelligence Lapse'],notes:['Recovery support, not a custom task.','<img src=x onerror=alert(1)>']};
 const context = {
-    state: {auth: {authenticated: true}, selectedSector: 'alpha', geography: {sectors: [{id:'alpha',name:'Alpha'}],systems: []}},
+    state: {auth: {authenticated: true}, selectedSector: 'alpha', selectedSystem:'system', geography: {sectors: [{id:'alpha',name:'Alpha'}],systems: [{id:'system',name:'System',sectorId:'alpha'}],bodies:[{id:'world',name:'World',systemId:'system'}]}},
     warView: {busy: false, error: '', planet: 'world', subsector: 'alpha', pool: 'omega', data: {version: 1, actor: {id: '42', roles: ['Watch Captain'], company_id: '1'}, campaigns: {}, commitments: {}, kill_teams: [], proposals: [], planets: [{id: 'world', name:'World',subsector_id:'alpha'}], boards: {world: [offer, {...offer,id:'vanilla-offer',name:'Vanilla only',aar_mode:'ops_strat',pool:'vanilla',capacity:3,recipe}]}, content: {objectives:29}, participant_names: {'42':'Captain','43':'Librarian'}}},
-    COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'), titleCase: value=>value, geographySystemDirectoryHtml:()=>'',
+    COMPANY_NAMES: {'1':'Primus'}, escapeHtml: value=>String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'), titleCase: value=>value, geographySystemDirectoryHtml:()=>'', geographyBodyIcon:()=>'', geographyBodyLabel:body=>body.name, geographyObjectivesHtml:()=>'', geographySystemOverviewHtml:()=>'',
     aarDraft: {memberDirectory:new Map(), managementRecordId:'old', idempotencyKey:'old', reviewing:true},
     document: {addEventListener:(name,callback)=>{handlers[name]=callback;},getElementById:()=>consoleElement,querySelectorAll:()=>[]},
     setPage:async (...args)=>navigation.push(args), renderReach:()=>{throw new Error('Canvas must stay mounted');},
@@ -1657,11 +1691,13 @@ assert.match(context.warConsoleHtml(),/Settled strike to reverse/);
 context.warView.data.actor.can_review=false;
 for(const [role,invade,commit] of [['Forgemaster',true,false],['Watch Master',true,true],['Watch Captain',false,true],['Watch Lieutenant',false,true],['Watch Sergeant',false,false],['Watch Brother',false,false]]){
     context.warView.data.actor.roles=[role];
+    context.state.selectedSystem=null;
     const controls=context.warConsoleHtml();
     assert.equal(controls.includes('data-war-action="invade"'),invade,role);
     assert.equal(controls.includes('data-war-action="start_test_invasion"'),invade,role);
     assert.equal(controls.includes('data-war-action="commit"'),commit,role);
 }
+context.state.selectedSystem='system';
 context.warView.data.actor.roles=['Watch Captain'];
 context.warView.data.actor.roles=['Forgemaster'];
 context.warView.data.sandbox={id:'a'.repeat(32),viewing:true,clock:'2026-10-24T00:00:00Z',subsector_id:'alpha'};
@@ -1713,6 +1749,142 @@ assert.doesNotMatch(html,/aar-strike-result|strikeSuccess/);
 """
         result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for authenticated map initialization")
+def test_system_strikes_focus_planets_and_order_dropdowns_follow_company_commitments():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const handlers={},focused=[];
+const offer=(id,planet,mode='ops_strat')=>({id,planet_id:planet,name:'Objective '+id,aar_mission:'Inferno',aar_mode:mode,capacity:mode==='omega'?5:3,status:'available',participants:[],required_rank:''});
+const consoleElement={outerHTML:'',querySelectorAll:()=>[]};
+const context={
+ state:{auth:{authenticated:true},selectedSector:'alpha',selectedSystem:'system-a',reachCanvasCamera:{focusBody:id=>{focused.push(id);return true;}},geography:{sectors:[{id:'alpha',name:'Alpha'},{id:'beta',name:'Beta'}],systems:[{id:'system-a',name:'Solenne Crown',sectorId:'alpha'},{id:'system-b',name:'Other System',sectorId:'beta'}],bodies:[{id:'world-a',name:'Vhaloris',systemId:'system-a'},{id:'world-b',name:'Kael Tertius',systemId:'system-a'},{id:'world-c',name:'Elsewhere',systemId:'system-b'}]}},
+ warView:{busy:false,error:'',subsector:'alpha',planet:'',pool:'vanilla',orderCompany:null,orderTeam:'',orderSystem:'',data:{version:1,actor:{id:'42',roles:['Watch Master'],company_id:'1',kill_team_id:'1-one',watch_brother:true},campaigns:{alpha:{status:'contested',balance:25,deadline:'2026-11-07'}},commitments:{'1':'alpha','2':'beta'},assignments:{},kill_teams:[{id:'1-one',name:'One',company_id:'1'},{id:'1-two',name:'Two',company_id:'1'},{id:'2-three',name:'Three',company_id:'2'}],proposals:[],planets:[{id:'world-a',system_id:'system-a'},{id:'world-b',system_id:'system-a'},{id:'world-c',system_id:'system-b'}],boards:{'world-a':[offer('a','world-a'),offer('omega','world-a','omega')],'world-b':[offer('b','world-b')],'world-c':[offer('c','world-c')]}}},
+ COMPANY_NAMES:{'1':'Primus','2':'Secundus'},escapeHtml:value=>String(value??''),titleCase:value=>value,geographySystemDirectoryHtml:()=>'',geographyBodyIcon:()=>'',
+ document:{activeElement:null,addEventListener:(name,callback)=>{handlers[name]=callback;},getElementById:id=>id==='war-console'?consoleElement:null,querySelectorAll:()=>[],querySelector:()=>null},
+ showSystemLevel:()=>{throw Error('Same-system strike must not refocus the whole system');},focusGeographySystemCamera:()=>{throw Error('Must focus the planet');}
+};
+context.geographySystemOverviewHtml=()=>'';
+context.geographyBodyLabel=body=>body.name;
+context.geographyObjectivesHtml=()=>'';
+context.openPlanetView=id=>{context.warView.planet=id;context.state.reachMapLevel='planet';context.state.reachCanvasCamera.focusBody(id);};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
+let markup=context.warConsoleHtml();
+assert.match(markup,/data-war-strike="a"/);assert.match(markup,/data-war-strike="b"/);
+assert.doesNotMatch(markup,/data-war-strike="c"|data-war-strike="omega"/);
+assert.match(markup,/Vhaloris/);assert.match(markup,/Kael Tertius/);
+assert.equal((markup.match(/<article class="war-strike"/g)||[]).length,1);
+assert.doesNotMatch(markup,/value="2-three"|value="system-b"/);
+(async()=>{
+ await handlers.click({target:{closest:selector=>selector==='[data-war-strike]'?{dataset:{warStrike:'b',warStrikePlanet:'world-b'}}:null}});
+ assert.deepEqual(focused,['world-b']);assert.equal(context.warView.planet,'world-b');assert.equal(context.warView.strike,'b');
+ assert.doesNotMatch(consoleElement.outerHTML,/data-war-strike="a"/);assert.match(consoleElement.outerHTML,/data-war-strike="b"/);
+ await handlers.change({target:{closest:()=>({dataset:{warField:'company_id'},value:'2'})}});
+ markup=context.warConsoleHtml();assert.match(markup,/value="2-three"/);assert.doesNotMatch(markup,/value="1-one"/);
+ assert.match(markup,/value="system-b"/);assert.doesNotMatch(markup,/value="system-a"/);
+ assert.match(markup,/data-war-action="assign"[^>]*disabled/);
+ await handlers.change({target:{closest:()=>({dataset:{warField:'system_id'},value:''})}});
+ assert.match(context.warConsoleHtml(),/value="" selected>Select destination system/);
+ await handlers.change({target:{closest:()=>({dataset:{warField:'kill_team_id'},value:''})}});
+ assert.match(context.warConsoleHtml(),/value="" selected>Select kill team/);
+ context.warView.data.commitments={};markup=context.warConsoleHtml();
+ assert.match(markup,/Commit company first/);assert.match(markup,/data-war-field="system_id"[^>]*disabled/);
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for authenticated map initialization")
+def test_subsector_panel_lists_only_systems_and_system_panel_has_scoped_navigation():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8'),handlers={},focus=[],systems=[];
+const c={state:{auth:{authenticated:true},selectedSector:'alpha',selectedSystem:null,geography:{sectors:[{id:'alpha',name:'Alpha'},{id:'beta',name:'Beta'}],systems:[{id:'one',name:'Solenne Crown',sectorId:'alpha'},{id:'two',name:'Viridian Tides',sectorId:'alpha'},{id:'three',name:'Other Subsector',sectorId:'beta'}],bodies:[{id:'vhaloris',name:'Vhaloris',kind:'hive_world',systemId:'one',orbitIndex:1},{id:'kael',name:'Kael Tertius',kind:'forge_world',systemId:'one',orbitIndex:2},{id:'theryn',name:'Theryn',kind:'agri_world',systemId:'two',orbitIndex:1}],routes:[]},reachCanvasCamera:{focusBody:id=>focus.push(id)}},warView:{subsector:'alpha',planet:'',busy:false,pool:'vanilla',data:{actor:{roles:['Watch Master'],company_id:'1'},campaigns:{},commitments:{},assignments:{},kill_teams:[],proposals:[],planets:[],boards:{}}},COMPANY_NAMES:{'1':'Primus'},escapeHtml:value=>String(value??''),titleCase:value=>value,document:{activeElement:null,addEventListener:(name,cb)=>handlers[name]=cb,getElementById:()=>null,querySelectorAll:()=>[]},showSystemLevel:id=>systems.push(id),focusGeographySystemCamera:()=>{}};
+c.geographyBodyIcon=()=>'';c.geographyBodyLabel=body=>body.name;c.geographyObjectivesHtml=()=>'';
+c.openPlanetView=id=>{c.warView.planet=id;c.state.reachMapLevel='planet';c.state.reachCanvasCamera.focusBody(id);};
+vm.createContext(c);
+vm.runInContext(html.slice(html.indexOf('function geographySystemDirectoryHtml('),html.indexOf('function geographySectorPanelHtml(')),c);
+vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),c);
+let markup=c.warConsoleHtml();
+assert.match(markup,/data-sector-system="one"/);assert.match(markup,/data-sector-system="two"/);
+assert.doesNotMatch(markup,/data-war-nav="planet"|Vhaloris|Kael Tertius|Theryn|System strikes|Kill-team assignment/);
+assert.match(markup,/Company commitment/);
+c.state.selectedSystem='one';markup=c.warConsoleHtml();
+assert.match(markup,/data-war-nav="system"/);assert.match(markup,/data-war-nav="planet"/);
+assert.match(markup,/Vhaloris/);assert.match(markup,/Kael Tertius/);
+assert.doesNotMatch(markup,/Theryn|Other Subsector|Company commitment|data-sector-system=/);
+assert.match(markup,/Kill-team assignment/);
+(async()=>{
+ await handlers.change({target:{closest:selector=>selector==='[data-war-nav]'?{dataset:{warNav:'planet'},value:'kael'}:null}});
+ assert.deepEqual(focus,['kael']);assert.equal(c.warView.planet,'kael');
+ await handlers.change({target:{closest:selector=>selector==='[data-war-nav]'?{dataset:{warNav:'planet'},value:'theryn'}:null}});
+ assert.deepEqual(focus,['kael']);
+ await handlers.change({target:{closest:selector=>selector==='[data-war-nav]'?{dataset:{warNav:'system'},value:'two'}:null}});
+ assert.deepEqual(systems,['two']);
+ await handlers.change({target:{closest:selector=>selector==='[data-war-nav]'?{dataset:{warNav:'system'},value:'three'}:null}});
+ assert.deepEqual(systems,['two']);
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for authenticated map initialization")
+def test_expanded_system_intelligence_shows_planet_descriptions_and_both_strike_pools():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8'),host={innerHTML:''};
+const context={state:{reachMapLevel:'system',selectedSystem:'one',geography:{systems:[{id:'one',name:'Solenne Crown'}],bodies:[{id:'star',name:'Solenne',systemId:'one',kind:'star',stellarClass:'G'},{id:'world',name:'Vhaloris',systemId:'one',kind:'hive_world',battleEligible:true,orbitIndex:1,description:'Hive spires and transit vaults.'},{id:'quiet',name:'Silent Anchorage',systemId:'one',kind:'station',battleEligible:false,orbitIndex:2}],routes:[]}},warView:{planet:'',data:{assignments:{},kill_teams:[],boards:{world:[{id:'v',name:'Cleansing Flame',aar_mission:'Inferno',pool:'vanilla',status:'available',participants:[],capacity:3},{id:'o',name:'Kingslayer',aar_mission:'Decapitation',pool:'omega',status:'recruiting',participants:['42'],capacity:5}]}}},escapeHtml:value=>String(value??''),geographyBodyIcon:()=>'',geographyBodyLabel:body=>body.kind,titleCase:value=>value,document:{getElementById:id=>id==='reach-system-intel'?host:null}};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function geographySystemOverviewHtml('),html.indexOf('function geographySectorPanelHtml(')),context);
+context.state.auth={authenticated:true};
+context.geographyObjectivesHtml=()=>'';
+host.innerHTML=context.geographySystemOverviewHtml(context.state.geography.systems[0],true);
+assert.match(host.innerHTML,/Hive spires and transit vaults/);
+assert.match(host.innerHTML,/1 Vanilla \/ 1 Omega \/ 1 available/);
+assert.match(host.innerHTML,/1 recruiting \/ 0 locked/);
+assert.match(host.innerHTML,/data-war-strike="v"/);assert.match(host.innerHTML,/data-war-strike="o"/);
+assert.match(host.innerHTML,/Non-combat location/);assert.match(host.innerHTML,/No deployments assigned/);
+assert.equal((host.innerHTML.match(/class="system-world-briefing"/g)||[]).length,2);
+context.warView.data=null;
+const offline=context.geographyBrowseDetailsHtml(context.state.geography.systems[0]);
+assert.match(offline,/Hive spires and transit vaults/);assert.match(offline,/Vhaloris/);
+assert.match(offline,/Live strike information unavailable/);assert.doesNotMatch(offline,/0 Vanilla|None assigned/);
+context.warView.planet='world';
+const planet=context.geographyBrowseDetailsHtml(context.state.geography.systems[0]);
+assert.match(planet,/aria-label="Planet details"/);assert.match(planet,/Hive spires and transit vaults/);
+assert.doesNotMatch(html,/reach-system-intel|refreshSystemIntel/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for authenticated map initialization")
+def test_disconnected_campaign_panel_keeps_static_system_and_planet_information():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8'),geography=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const system=geography.systems.find(item=>item.name==='Penumbral Choir');
+const c={state:{auth:{authenticated:true},selectedSector:system.sectorId,selectedSystem:system.id,reachMapLevel:'system',geography},warView:{data:null,error:'Campaign connection unavailable. Map browsing is still available.',subsector:system.sectorId,planet:''},escapeHtml:value=>String(value??''),titleCase:value=>value,geographyBodyIcon:()=>'',geographyBodyLabel:body=>body.kind,geographyObjectivesHtml:()=>'',document:{addEventListener:()=>{}}};
+vm.createContext(c);
+vm.runInContext(html.slice(html.indexOf('function geographySystemDirectoryHtml('),html.indexOf('function geographySectorPanelHtml(')),c);
+vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('function refreshWarConsole()')),c);
+let markup=c.warConsoleHtml();
+for(const name of ['Sancta Liora','Kethrys','Calyx'])assert.match(markup,new RegExp(name));
+assert.match(markup,/Campaign connection unavailable/);assert.match(markup,/Primary star/);
+assert.match(markup,/Live strike information unavailable/);
+assert.doesNotMatch(markup,/data-war-action="join"|data-war-action="commit"|0 Vanilla/);
+c.warView.planet=geography.bodies.find(body=>body.systemId===system.id&&body.name==='Calyx').id;
+markup=c.warConsoleHtml();assert.match(markup,/aria-label="Planet details"/);assert.match(markup,/Calyx/);
+c.state.auth.authenticated=false;c.warView.planet='';markup=c.warConsoleHtml();
+assert.match(markup,/Sign in/);assert.match(markup,/Sancta Liora/);assert.match(markup,/Kethrys/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html"), str(server.ROOT / "data" / "reach_geography.json")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for authenticated map initialization")
@@ -1829,7 +2001,8 @@ const html=fs.readFileSync(process.argv[1],'utf8');
 let loads=0,focused=null;
 const makeInput=()=>({value:'',selectionStart:0,selectionEnd:0,tagName:'INPUT',dataset:{},hasAttribute:name=>name==='data-war-reversal-reason',getAttribute:name=>name==='data-war-reversal-reason'?'':null,focus(){focused=this;},setSelectionRange(start,end){this.selectionStart=start;this.selectionEnd=end;}});
 let input=makeInput();input.value='Verified duplicate credit';input.selectionStart=4;input.selectionEnd=8;focused=input;
-const panel={querySelectorAll:()=>[input],set outerHTML(value){input=makeInput();}};
+let section={open:true,getAttribute:()=> 'orders'};
+const panel={querySelectorAll:selector=>selector==='details[open]'?(section.open?[section]:[]):selector==='details'?[section]:[input],set outerHTML(value){input=makeInput();section={open:false,getAttribute:()=> 'orders'};}};
 const context={state:{page:'reach',geography:{sectors:[]}},warView:{busy:false,data:{}},
  document:{visibilityState:'visible',get activeElement(){return focused;},querySelector:()=>null,querySelectorAll:()=>[],getElementById:identity=>identity==='war-console'?panel:{}},
  loadReach:async()=>{loads++;},warConsoleHtml:()=>'<section></section>',renderReach:()=>{throw Error('Canvas remounted');},updateStatusBadge:()=>{},titleCase:value=>value};
@@ -1839,6 +2012,7 @@ vm.runInContext(html.slice(html.indexOf('async function refreshReach()'),html.in
 (async()=>{
  await context.refreshReach();
  assert.equal(loads,1);assert.equal(input.value,'Verified duplicate credit');
+ assert.equal(section.open,true);
  assert.equal(focused,input);assert.equal(input.selectionStart,4);assert.equal(input.selectionEnd,8);
  focused={dataset:{warPool:'omega'},closest:()=>({})};
  await context.refreshReach();await context.refreshReach();assert.equal(loads,3);
