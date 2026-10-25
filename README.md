@@ -117,6 +117,19 @@ and this pinned dependency have explicit same-origin asset routes; no CDN is req
 
 ### Strike Preview And Surface View
 
+Hover tags come from the authored Deathwatch War Atlas catalogue, not raw objective
+IDs: Exterminatus is ANNIHILATION, Tip of the Spear is ASSAULT, and Cleansing Flame
+is PURIFICATION. Catalogue regeneration preserves the optional tag field; older
+catalogues use a readable general/specialist fallback. Board generation is unchanged.
+
+The strike panel puts the primary Join/Withdraw/Report action and filled-slot count
+first, followed by a fixed three- or five-place roster. Positive, negative and mandatory
+faction-conversion modifiers have separate labelled groups and canonical effects.
+Briefing/evidence/adaptation/reference/cancellation are secondary. Available actions
+and specialist coverage are provided by the bot using the same validator as actual
+signup, which is rechecked transactionally. A blocked slot explains why; Join and
+Withdraw are one-click commands with in-progress feedback and preserved keyboard focus.
+
 Hovering or keyboard-focusing a strike in the planet panel rotates to its marker;
 it does not zoom, select or expose signup controls. Hovering a marker on the globe
 shows an animated green leader to a small image-backed card containing only the

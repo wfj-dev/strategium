@@ -71,6 +71,8 @@ def validate_objective_catalog(payload: Any) -> dict[str, Any]:
                 raise ValueError(f"objective {identity} has invalid or duplicate setting")
             seen.add(setting)
         objective = {"id": identity, "name": _text(raw.get("name"), "objective name"), "category": category, "settings": settings.copy()}
+        if raw.get("tag") is not None:
+            objective["tag"] = _text(raw["tag"], "objective tag")
         if category == "specialist":
             objective["track"] = _text(raw.get("track"), "objective track", 60)
         objectives.append(objective)

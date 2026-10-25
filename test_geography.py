@@ -166,14 +166,14 @@ def test_imperial_world_classes_survive_validation():
 
 def test_objective_import_uses_only_authored_expression_settings():
     cards = [
-        {"id": "purge", "name": "Purge", "spec": False, "expressions": [
+        {"id": "purge", "name": "Purge", "tag": "PURIFICATION", "spec": False, "expressions": [
             {"settings": ["hive|ice", "research|ice"]}, {"settings": ["hive|ice"]},
         ]},
         {"id": "study", "name": "Study", "spec": True, "track": "lib", "rank": "Ignored", "expressions": []},
     ]
     atlas = '<script>throw new Error("must not execute")</script><script type="application/json" id="cards-data">' + json.dumps({"cards": cards}) + '</script>'
     assert import_objectives(atlas) == {"schemaVersion": 1, "objectives": [
-        {"id": "purge", "name": "Purge", "category": "general", "settings": ["hive|ice", "research|ice"]},
+        {"id": "purge", "name": "Purge", "tag": "PURIFICATION", "category": "general", "settings": ["hive|ice", "research|ice"]},
         {"id": "study", "name": "Study", "category": "specialist", "track": "Librarius", "settings": []},
     ]}
 

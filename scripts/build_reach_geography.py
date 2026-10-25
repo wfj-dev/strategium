@@ -90,6 +90,8 @@ def import_objectives(atlas: str) -> dict[str, Any]:
         }
         if card["spec"]:
             objective["track"] = tracks[card["track"]]
+        if card.get("tag"):
+            objective["tag"] = card["tag"]
         objectives.append(objective)
     return validate_objective_catalog({"schemaVersion": 1, "objectives": objectives})
 

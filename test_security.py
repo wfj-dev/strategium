@@ -40,12 +40,48 @@ def test_planet_renderer_modules_are_local_allowlisted_javascript(local_site, pa
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
-def test_strike_region_manifest_is_empty_and_region_paths_are_constrained(local_site):
+def test_strike_region_manifest_and_region_paths_are_constrained(local_site):
     with urllib.request.urlopen(local_site + "/assets/strike-regions/manifest.json") as response:
         assert response.headers.get_content_type() == "application/json"
-        assert json.loads(response.read()) == {"schemaVersion": 1, "regions": {}}
+        payload = json.loads(response.read())
+        assert payload == json.loads((server.ROOT / "data" / "strike_region_art.json").read_text())
+        assert payload["schemaVersion"] == 1
+        assert isinstance(payload["regions"], dict)
+        for planet in payload["regions"].values():
+            for filename in planet.get("objectives", {}).values():
+                assert re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,79}\.(?:webp|png|jpg|jpeg)", filename)
+                assert server._static_asset_path(f"/assets/strike-regions/{filename}").is_file()
     for path in ("/assets/strike-regions/../server.py", "/assets/strike-regions/nested/file.webp", "/assets/strike-regions/image.svg", "/assets/strike-regions/%2e%2e.png"):
         assert server._static_asset_path(path) is None
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
+def test_strike_signup_is_first_and_atlas_tags_modifiers_and_roster_are_clear():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8'),geo=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const offer={id:'one',planet_id:'world',name:'Exterminatus',objective_id:'exterminatus',briefing:'Complete the assigned operation.',aar_mission:'Ballistic Engine',aar_difficulty:'@Hard-Stratagem',pool:'vanilla',capacity:3,status:'available',participants:[],required_rank:'',viewer_signup:{can_join:true,reason:''},recipe:{positive:'Surplus',negatives:['Tsunami','Detonation Risk','Myopia'],forced:['Intelligence Lapse'],notes:['Adaptation notes.']}};
+const c={state:{auth:{authenticated:true},reachMapLevel:'strike',selectedSector:'alpha',selectedSystem:'system',geography:{...geo,sectors:[{id:'alpha',name:'Alpha'}],systems:[{id:'system',name:'Solenne Crown',sectorId:'alpha'}],bodies:[{id:'world',name:'Vhaloris',systemId:'system'}]}},warView:{busy:false,error:'',subsector:'alpha',planet:'world',strike:'one',pool:'vanilla',data:{actor:{id:'42',roles:['Watch Brother'],company_id:'1',active:true,watch_brother:true},campaigns:{},commitments:{},assignments:{},kill_teams:[],proposals:[],planets:[{id:'world',system_id:'system'}],boards:{world:[offer]},participant_names:{'42':'Brother Tester'},content:{stratagems:{Surplus:{description:'Carry twice as much Equipment.'}}}}},COMPANY_NAMES:{'1':'Primus'},escapeHtml:value=>String(value??''),titleCase:value=>value};
+vm.createContext(c);
+vm.runInContext(html.slice(html.indexOf('function objectiveDisplayTag('),html.indexOf('function showPlanetStrikePreview(')),c);
+vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('function refreshWarConsole()')),c);
+assert.equal(c.objectiveDisplayTag(offer),'ANNIHILATION');
+assert.equal(c.objectiveDisplayTag({objective_id:'vanguard'}),'ASSAULT');
+assert.equal(c.objectiveDisplayTag({objective_id:'unknown'}),'General objective');
+let markup=c.warConsoleHtml();
+assert(markup.indexOf('data-war-action="join"')<markup.indexOf('aria-label="Strike roster"'));
+assert(markup.indexOf('aria-label="Strike roster"')<markup.indexOf('aria-label="Strike modifiers"'));
+assert.equal((markup.match(/strike-slot-number/g)||[]).length,3);
+assert.match(markup,/Positive \/ 1/);assert.match(markup,/Negative \/ 3/);assert.match(markup,/Mandatory faction conversion \/ additional/);
+assert.match(markup,/Carry twice as much Equipment/);assert.match(markup,/ANNIHILATION/);
+offer.viewer_signup={can_join:false,reason:'The remaining slot must fulfill the required rank',specialist_fulfilled:false};offer.required_rank='Bladeguard';
+markup=c.warConsoleHtml();assert.match(markup,/data-war-action="join"[^>]*disabled/);assert.match(markup,/remaining slot/);
+offer.viewer_signup={can_join:true,reason:'',specialist_fulfilled:true};markup=c.warConsoleHtml();assert.match(markup,/Covered/);assert.doesNotMatch(markup,/Open \/ Bladeguard requirement/);
+offer.capacity=5;assert.equal((c.warConsoleHtml().match(/strike-slot-number/g)||[]).length,5);
+offer.status='locked';offer.participants=['42','43','44','45','46'];markup=c.warConsoleHtml();assert.match(markup,/data-war-action="report"/);assert.doesNotMatch(markup,/data-war-action="join"/);assert.match(markup,/Brother Tester \(You\)/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html"), str(server.ROOT / "data" / "reach_geography.json")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
@@ -1799,6 +1835,7 @@ const context={
  showSystemLevel:()=>{throw Error('Same-system strike must not refocus the whole system');},focusGeographySystemCamera:()=>{throw Error('Must focus the planet');}
 };
 context.geographySystemOverviewHtml=()=>'';
+context.objectiveDisplayTag=()=> 'General objective';
 context.geographyBodyLabel=body=>body.name;
 context.geographyObjectivesHtml=()=>'';
 context.openPlanetView=id=>{context.warView.planet=id;context.state.reachMapLevel='planet';context.state.reachCanvasCamera.focusBody(id);};

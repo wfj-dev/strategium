@@ -723,6 +723,31 @@
   .planet-preview-leader path { fill: none; stroke: var(--green); stroke-width: 1.5; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .35s ease; }
   .planet-preview-leader[data-drawn="true"] path { stroke-dashoffset: 0; }
   .strike-panel-back { margin-bottom: 14px; }
+  .strike-detail { min-width: 0; }
+  .strike-mission-line { margin: 0 0 10px; color: var(--white); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+  .strike-context { color: var(--green-dim); font-size: 11px; line-height: 1.6; }
+  .strike-action-bar { position: sticky; z-index: 6; top: -1px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px 12px; align-items: center; padding: 12px 0; background: #030906; border-bottom: 1px solid var(--border-dim); }
+  .strike-action-bar .btn-dossier-action { min-height: 44px; padding: 10px 18px; border-color: var(--gold); color: var(--gold); }
+  .strike-action-reason { grid-column: 1 / -1; margin: 0; color: var(--green-dim); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+  .strike-capacity { color: var(--white); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .strike-section { padding: 14px 0; border-bottom: 1px solid var(--border-dim); }
+  .strike-section h3 { margin: 0 0 10px; color: var(--gold); font-size: 12px; }
+  .strike-roster { display: grid; gap: 6px; list-style: none; padding: 0; margin: 0; }
+  .strike-roster li { display: flex; gap: 10px; align-items: center; min-height: 44px; padding: 7px 9px; background: rgba(79,214,122,.035); color: var(--white); font-size: 12px; overflow-wrap: anywhere; }
+  .strike-roster .empty { color: var(--green-dim); border: 1px dashed var(--border-dim); background: none; }
+  .strike-slot-number { flex: 0 0 18px; color: var(--green-dim); font-size: 10px; }
+  .strike-roster small { display: block; margin-top: 3px; color: var(--gold); font-size: 10px; }
+  .strike-modifier-group { margin: 12px 0; padding-left: 10px; border-left: 2px solid var(--green); }
+  .strike-modifier-group.negative { border-color: #d29374; }
+  .strike-modifier-group.forced { border-color: var(--gold); }
+  .strike-modifier-group h4 { margin: 0 0 8px; color: var(--green); font-size: 10px; letter-spacing: 0; }
+  .strike-modifier-group.negative h4 { color: #e1aa8f; }
+  .strike-modifier-group.forced h4 { color: var(--gold); }
+  .strike-modifier-row { margin: 8px 0; }
+  .strike-modifier-row strong { color: var(--white); font-size: 12px; }
+  .strike-modifier-row p { margin: 4px 0 0; color: var(--green-dim); font-size: 11px; line-height: 1.55; }
+  .strike-secondary summary { color: var(--green-dim); cursor: pointer; padding: 12px 0; font-size: 11px; }
+  .strike-secondary p { color: var(--green-dim); font-size: 11px; line-height: 1.65; overflow-wrap: anywhere; }
   @media (prefers-reduced-motion: reduce) { .planet-preview-leader path, .planet-region-art { transition: none; } }
   .war-system-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
   .war-system-facts div { min-width: 0; }
@@ -1076,7 +1101,8 @@
     transition: transform .28s cubic-bezier(.2,.72,.24,1), opacity .2s ease, visibility .28s;
   }
   .reach-map-shell.has-sector-panel .reach-sector-panel { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0); }
-  .reach-sector-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 14px 12px; border-bottom: 1px solid var(--border-dim); }
+  .reach-sector-panel-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 14px 12px; border-bottom: 1px solid var(--border-dim); }
+  .reach-sector-panel-head > div:first-child { flex: 1 1 170px; min-width: 0; }
   .reach-sector-panel-kicker { color: var(--green-faint); font-size: 8px; text-transform: uppercase; }
   .reach-sector-panel-title { margin: 3px 0 0; color: var(--white); font: 700 17px 'Cinzel', serif; overflow-wrap: anywhere; }
   .reach-sector-panel-meta { margin-top: 5px; color: var(--green-dim); font-size: 9px; line-height: 1.4; }
@@ -5757,6 +5783,11 @@ function hidePlanetStrikePreview() {
   if (leader) { leader.setAttribute("hidden", ""); leader.dataset.drawn = "false"; }
 }
 
+function objectiveDisplayTag(offer) {
+  const entry = state.geography?.objectiveCatalog?.objectives.find(objective => objective.id === offer.objective_id);
+  return entry?.tag || entry?.track || (offer.required_rank ? "Specialist objective" : "General objective");
+}
+
 function showPlanetStrikePreview(point) {
   if (!point || state.reachMapLevel !== "planet") { hidePlanetStrikePreview(); return; }
   const host = document.getElementById("reach-planet-stage");
@@ -5767,7 +5798,7 @@ function showPlanetStrikePreview(point) {
   if (card.dataset.strike !== point.id) {
     card.dataset.strike = point.id;
     card.querySelector("strong").textContent = offer.name;
-    card.querySelector("small").textContent = titleCase(offer.objective_id || (offer.required_rank ? "Specialist objective" : "General objective"));
+    card.querySelector("small").textContent = objectiveDisplayTag(offer);
     const body = state.geography.bodies.find(item => item.id === warView.planet);
     const image = card.querySelector("img");
     image.src = geographyBodyArtwork(body) || "/assets/map-icons/planet.webp";
@@ -5847,7 +5878,11 @@ async function syncPlanetView() {
   if (!host || !body) { if (planetView.id) closePlanetView(); return; }
   const artwork = geographyBodyArtwork(body);
   const offers = (warView.data?.boards[body.id] || []).filter(offer => (offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla")) === (warView.pool || "vanilla"));
-  if (planetView.id === body.id && planetView.loading) { await planetView.loading; return; }
+  if (planetView.id === body.id && planetView.loading) {
+    const generation = planetView.generation;
+    await planetView.loading;
+    if (generation !== planetView.generation || !host.isConnected) return;
+  }
   host.hidden = false;
   document.querySelector(".reach-map-shell")?.classList.add("planet-mode");
   document.getElementById("planet-stage-name").textContent = body.name;
@@ -5975,7 +6010,38 @@ function warConsoleHtml() {
     </div>`).join("") || `<p>No reports awaiting review.</p>`}
     <h3 class="tier-label">Strike credit corrections</h3><div class="reach-toolbar"><label>Settled strike to reverse<select class="reach-select" data-war-reversal>${(war.recent_results || []).filter(result => !result.reversed && !result.participants.includes(war.actor.id)).map(result => option(result.strike_id, `${result.mission} / AAR ${result.aar_id}`)).join("")}</select></label><label>Why reverse this credit?<input class="reach-select" data-war-reversal-reason maxlength="500"></label>${button("reverse", "Reverse strike credit")}</div>
   </section>` : "";
-  if (strikeMode) return `<section id="war-console" aria-label="Strike deployment"><button type="button" class="btn-dossier-action strike-panel-back" data-strike-back>Return to planet</button>${selectedStrike ? `<article class="war-strike"><span class="field-label">Strike briefing</span><h3>${escapeHtml(selectedStrike.name)}</h3><p>${escapeHtml(selectedStrike.briefing || "")}</p><p>${escapeHtml(selectedStrike.aar_mission)} / ${escapeHtml(selectedStrike.aar_difficulty || "")} / ${selectedStrike.capacity} players</p><p>${escapeHtml(titleCase(selectedStrike.status))} / ${selectedStrike.participants.length} of ${selectedStrike.capacity}</p><p>${escapeHtml(selectedStrike.required_rank || "No specialist requirement")}</p>${recipeHtml(selectedStrike.recipe)}<h4 class="tier-label">Roster</h4><ul>${selectedStrike.participants.map(identity => `<li>${escapeHtml(war.participant_names?.[identity] || identity)}${selectedStrike.specialist_id === identity ? " (required specialist)" : ""}</li>`).join("") || "<li>No signups yet.</li>"}</ul>${selectedStrike.attempt_id ? `<p>Strike ID: <code>${escapeHtml(selectedStrike.attempt_id)}</code></p>` : ""}<div class="tools">${!testing && ["available", "recruiting"].includes(selectedStrike.status) && (canParticipate || selectedStrike.participants.includes(war.actor.id)) ? button(selectedStrike.participants.includes(war.actor.id) ? "leave" : "join", selectedStrike.participants.includes(war.actor.id) ? "Withdraw" : "Join strike", `data-strike="${escapeHtml(selectedStrike.id)}" `) : ""}${!testing && ["locked", "deployed"].includes(selectedStrike.status) && selectedStrike.participants.includes(war.actor.id) ? button("report", "Report Completion", `data-strike="${escapeHtml(selectedStrike.id)}" `) : ""}${testing && selectedStrike.status === "available" ? button("simulate_completion", "Simulate Completion", `data-strike="${escapeHtml(selectedStrike.id)}" `) : ""}</div>${["locked", "deployed"].includes(selectedStrike.status) && (selectedStrike.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(selectedStrike.id)}" maxlength="300"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(selectedStrike.id)}" `)}` : ""}${!testing && !canParticipate ? `<p class="aar-upload-hint">The Watch Brother role and active membership are required for strike signup.</p>` : ""}</article>` : `<p>This strike is no longer available.</p>`}<div role="status" aria-live="polite">${escapeHtml(warView.error)}</div></section>`;
+  if (strikeMode) {
+    const offer = selectedStrike;
+    if (!offer) return `<section id="war-console" aria-label="Strike deployment"><button type="button" class="btn-dossier-action strike-panel-back" data-strike-back>Return to planet</button><p>This strike is no longer available.</p></section>`;
+    const joined = offer.participants.includes(war.actor.id);
+    const recruiting = ["available", "recruiting"].includes(offer.status);
+    const locked = ["locked", "deployed"].includes(offer.status);
+    const signup = offer.viewer_signup;
+    const canJoin = canParticipate && (signup ? signup.can_join === true : true);
+    let primary = "";
+    if (testing && offer.status === "available") primary = button("simulate_completion", "Simulate completion", `data-strike="${escapeHtml(offer.id)}" `);
+    else if (!testing && recruiting && joined) primary = button("leave", "Withdraw", `data-strike="${escapeHtml(offer.id)}" `);
+    else if (!testing && recruiting) primary = button("join", "Join strike", `data-strike="${escapeHtml(offer.id)}" `, !canJoin);
+    else if (!testing && locked && joined) primary = button("report", "Report completion", `data-strike="${escapeHtml(offer.id)}" `);
+    const reason = testing ? "Test simulation / no real rewards" : recruiting && !joined ? signup?.reason || (!canParticipate ? "Active membership and the Watch Brother role are required." : "") : offer.status === "review_pending" ? "Evidence awaiting independent review." : locked ? "Roster locked" : "";
+    const recipe = offer.recipe;
+    const modifier = name => `<div class="strike-modifier-row"><strong>${escapeHtml(name)}</strong>${war.content?.stratagems?.[name]?.description ? `<p>${escapeHtml(war.content.stratagems[name].description)}</p>` : ""}</div>`;
+    const specialistCovered = !!offer.specialist_id || signup?.specialist_fulfilled === true;
+    const specialist = offer.required_rank ? `<p class="strike-context">Required specialist: <strong>${escapeHtml(offer.required_rank)}</strong>${specialistCovered ? " / Covered" : " / Needed"}</p>` : "";
+    return `<section id="war-console" aria-label="Strike deployment"><button type="button" class="btn-dossier-action strike-panel-back" data-strike-back>Return to planet</button><article class="strike-detail">
+      <span class="field-label">${escapeHtml(objectiveDisplayTag(offer))}</span><p class="strike-mission-line">${escapeHtml(offer.aar_mission)} / ${escapeHtml(offer.aar_difficulty || "")}</p>
+      <div class="strike-action-bar">${primary || `<span class="strike-context">${escapeHtml(titleCase(offer.status))}</span>`}<span class="strike-capacity">${offer.participants.length} / ${offer.capacity} joined</span>${reason ? `<p class="strike-action-reason">${escapeHtml(reason)}</p>` : ""}</div>
+      <section class="strike-section" aria-label="Strike roster"><h3>Roster</h3>${specialist}<ol class="strike-roster">${Array.from({length: offer.capacity}, (_, index) => {
+        const identity = offer.participants[index];
+        return identity ? `<li><span class="strike-slot-number">${index + 1}</span><span>${escapeHtml(war.participant_names?.[identity] || identity)}${identity === war.actor.id ? " (You)" : ""}${offer.specialist_id === identity ? `<small>Required specialist</small>` : ""}</span></li>` : `<li class="empty"><span class="strike-slot-number">${index + 1}</span><span>${offer.required_rank && !specialistCovered && index === offer.capacity - 1 ? `Open / ${escapeHtml(offer.required_rank)} requirement` : "Open slot"}</span></li>`;
+      }).join("")}</ol></section>
+      <section class="strike-section" aria-label="Strike modifiers"><h3>Modifiers</h3>${recipe ? `<div class="strike-modifier-group positive"><h4>Positive / 1</h4>${modifier(recipe.positive)}</div><div class="strike-modifier-group negative"><h4>Negative / ${recipe.negatives.length}</h4>${recipe.negatives.map(modifier).join("")}</div>${recipe.forced?.length ? `<div class="strike-modifier-group forced"><h4>Mandatory faction conversion / additional</h4>${recipe.forced.map(modifier).join("")}</div>` : ""}` : `<p class="strike-context">No additional stratagem recipe assigned.</p>`}</section>
+      ${offer.briefing ? `<section class="strike-section"><h3>Briefing</h3><p class="strike-context">${escapeHtml(offer.briefing)}</p></section>` : ""}
+      ${recipe ? `<details class="strike-secondary" data-war-section="strike-evidence"><summary>Evidence and adaptation</summary><p>Evidence must show the assigned stratagems and operation result. Independent staff approval is required.</p>${(recipe.notes || []).map(note => `<p>${escapeHtml(note)}</p>`).join("")}</details>` : ""}
+      ${offer.attempt_id ? `<details class="strike-secondary"><summary>Strike reference</summary><p><code>${escapeHtml(offer.attempt_id)}</code></p></details>` : ""}
+      ${locked && (joined || master) ? `<details class="strike-secondary" data-war-section="strike-cancel"><summary>Cancel roster</summary><label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}</details>` : ""}
+    </article><div role="status" aria-live="polite">${escapeHtml(warView.error)}</div></section>`;
+  }
   return `<section id="war-console" aria-label="Galactic War command">
     <div class="reach-toolbar">
       ${selectedSystem ? `<span>${escapeHtml(state.geography?.sectors.find(sector => sector.id === sectorId)?.name || sectorId)}</span>` : select("subsector_id", "Subsector", (state.geography?.sectors || []).map(sector => option(sector.id, sector.name, sector.id === sectorId)).join(""))}
@@ -6030,6 +6096,8 @@ function refreshWarConsole() {
   const field = focused?.dataset?.warField;
   const pool = focused?.dataset?.warPool;
   const navigation = focused?.dataset?.warNav;
+  const action = focused?.dataset?.warAction;
+  const actionStrike = focused?.dataset?.strike;
   const console = document.getElementById("war-console");
   const strikeScroll = console?.querySelector?.(".war-strike-list")?.scrollTop || 0;
   const openSections = [...(console?.querySelectorAll?.("details[open]") || [])].map(section => section.getAttribute("data-war-section") || section.getAttribute("data-world-intel") || section.querySelector("summary")?.textContent);
@@ -6049,6 +6117,9 @@ function refreshWarConsole() {
     [...document.querySelectorAll("[data-war-field], [data-war-pool], [data-war-nav]")].find(control =>
       field ? control.dataset.warField === field : pool ? control.dataset.warPool === pool : control.dataset.warNav === navigation
     )?.focus({preventScroll: true});
+  }
+  if (["join", "leave"].includes(action)) {
+    [...document.querySelectorAll("[data-war-action]")].find(control => control.dataset.strike === actionStrike && ["join", "leave", "report"].includes(control.dataset.warAction))?.focus({preventScroll: true});
   }
   const controls = [...(document.getElementById("war-console")?.querySelectorAll?.("input, textarea, select") || [])];
   drafts.forEach(draft => {
@@ -6251,9 +6322,14 @@ document.addEventListener("click", async event => {
       return;
     }
   }
+  const restoreSignupFocus = ["join", "leave"].includes(payload.action) && document.activeElement === button;
   warView.busy = true;
   ++warView.requestSequence;
   button.disabled = true;
+  if (["join", "leave"].includes(payload.action)) {
+    button.textContent = payload.action === "join" ? "Joining..." : "Withdrawing...";
+    button.setAttribute("aria-busy", "true");
+  }
   document.querySelectorAll("[data-war-field], [data-war-pool]").forEach(control => { control.disabled = true; });
   try {
     const response = await fetch(apiUrl("/api/war"), { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Token": state.auth.csrf || "" }, body: JSON.stringify(payload) });
@@ -6267,7 +6343,10 @@ document.addEventListener("click", async event => {
       sector.status = campaign?.status === "contested" ? "critical" : campaign?.status || "secure";
     }
   } catch (error) { warView.error = error.message; }
-  finally { warView.busy = false; refreshWarConsole(); updateStatusBadge(); }
+  finally {
+    warView.busy = false; refreshWarConsole(); updateStatusBadge();
+    if (restoreSignupFocus) [...document.querySelectorAll("[data-war-action]")].find(control => control.dataset.strike === payload.strike_id && ["join", "leave", "report"].includes(control.dataset.warAction))?.focus({preventScroll: true});
+  }
 });
 
 function previewPlanetStrike(event) {

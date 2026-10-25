@@ -30,7 +30,8 @@
         "hive|jungle",
         "hive|starship",
         "hive|underhive"
-      ]
+      ],
+      "tag": "PURIFICATION"
     },
     {
       "id": "specimen",
@@ -62,7 +63,8 @@
         "research|ice",
         "research|industrial",
         "research|jungle"
-      ]
+      ],
+      "tag": "EXCISION"
     },
     {
       "id": "relic",
@@ -93,7 +95,8 @@
         "research|desert",
         "research|jungle",
         "research|underhive"
-      ]
+      ],
+      "tag": "RECOVERY"
     },
     {
       "id": "decap",
@@ -125,7 +128,8 @@
         "research|jungle",
         "research|starship",
         "research|warzone"
-      ]
+      ],
+      "tag": "ELIMINATION"
     },
     {
       "id": "hold",
@@ -156,7 +160,8 @@
         "research|ice",
         "research|starship",
         "research|warzone"
-      ]
+      ],
+      "tag": "COMMUNICATIONS"
     },
     {
       "id": "escort",
@@ -187,7 +192,8 @@
         "research|industrial",
         "research|starship",
         "research|underhive"
-      ]
+      ],
+      "tag": "ESCORT"
     },
     {
       "id": "sabotage",
@@ -219,7 +225,8 @@
         "hive|starship",
         "research|industrial",
         "research|underhive"
-      ]
+      ],
+      "tag": "DEMOLITION"
     },
     {
       "id": "exterminatus",
@@ -251,7 +258,8 @@
         "hive|ice",
         "research|desert",
         "research|warzone"
-      ]
+      ],
+      "tag": "ANNIHILATION"
     },
     {
       "id": "auspex",
@@ -283,7 +291,8 @@
         "forge|underhive",
         "hive|underhive",
         "hive|warzone"
-      ]
+      ],
+      "tag": "TRIANGULATION"
     },
     {
       "id": "lost",
@@ -314,7 +323,8 @@
         "hive|underhive",
         "research|asteroid",
         "research|desert"
-      ]
+      ],
+      "tag": "RESCUE"
     },
     {
       "id": "vanguard",
@@ -330,7 +340,8 @@
         "feral|jungle",
         "forge|ice"
       ],
-      "track": "Hall of Blades"
+      "track": "Hall of Blades",
+      "tag": "ASSAULT"
     },
     {
       "id": "champion",
@@ -347,7 +358,8 @@
         "hive|underhive",
         "hive|warzone"
       ],
-      "track": "Hall of Blades"
+      "track": "Hall of Blades",
+      "tag": "CHALLENGE"
     },
     {
       "id": "forlorn",
@@ -362,7 +374,8 @@
         "feudal|desert",
         "forge|industrial"
       ],
-      "track": "Hall of Blades"
+      "track": "Hall of Blades",
+      "tag": "REARGUARD"
     },
     {
       "id": "judgment",
@@ -377,7 +390,8 @@
         "feral|warzone",
         "feudal|industrial"
       ],
-      "track": "Hall of Blades"
+      "track": "Hall of Blades",
+      "tag": "EXECUTION"
     },
     {
       "id": "rally",
@@ -392,7 +406,8 @@
         "forge|underhive",
         "forge|warzone"
       ],
-      "track": "Reclusiam"
+      "track": "Reclusiam",
+      "tag": "MUSTER"
     },
     {
       "id": "unbowed",
@@ -408,7 +423,8 @@
         "hive|starship",
         "research|warzone"
       ],
-      "track": "Reclusiam"
+      "track": "Reclusiam",
+      "tag": "LAST STAND"
     },
     {
       "id": "corruption",
@@ -423,7 +439,8 @@
         "feudal|industrial",
         "forge|underhive"
       ],
-      "track": "Reclusiam"
+      "track": "Reclusiam",
+      "tag": "HERESY"
     },
     {
       "id": "vivisection",
@@ -439,7 +456,8 @@
         "research|underhive",
         "research|warzone"
       ],
-      "track": "Apothecarion"
+      "track": "Apothecarion",
+      "tag": "VIVISECTION"
     },
     {
       "id": "geneseed",
@@ -455,7 +473,8 @@
         "death|warzone",
         "hive|desert"
       ],
-      "track": "Apothecarion"
+      "track": "Apothecarion",
+      "tag": "GENE-SEED"
     },
     {
       "id": "contagion",
@@ -470,7 +489,8 @@
         "feudal|jungle",
         "research|jungle"
       ],
-      "track": "Apothecarion"
+      "track": "Apothecarion",
+      "tag": "CONTAINMENT"
     },
     {
       "id": "psyhunt",
@@ -485,7 +505,8 @@
         "research|ice",
         "research|jungle"
       ],
-      "track": "Librarius"
+      "track": "Librarius",
+      "tag": "DIVINATION"
     },
     {
       "id": "archive",
@@ -501,7 +522,8 @@
         "hive|underhive",
         "research|asteroid"
       ],
-      "track": "Librarius"
+      "track": "Librarius",
+      "tag": "PROSCRIPTION"
     },
     {
       "id": "veil",
@@ -516,7 +538,8 @@
         "hive|asteroid",
         "research|asteroid"
       ],
-      "track": "Librarius"
+      "track": "Librarius",
+      "tag": "BANISHMENT"
     },
     {
       "id": "salvage",
@@ -533,7 +556,8 @@
         "forge|jungle",
         "hive|industrial"
       ],
-      "track": "Armory"
+      "track": "Armory",
+      "tag": "RESTORATION"
     },
     {
       "id": "archeo",
@@ -548,7 +572,8 @@
         "hive|ice",
         "research|desert"
       ],
-      "track": "Armory"
+      "track": "Armory",
+      "tag": "EXCAVATION"
     },
     {
       "id": "awaken",
@@ -562,7 +587,8 @@
         "forge|starship",
         "hive|starship"
       ],
-      "track": "Armory"
+      "track": "Armory",
+      "tag": "AWAKENING"
     },
     {
       "id": "knife",
@@ -577,7 +603,8 @@
         "research|desert",
         "research|industrial"
       ],
-      "track": "Black Vault"
+      "track": "Black Vault",
+      "tag": "ASSASSINATION"
     },
     {
       "id": "net",
@@ -593,7 +620,8 @@
         "feudal|asteroid",
         "feudal|ice"
       ],
-      "track": "Black Vault"
+      "track": "Black Vault",
+      "tag": "ENCIRCLEMENT"
     },
     {
       "id": "capture",
@@ -608,7 +636,8 @@
         "research|starship",
         "research|underhive"
       ],
-      "track": "Black Vault"
+      "track": "Black Vault",
+      "tag": "CAPTURE"
     }
   ]
 }
