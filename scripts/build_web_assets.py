@@ -56,8 +56,8 @@ def build_pauldron(name: str) -> Path:
 
 
 def build_map_icons() -> None:
-    import numpy as np
     import cv2
+    import numpy as np
 
     sheet = Image.open(ASSETS / "40k map icons.webp").convert("RGBA")
     output = WEB / "map-icons"
@@ -120,8 +120,8 @@ def build_planet_art() -> dict[str, list[str]]:
 
 
 def build_galactic_assets() -> dict:
-    import numpy as np
     import cv2
+    import numpy as np
 
     output = WEB / "galactic-map"
     output.mkdir(parents=True, exist_ok=True)
@@ -265,6 +265,8 @@ def main() -> None:
     if args.galactic_map_only:
         build_galactic_assets()
         return
+    import numpy as np
+
     build_planet_art()
     for source in pauldron_sources():
         _save(source, WEB / "pauldrons" / f"{source.stem}.webp", max_size=(192, 192))

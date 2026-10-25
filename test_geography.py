@@ -103,6 +103,32 @@ def test_strike_region_builder_matches_catalogue_and_preserves_source_art(tmp_pa
     assert result["regions"]["calyx"]["objectives"]["psyhunt"] == "research-ice-psyhunt.webp"
 
 
+def test_full_asset_build_imports_numpy_for_sparse_fortress_layers(tmp_path, monkeypatch):
+    from PIL import Image
+    from scripts import build_web_assets as builder
+
+    assets = tmp_path / "assets"
+    fortress = assets / "Jericho 2.0 Map"
+    fortress.mkdir(parents=True)
+    base = Image.new("RGBA", (16, 16), (20, 40, 30, 255))
+    base.save(fortress / "0 - Base Map.png")
+    layer = base.copy()
+    layer.putpixel((8, 8), (180, 80, 40, 255))
+    layer.save(fortress / "1 - Fortress.png")
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    monkeypatch.setattr(builder, "ASSETS", assets)
+    monkeypatch.setattr(builder, "WEB", assets / "web")
+    monkeypatch.setattr(builder, "RANK_CARDS_SOURCE_DIR", tmp_path / "no-rank-cards")
+    monkeypatch.setattr(builder, "build_planet_art", lambda: {})
+    monkeypatch.setattr(builder, "pauldron_sources", lambda: [])
+    monkeypatch.setattr(builder, "_save", lambda *args, **kwargs: None)
+    monkeypatch.setattr("sys.argv", ["build_web_assets.py"])
+    builder.main()
+    with Image.open(fortress / "1 - Fortress.webp") as generated:
+        assert generated.getpixel((0, 0))[3] == 0
+        assert generated.getpixel((8, 8))[3] == 255
+
+
 def test_planet_art_validation_preserves_pairings_and_rejects_untrusted_paths():
     payload = _sample_geography()
     payload["planetArt"] = {"hive|underhive": ["hive-underhive-1.webp"]}
