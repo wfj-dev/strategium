@@ -184,13 +184,75 @@ def build_galactic_assets() -> dict:
     return geometry
 
 
+def build_strike_region_art() -> dict:
+    geography = json.loads((ROOT / "data" / "reach_geography.json").read_text(encoding="utf-8"))
+    def normalize(value: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", value.casefold())
+    bodies = {normalize(body["name"]): body for body in geography["bodies"] if body.get("kind") != "star"}
+    catalogue = geography["objectiveCatalog"]["objectives"]
+    objectives = {normalize(entry["name"]): entry["id"] for entry in catalogue}
+    world_aliases = {"civilized": "civilised", "researchstation": "research"}
+    biome_aliases = {"wastelandwarzone": "warzone", "starshipspacehulk": "starship", "lifelessasteroid": "asteroid"}
+    def world_key(value):
+        value = normalize(value).removesuffix("world")
+        return world_aliases.get(value, value)
+
+    sources = [source for source in sorted((ASSETS / "galactic map planets").rglob("*.png")) if source.parent.name == "Subsector 29 - Objective Images"]
+    setting_sources = set((ASSETS / "Deathwatch Objective Images (World Type - Biome - Objective)").glob("*.png"))
+    sources.extend(sorted(setting_sources))
+    if not sources:
+        raise FileNotFoundError("No strike objective artwork found")
+    manifest = {"schemaVersion": 1, "regions": {}}
+    jobs = []
+    for source in sources:
+        if source in setting_sources:
+            parts = source.stem.split(" - ", 2)
+            if len(parts) != 3:
+                raise ValueError(f"Unrecognized strike artwork filename: {source.name}")
+            world = world_key(parts[0])
+            biome = biome_aliases.get(normalize(parts[1]), normalize(parts[1]))
+            objective_id = objectives.get(normalize(parts[2]))
+            contract = next((entry for entry in catalogue if entry["id"] == objective_id), None)
+            if contract is None or f"{world}|{biome}" not in contract.get("settings", []):
+                raise ValueError(f"Unsupported Atlas setting/objective in strike artwork: {source.name}")
+            targets = [body for body in bodies.values() if world_key(body.get("kind", "")) == world and normalize(body.get("biome", "")) == biome]
+            filename = f"{world}-{biome}-{objective_id}.webp"
+        else:
+            match = re.fullmatch(r"\d{2}-\d{2} (.+?) - (.+?) - (.+)", source.stem)
+            if not match:
+                raise ValueError(f"Unrecognized strike artwork filename: {source.name}")
+            body = bodies.get(normalize(match[1]))
+            objective_id = objectives.get(normalize(match[3]))
+            if body is None or objective_id is None:
+                raise ValueError(f"Unknown planet or objective in strike artwork: {source.name}")
+            targets = [body]
+            filename = f"{body['id']}-{objective_id}.webp"
+        for body in targets:
+            entries = manifest["regions"].setdefault(body["id"], {"objectives": {}})["objectives"]
+            if objective_id in entries:
+                raise ValueError(f"Duplicate strike artwork for {body['name']} / {objective_id}")
+            entries[objective_id] = filename
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,79}\.webp", filename):
+            raise ValueError("Strike artwork output name is not safe")
+        jobs.append((source, WEB / "strike-regions" / filename))
+    for source, target in jobs:
+        _save(source, target, max_size=(2560, 1440), quality=88)
+    (ROOT / "data" / "strike_region_art.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(f"Built {len(jobs)} strike regions for {len(manifest['regions'])} planets")
+    return manifest
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--galactic-map-only", action="store_true")
     parser.add_argument("--map-icons-only", action="store_true")
     parser.add_argument("--planet-art-only", action="store_true")
+    parser.add_argument("--strike-region-art-only", action="store_true")
     parser.add_argument("--pauldron", help="Build only the named Chapter pauldron thumbnail")
     args = parser.parse_args()
+    if args.strike_region_art_only:
+        build_strike_region_art()
+        return
     if args.planet_art_only:
         build_planet_art()
         return

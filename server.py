@@ -693,6 +693,7 @@ def _static_asset_path(path: str) -> Path | None:
         OXBLOOD_CURSOR_URL: OXBLOOD_CURSOR_PATH,
         "/assets/planet-view.mjs": WEB_ASSETS_DIR / "planet-view.mjs",
         "/assets/vendor/three.module.min.js": WEB_ASSETS_DIR / "vendor" / "three.module.min.js",
+        "/assets/strike-regions/manifest.json": ROOT / "data" / "strike_region_art.json",
         FORTRESS_MAP_URL: FORTRESS_MAP_PATH,
         FORTRESS_MAP_WEBP_URL: FORTRESS_MAP_WEBP_PATH,
         REACH_BACKGROUND_WEBP_URL: REACH_BACKGROUND_WEBP_PATH,
@@ -702,6 +703,11 @@ def _static_asset_path(path: str) -> Path | None:
     }
     if path in fixed:
         return _existing(fixed[path])
+    if path.startswith("/assets/strike-regions/"):
+        filename = path.removeprefix("/assets/strike-regions/")
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,79}\.(?:webp|png|jpg|jpeg)", filename):
+            return None
+        return _existing(WEB_ASSETS_DIR / "strike-regions" / filename)
     if path.startswith("/assets/planets/"):
         filename = path.removeprefix("/assets/planets/")
         if not re.fullmatch(r"(?:hive|forge|agri|civilised|feral|feudal|death|dead|cemetery|research|research_station)-(?:jungle|desert|ice|industrial|warzone|underhive|starship|asteroid)-(?:[1-9]|1[0-9]|20)\.webp", filename):
@@ -1049,7 +1055,7 @@ class StrategiumHandler(BaseHTTPRequestHandler):
         if path is None:
             self.send_error(HTTPStatus.NOT_FOUND)
             return
-        mime = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".mp3": "audio/mpeg", ".mjs": "text/javascript", ".js": "text/javascript"}[path.suffix]
+        mime = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".mp3": "audio/mpeg", ".mjs": "text/javascript", ".js": "text/javascript", ".json": "application/json", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}[path.suffix]
         stat = path.stat()
         modified = int(stat.st_mtime)
         try:

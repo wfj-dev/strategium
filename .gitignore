@@ -31,6 +31,7 @@ __pycache__
 data/*
 !data/reach_geography.json
 !data/reach_objectives.json
+!data/strike_region_art.json
 # Python/test/runtime artifacts
 .pytest_cache/
 .ruff_cache/

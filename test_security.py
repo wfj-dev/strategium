@@ -40,6 +40,38 @@ def test_planet_renderer_modules_are_local_allowlisted_javascript(local_site, pa
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
+def test_strike_region_manifest_is_empty_and_region_paths_are_constrained(local_site):
+    with urllib.request.urlopen(local_site + "/assets/strike-regions/manifest.json") as response:
+        assert response.headers.get_content_type() == "application/json"
+        assert json.loads(response.read()) == {"schemaVersion": 1, "regions": {}}
+    for path in ("/assets/strike-regions/../server.py", "/assets/strike-regions/nested/file.webp", "/assets/strike-regions/image.svg", "/assets/strike-regions/%2e%2e.png"):
+        assert server._static_asset_path(path) is None
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
+def test_strike_region_art_lookup_is_local_and_marker_hover_does_not_select():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8'),moduleSource=fs.readFileSync(process.argv[2],'utf8');
+const c={};vm.createContext(c);
+vm.runInContext(html.slice(html.indexOf('function strikeRegionArtwork('),html.indexOf('async function loadStrikeRegionArtwork(')),c);
+const manifest={schemaVersion:1,regions:{vhaloris:{default:'vhaloris-default.webp',objectives:{purge:'vhaloris-purge.jpg'}}}};
+assert.equal(c.strikeRegionArtwork('vhaloris',{objective_id:'purge'},manifest),'/assets/strike-regions/vhaloris-purge.jpg');
+assert.equal(c.strikeRegionArtwork('vhaloris',{objective_id:'other'},manifest),'/assets/strike-regions/vhaloris-default.webp');
+assert.equal(c.strikeRegionArtwork('missing',{},manifest),'');
+manifest.regions.vhaloris.default='../server.py';assert.equal(c.strikeRegionArtwork('vhaloris',{},manifest),'');
+manifest.regions.vhaloris.default='https://example.com/art.webp';assert.equal(c.strikeRegionArtwork('vhaloris',{},manifest),'');
+const preview=html.slice(html.indexOf('function previewPlanetStrike('),html.indexOf('async function refreshReach('));
+assert.doesNotMatch(preview,/selectPlanetStrike|warView\.strike\s*=/);
+assert.match(moduleSource,/onPreview\?\.\(\{id: hoveredId/);
+assert.match(moduleSource,/onSelect\?\.\(marker.userData.id\)/);
+assert.match(html,/planet-preview-leader/);assert.match(html,/pathLength="1"/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html"), str(server.WEB_ASSETS_DIR / "planet-view.mjs")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
 def test_planet_strike_locations_are_stable_and_artwork_projection_is_retained():
     source = r"""
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
@@ -1770,6 +1802,7 @@ context.geographySystemOverviewHtml=()=>'';
 context.geographyBodyLabel=body=>body.name;
 context.geographyObjectivesHtml=()=>'';
 context.openPlanetView=id=>{context.warView.planet=id;context.state.reachMapLevel='planet';context.state.reachCanvasCamera.focusBody(id);};
+context.selectPlanetStrike=id=>{context.warView.strike=id;context.openPlanetView(context.warView.data.boards['world-b'].find(offer=>offer.id===id).planet_id);context.state.reachMapLevel='strike';context.refreshWarConsole();};
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
 let markup=context.warConsoleHtml();
@@ -1781,7 +1814,13 @@ assert.doesNotMatch(markup,/value="2-three"|value="system-b"/);
 (async()=>{
  await handlers.click({target:{closest:selector=>selector==='[data-war-strike]'?{dataset:{warStrike:'b',warStrikePlanet:'world-b'}}:null}});
  assert.deepEqual(focused,['world-b']);assert.equal(context.warView.planet,'world-b');assert.equal(context.warView.strike,'b');
- assert.doesNotMatch(consoleElement.outerHTML,/data-war-strike="a"/);assert.match(consoleElement.outerHTML,/data-war-strike="b"/);
+ assert.doesNotMatch(consoleElement.outerHTML,/data-war-strike="a"|data-war-strike="b"/);
+ assert.match(consoleElement.outerHTML,/aria-label="Strike deployment"/);
+ assert.match(consoleElement.outerHTML,/Roster/);assert.match(consoleElement.outerHTML,/data-war-action="join"/);
+ const selected=context.warView.strike;context.warView.strike='gone';
+ assert.match(context.warConsoleHtml(),/no longer available/);assert.doesNotMatch(context.warConsoleHtml(),/data-war-action="join"/);
+ context.warView.strike=selected;
+ context.state.reachMapLevel='planet';
  await handlers.change({target:{closest:()=>({dataset:{warField:'company_id'},value:'2'})}});
  markup=context.warConsoleHtml();assert.match(markup,/value="2-three"/);assert.doesNotMatch(markup,/value="1-one"/);
  assert.match(markup,/value="system-b"/);assert.doesNotMatch(markup,/value="system-a"/);

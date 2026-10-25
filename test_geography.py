@@ -68,6 +68,41 @@ def test_planet_art_groups_by_pairing_preserves_alpha_and_keeps_variants(tmp_pat
         builder.build_planet_art()
 
 
+def test_strike_region_builder_matches_catalogue_and_preserves_source_art(tmp_path, monkeypatch):
+    from PIL import Image
+    from scripts import build_web_assets as builder
+
+    sources = tmp_path / "assets" / "galactic map planets" / "Subsector 29 - Objective Images"
+    sources.mkdir(parents=True)
+    (tmp_path / "data").mkdir()
+    geography = {"bodies": [{"id": "calyx", "name": "Calyx", "kind": "research_station"}], "objectiveCatalog": {"objectives": [{"id": "psyhunt", "name": "Warp's Eye"}]}}
+    (tmp_path / "data" / "reach_geography.json").write_text(json.dumps(geography))
+    source = sources / "01-01 Calyx - Rho-838 - Warps Eye.png"
+    Image.new("RGB", (320, 180), (70, 90, 120)).save(source)
+    original = source.read_bytes()
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    monkeypatch.setattr(builder, "ASSETS", tmp_path / "assets")
+    monkeypatch.setattr(builder, "WEB", tmp_path / "assets" / "web")
+    result = builder.build_strike_region_art()
+    assert result["regions"]["calyx"]["objectives"] == {"psyhunt": "calyx-psyhunt.webp"}
+    assert source.read_bytes() == original
+    assert (builder.WEB / "strike-regions" / "calyx-psyhunt.webp").is_file()
+    duplicate = sources / "01-02 Calyx - Rho-999 - Warps Eye.png"
+    duplicate.write_bytes(original)
+    with pytest.raises(ValueError, match="Duplicate"):
+        builder.build_strike_region_art()
+    duplicate.unlink()
+    source.unlink()
+    setting_dir = builder.ASSETS / "Deathwatch Objective Images (World Type - Biome - Objective)"
+    setting_dir.mkdir()
+    (setting_dir / "Research World - Ice - Warps Eye.png").write_bytes(original)
+    geography["bodies"][0]["biome"] = "ice"
+    geography["objectiveCatalog"]["objectives"][0]["settings"] = ["research|ice"]
+    (tmp_path / "data" / "reach_geography.json").write_text(json.dumps(geography))
+    result = builder.build_strike_region_art()
+    assert result["regions"]["calyx"]["objectives"]["psyhunt"] == "research-ice-psyhunt.webp"
+
+
 def test_planet_art_validation_preserves_pairings_and_rejects_untrusted_paths():
     payload = _sample_geography()
     payload["planetArt"] = {"hive|underhive": ["hive-underhive-1.webp"]}

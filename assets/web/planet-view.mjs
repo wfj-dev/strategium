@@ -13,14 +13,14 @@ export function strikeLocation(planetId, strike) {
   };
 }
 
-export async function createPlanetView(host, {planet, artwork, strikes = [], onSelect}) {
+export async function createPlanetView(host, {planet, artwork, strikes = [], onSelect, onPreview}) {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({alpha: true, antialias: true, powerPreference: 'low-power'});
   } catch {
     host.dataset.renderer = 'fallback';
-    return {update() {}, focus() {}, dispose() {}};
+    return {update() {}, focus() {}, select: async () => true, overview() {}, dispose() {}};
   }
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
   renderer.setClearColor(0x000000, 0);
@@ -65,13 +65,16 @@ export async function createPlanetView(host, {planet, artwork, strikes = [], onS
   let targetYaw = 0, targetPitch = 0, frame = 0, disposed = false, loaded = false;
   let dragging = false, lastPoint = null, moved = 0, lastFrame = 0;
   let selectedId = '';
+  let hoveredId = '';
+  let baseDistance = 3.7, zoom = 1, targetZoom = 1, approach = null;
   const vector = location => new THREE.Vector3(Math.cos(location.latitude) * Math.sin(location.longitude), Math.sin(location.latitude), Math.cos(location.latitude) * Math.cos(location.longitude));
   const resize = () => {
     if (disposed) return;
     const width = Math.max(1, host.clientWidth), height = Math.max(1, host.clientHeight);
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
-    camera.position.z = camera.aspect < 1 ? 3.7 / Math.max(.65, camera.aspect) : 3.7;
+    baseDistance = camera.aspect < 1 ? 3.7 / Math.max(.65, camera.aspect) : 3.7;
+    camera.position.z = baseDistance / zoom;
     camera.updateProjectionMatrix();
   };
   const observer = new ResizeObserver(resize);
@@ -117,28 +120,53 @@ export async function createPlanetView(host, {planet, artwork, strikes = [], onS
     host.dataset.focusedStrike = identity;
     if (reducedMotion.matches) globe.rotation.set(targetPitch, targetYaw, 0, 'XYZ');
   }
+  function selectStrike(identity, closeUp = false) {
+    approach?.(false);
+    if (!markers.has(identity)) return Promise.resolve(false);
+    focus(identity);
+    targetZoom = closeUp ? 1.65 : 1.3;
+    if (reducedMotion.matches) zoom = targetZoom;
+    return new Promise(resolve => { approach = resolve; });
+  }
+  function overview() {
+    approach?.(false); approach = null;
+    targetZoom = 1;
+    if (reducedMotion.matches) zoom = 1;
+  }
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  function pick(event) {
+  function markerAt(event) {
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
     const hits = raycaster.intersectObjects([sphere, ...markers.values()], true);
     const hit = hits.find(entry => entry.object !== sphere);
-    if (!hit || hits[0].object === sphere) return;
-    const marker = hit.object.parent;
+    return !hit || hits[0].object === sphere ? null : hit.object.parent;
+  }
+  function pick(event) {
+    const marker = markerAt(event);
+    if (!marker) return;
+    hoveredId = ''; onPreview?.(null);
     focus(marker.userData.id);
     onSelect?.(marker.userData.id);
   }
   function down(event) {
     event.stopPropagation();
+    hoveredId = ''; onPreview?.(null);
+    if (targetZoom > 1) return;
     dragging = true; moved = 0;
     lastPoint = {x: event.clientX, y: event.clientY};
     renderer.domElement.setPointerCapture(event.pointerId);
   }
   function move(event) {
     event.stopPropagation();
-    if (!dragging) return;
+    if (!dragging) {
+      const marker = targetZoom > 1 ? null : markerAt(event);
+      hoveredId = marker?.userData.id || '';
+      renderer.domElement.style.cursor = hoveredId ? 'pointer' : 'grab';
+      if (!hoveredId) onPreview?.(null);
+      return;
+    }
     const dx = event.clientX - lastPoint.x, dy = event.clientY - lastPoint.y;
     moved += Math.abs(dx) + Math.abs(dy);
     targetYaw += dx * .007;
@@ -153,6 +181,7 @@ export async function createPlanetView(host, {planet, artwork, strikes = [], onS
     if (event.type === 'pointerup' && moved < 7) pick(event);
   }
   function keyboard(event) {
+    if (targetZoom > 1) return;
     const keys = {ArrowLeft: [-.18, 0], ArrowRight: [.18, 0], ArrowUp: [0, -.12], ArrowDown: [0, .12]};
     if (!keys[event.key]) return;
     event.preventDefault();
@@ -160,7 +189,7 @@ export async function createPlanetView(host, {planet, artwork, strikes = [], onS
     targetPitch = THREE.MathUtils.clamp(targetPitch + keys[event.key][1], -1.1, 1.1);
     if (reducedMotion.matches) globe.rotation.set(targetPitch, targetYaw, 0, 'XYZ');
   }
-  const events = {pointerdown: down, pointermove: move, pointerup: up, pointercancel: up, keydown: keyboard};
+  const events = {pointerdown: down, pointermove: move, pointerup: up, pointercancel: up, keydown: keyboard, pointerleave: () => { hoveredId = ''; onPreview?.(null); }};
   Object.entries(events).forEach(([name, handler]) => renderer.domElement.addEventListener(name, handler));
   function lost(event) {
     event.preventDefault(); host.dataset.renderer = 'fallback';
@@ -170,6 +199,8 @@ export async function createPlanetView(host, {planet, artwork, strikes = [], onS
   function dispose() {
     if (disposed) return;
     disposed = true;
+    onPreview?.(null);
+    approach?.(false); approach = null;
     cancelAnimationFrame(frame); observer.disconnect();
     Object.entries(events).forEach(([name, handler]) => renderer.domElement.removeEventListener(name, handler));
     renderer.domElement.removeEventListener('webglcontextlost', lost);
@@ -188,15 +219,26 @@ export async function createPlanetView(host, {planet, artwork, strikes = [], onS
       globe.rotation.order = 'XYZ';
       globe.rotation.y += (targetYaw - globe.rotation.y) * .14;
       globe.rotation.x += (targetPitch - globe.rotation.x) * .14;
+      zoom += (targetZoom - zoom) * .13;
+    }
+    camera.position.z = baseDistance / zoom;
+    if (approach && Math.abs(globe.rotation.y - targetYaw) < .015 && Math.abs(globe.rotation.x - targetPitch) < .015 && Math.abs(zoom - targetZoom) < .01) {
+      const resolve = approach; approach = null; resolve(true);
     }
     if (loaded) renderer.render(scene, camera);
+    if (hoveredId && markers.has(hoveredId)) {
+      const marker = markers.get(hoveredId);
+      const point = marker.getWorldPosition(new THREE.Vector3()).project(camera);
+      onPreview?.({id: hoveredId, x: (point.x + 1) * host.clientWidth / 2, y: (1 - point.y) * host.clientHeight / 2});
+    }
     host.dataset.yaw = globe.rotation.y.toFixed(3);
+    host.dataset.zoom = zoom.toFixed(3);
   }
   update(strikes);
   frame = requestAnimationFrame(draw);
   try {
     const texture = await new THREE.TextureLoader().loadAsync(artwork);
-    if (disposed) { texture.dispose(); return {update() {}, focus() {}, dispose() {}}; }
+    if (disposed) { texture.dispose(); return {update() {}, focus() {}, select: async () => false, overview() {}, dispose() {}}; }
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
     material.uniforms.portrait.value = texture;
@@ -204,5 +246,5 @@ export async function createPlanetView(host, {planet, artwork, strikes = [], onS
   } catch {
     host.dataset.renderer = 'fallback'; dispose();
   }
-  return {update, focus, dispose};
+  return {update, focus, select: selectStrike, overview, dispose};
 }

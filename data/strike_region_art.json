@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "regions": {
+    "sector_29_system_01_world_04": {
+      "objectives": {
+        "sabotage": "agri-jungle-sabotage.webp",
+        "contagion": "agri-jungle-contagion.webp",
+        "relic": "agri-jungle-relic.webp",
+        "escort": "agri-jungle-escort.webp",
+        "vanguard": "agri-jungle-vanguard.webp"
+      }
+    },
+    "sector_29_system_02_world_01": {
+      "objectives": {
+        "sabotage": "agri-jungle-sabotage.webp",
+        "contagion": "agri-jungle-contagion.webp",
+        "relic": "agri-jungle-relic.webp",
+        "escort": "agri-jungle-escort.webp",
+        "vanguard": "agri-jungle-vanguard.webp"
+      }
+    },
+    "sector_29_system_01_world_05": {
+      "objectives": {
+        "judgment": "cemetery-warzone-judgment.webp",
+        "purge": "cemetery-warzone-purge.webp",
+        "unbowed": "cemetery-warzone-unbowed.webp",
+        "lost": "cemetery-warzone-lost.webp",
+        "relic": "cemetery-warzone-relic.webp"
+      }
+    },
+    "sector_29_system_01_world_03": {
+      "objectives": {
+        "hold": "civilised-desert-hold.webp",
+        "lost": "civilised-desert-lost.webp",
+        "relic": "civilised-desert-relic.webp",
+        "champion": "civilised-desert-champion.webp"
+      }
+    },
+    "sector_29_system_04_world_01": {
+      "objectives": {
+        "hold": "civilised-desert-hold.webp",
+        "lost": "civilised-desert-lost.webp",
+        "relic": "civilised-desert-relic.webp",
+        "champion": "civilised-desert-champion.webp"
+      }
+    },
+    "sector_29_system_03_world_03": {
+      "objectives": {
+        "unbowed": "civilised-ice-unbowed.webp",
+        "archeo": "civilised-ice-archeo.webp",
+        "sabotage": "civilised-ice-sabotage.webp",
+        "lost": "civilised-ice-lost.webp",
+        "specimen": "civilised-ice-specimen.webp"
+      }
+    },
+    "sector_29_system_02_world_02": {
+      "objectives": {
+        "purge": "civilised-jungle-purge.webp",
+        "rally": "civilised-jungle-rally.webp",
+        "sabotage": "civilised-jungle-sabotage.webp",
+        "relic": "civilised-jungle-relic.webp"
+      }
+    },
+    "sector_29_system_05_world_02": {
+      "objectives": {
+        "awaken": "civilised-warzone-awaken.webp",
+        "decap": "civilised-warzone-decap.webp",
+        "rally": "civilised-warzone-rally.webp",
+        "escort": "civilised-warzone-escort.webp",
+        "specimen": "civilised-warzone-specimen.webp"
+      }
+    },
+    "sector_29_system_03_world_04": {
+      "objectives": {
+        "auspex": "dead-asteroid-auspex.webp",
+        "exterminatus": "dead-asteroid-exterminatus.webp",
+        "escort": "dead-asteroid-escort.webp",
+        "veil": "dead-asteroid-veil.webp",
+        "vanguard": "dead-asteroid-vanguard.webp"
+      }
+    },
+    "sector_29_system_05_world_03": {
+      "objectives": {
+        "auspex": "death-ice-auspex.webp",
+        "exterminatus": "death-ice-exterminatus.webp",
+        "net": "death-ice-net.webp",
+        "lost": "death-ice-lost.webp",
+        "geneseed": "death-ice-geneseed.webp"
+      }
+    },
+    "sector_29_system_02_world_03": {
+      "objectives": {
+        "auspex": "death-jungle-auspex.webp",
+        "purge": "death-jungle-purge.webp",
+        "sabotage": "death-jungle-sabotage.webp",
+        "specimen": "death-jungle-specimen.webp",
+        "vivisection": "death-jungle-vivisection.webp",
+        "psyhunt": "death-jungle-psyhunt.webp"
+      }
+    },
+    "sector_29_system_05_world_01": {
+      "objectives": {
+        "auspex": "feral-desert-auspex.webp",
+        "exterminatus": "feral-desert-exterminatus.webp",
+        "net": "feral-desert-net.webp",
+        "relic": "feral-desert-relic.webp",
+        "capture": "feral-desert-capture.webp"
+      }
+    },
+    "sector_29_system_04_world_02": {
+      "objectives": {
+        "judgment": "feral-warzone-judgment.webp",
+        "purge": "feral-warzone-purge.webp",
+        "hold": "feral-warzone-hold.webp",
+        "relic": "feral-warzone-relic.webp",
+        "capture": "feral-warzone-capture.webp"
+      }
+    },
+    "sector_29_system_01_world_02": {
+      "objectives": {
+        "awaken": "forge-industrial-awaken.webp",
+        "decap": "forge-industrial-decap.webp",
+        "hold": "forge-industrial-hold.webp",
+        "sabotage": "forge-industrial-sabotage.webp",
+        "escort": "forge-industrial-escort.webp",
+        "forlorn": "forge-industrial-forlorn.webp"
+      }
+    },
+    "sector_29_system_03_world_02": {
+      "objectives": {
+        "awaken": "forge-industrial-awaken.webp",
+        "decap": "forge-industrial-decap.webp",
+        "hold": "forge-industrial-hold.webp",
+        "sabotage": "forge-industrial-sabotage.webp",
+        "escort": "forge-industrial-escort.webp",
+        "forlorn": "forge-industrial-forlorn.webp"
+      }
+    },
+    "sector_29_system_03_world_01": {
+      "objectives": {
+        "salvage": "hive-industrial-salvage.webp",
+        "sabotage": "hive-industrial-sabotage.webp",
+        "relic": "hive-industrial-relic.webp",
+        "escort": "hive-industrial-escort.webp",
+        "champion": "hive-industrial-champion.webp"
+      }
+    },
+    "sector_29_system_01_world_01": {
+      "objectives": {
+        "auspex": "hive-underhive-auspex.webp",
+        "purge": "hive-underhive-purge.webp",
+        "archive": "hive-underhive-archive.webp",
+        "lost": "hive-underhive-lost.webp",
+        "champion": "hive-underhive-champion.webp"
+      }
+    },
+    "sector_29_system_04_world_03": {
+      "objectives": {
+        "hold": "research-ice-hold.webp",
+        "escort": "research-ice-escort.webp",
+        "specimen": "research-ice-specimen.webp",
+        "vivisection": "research-ice-vivisection.webp",
+        "psyhunt": "research-ice-psyhunt.webp"
+      }
+    },
+    "sector_29_system_02_world_04": {
+      "objectives": {
+        "sabotage": "research-industrial-sabotage.webp",
+        "knife": "research-industrial-knife.webp",
+        "escort": "research-industrial-escort.webp",
+        "specimen": "research-industrial-specimen.webp"
+      }
+    }
+  }
+}
