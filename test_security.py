@@ -64,6 +64,7 @@ const offer={id:'one',planet_id:'world',name:'Exterminatus',objective_id:'exterm
 const c={state:{auth:{authenticated:true},reachMapLevel:'strike',selectedSector:'alpha',selectedSystem:'system',geography:{...geo,sectors:[{id:'alpha',name:'Alpha'}],systems:[{id:'system',name:'Solenne Crown',sectorId:'alpha'}],bodies:[{id:'world',name:'Vhaloris',systemId:'system'}]}},warView:{busy:false,error:'',subsector:'alpha',planet:'world',strike:'one',pool:'vanilla',data:{actor:{id:'42',roles:['Watch Brother'],company_id:'1',active:true,watch_brother:true},campaigns:{},commitments:{},assignments:{},kill_teams:[],proposals:[],planets:[{id:'world',system_id:'system'}],boards:{world:[offer]},participant_names:{'42':'Brother Tester'},content:{stratagems:{Surplus:{description:'Carry twice as much Equipment.'}}}}},COMPANY_NAMES:{'1':'Primus'},escapeHtml:value=>String(value??''),titleCase:value=>value};
 vm.createContext(c);
 vm.runInContext(html.slice(html.indexOf('function objectiveDisplayTag('),html.indexOf('function showPlanetStrikePreview(')),c);
+vm.runInContext(html.slice(html.indexOf('function strikeSceneBriefingHtml('),html.indexOf('function strikeRegionArtwork(')),c);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('function refreshWarConsole()')),c);
 assert.equal(c.objectiveDisplayTag(offer),'ANNIHILATION');
 assert.equal(c.objectiveDisplayTag({objective_id:'vanguard'}),'ASSAULT');
@@ -73,7 +74,17 @@ assert(markup.indexOf('data-war-action="join"')<markup.indexOf('aria-label="Stri
 assert(markup.indexOf('aria-label="Strike roster"')<markup.indexOf('aria-label="Strike modifiers"'));
 assert.equal((markup.match(/strike-slot-number/g)||[]).length,3);
 assert.match(markup,/Positive \/ 1/);assert.match(markup,/Negative \/ 3/);assert.match(markup,/Mandatory faction conversion \/ additional/);
-assert.match(markup,/Carry twice as much Equipment/);assert.match(markup,/ANNIHILATION/);
+assert.match(markup,/Carry twice as much Equipment/);assert.doesNotMatch(markup,/Complete the assigned operation/);
+const briefing=c.strikeSceneBriefingHtml(offer,{name:'Vhaloris'});
+assert.match(briefing,/ANNIHILATION/);assert.match(briefing,/Exterminatus/);
+assert.match(briefing,/Complete the assigned operation/);assert.match(briefing,/Tsunami \/ Detonation Risk \/ Myopia/);
+assert.doesNotMatch(briefing,/Carry twice as much Equipment/);
+const sceneHost={hidden:true,innerHTML:''},stage={dataset:{}};
+c.document={getElementById:identity=>identity==='strike-scene-briefing'?sceneHost:stage};
+c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,false);assert.equal(stage.dataset.view,'strike');
+c.state.reachMapLevel='planet';c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(sceneHost.innerHTML,'');assert.equal(stage.dataset.view,'planet');
+c.state.reachMapLevel='strike';c.warView.strike='removed';c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(sceneHost.innerHTML,'');
+c.warView.strike='one';const savedWar=c.warView.data;c.warView.data=null;c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(stage.dataset.view,'planet');c.warView.data=savedWar;
 offer.viewer_signup={can_join:false,reason:'The remaining slot must fulfill the required rank',specialist_fulfilled:false};offer.required_rank='Bladeguard';
 markup=c.warConsoleHtml();assert.match(markup,/data-war-action="join"[^>]*disabled/);assert.match(markup,/remaining slot/);
 offer.viewer_signup={can_join:true,reason:'',specialist_fulfilled:true};markup=c.warConsoleHtml();assert.match(markup,/Covered/);assert.doesNotMatch(markup,/Open \/ Bladeguard requirement/);
@@ -743,6 +754,17 @@ const context={state:{geography},escapeHtml:value=>String(value),STELLAR_TYPES:{
     reachArtImage:()=>loaded?image:null,
     context:{drawImage:(...args)=>draws.push(args),beginPath:()=>{},arc:(...args)=>arcs.push(args),stroke:()=>{}}};
 vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function hashStr('),html.indexOf('function formationName(')),context);
+assert.equal(context.geographyOrbitTilt({id:'stable-world'}),context.geographyOrbitTilt({id:'stable-world'}));
+assert(Math.abs(context.geographyOrbitTilt({id:'stable-world'}))<=Math.PI*16/180);
+context.bodiesBySystem=new Map();context.reducedMotion={matches:true};
+vm.runInContext(html.slice(html.indexOf('  function bodyPosition('),html.indexOf('  function focusBody(')),context);
+const orbitBody={id:'stable-world',kind:'hive_world',orbitIndex:2,orbitAngle:35};
+const orbitPosition=context.bodyPosition({id:'system',x:10,y:20},orbitBody);
+assert.equal(orbitPosition.orbitRotation,context.geographyOrbitTilt(orbitBody));
+const phase=35*Math.PI/180,tilt=orbitPosition.orbitRotation;
+assert(Math.abs(orbitPosition.x-(10+13*(Math.cos(phase)*Math.cos(tilt)-.46*Math.sin(phase)*Math.sin(tilt))))<1e-9);
+assert(Math.abs(orbitPosition.y-(20+13*(Math.cos(phase)*Math.sin(tilt)+.46*Math.sin(phase)*Math.cos(tilt))))<1e-9);
 vm.runInContext(html.slice(html.indexOf('const GEOGRAPHY_WORLD_TYPES ='),html.indexOf('function openGeographySystem(')),context);
 const body={id:'unrelated_sector_world',name:'Unrelated Name',kind:'hive_world',biome:'underhive'};
 assert.equal(context.geographyBodyArtwork(body),'/assets/planets/hive-underhive-1.webp');

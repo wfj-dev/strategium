@@ -368,11 +368,14 @@ def test_frontend_orbit_layout_matches_builder_spacing() -> None:
     number = r"(\d+(?:\.\d+)?)"
     planet = re.search(rf"let radius = {number} \+ body\.orbitIndex \* {number};", page)
     moon = re.search(rf"radius = {number} \+ body\.orbitIndex \* {number};\n", page[planet.end():])
-    aspect = re.search(r"y: centerY \+ Math\.sin\(angle\) \* radius \* ([\d.]+)", page)
+    aspect = re.search(r"const localY = Math\.sin\(angle\) \* ([\d.]+);", page)
 
     assert (float(planet[1]), float(planet[2])) == (ORBIT_BASE, ORBIT_STEP)
     assert (float(moon[1]), float(moon[2])) == (MOON_ORBIT_BASE, MOON_ORBIT_STEP)
     assert float(aspect[1]) == ORBIT_ASPECT
+    assert "const orbitRotation = geographyOrbitTilt(body);" in page
+    assert 'scale(1 .42) rotate(${orbitRotation * 180 / Math.PI})' in page
+    assert "context.rotate(position.orbitRotation);" in page
 
 
 def test_generated_geography_orbits_never_overlap() -> None:

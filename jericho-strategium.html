@@ -748,6 +748,20 @@
   .strike-modifier-row p { margin: 4px 0 0; color: var(--green-dim); font-size: 11px; line-height: 1.55; }
   .strike-secondary summary { color: var(--green-dim); cursor: pointer; padding: 12px 0; font-size: 11px; }
   .strike-secondary p { color: var(--green-dim); font-size: 11px; line-height: 1.65; overflow-wrap: anywhere; }
+  .reach-planet-stage[data-view="strike"]::after { content: ""; position: absolute; z-index: 2; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,.65), transparent 48%), linear-gradient(0deg, rgba(0,0,0,.78), transparent 42%), rgba(0,0,0,.2); }
+  .reach-planet-stage[data-view="strike"] .planet-stage-heading, .reach-planet-stage[data-view="strike"] .planet-stage-target { visibility: hidden; }
+  .strike-scene-briefing { position: absolute; z-index: 6; inset: 22px calc(min(460px, 48%) + 22px) 76px 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-width: 0; pointer-events: none; }
+  .strike-scene-briefing[hidden] { display: none; }
+  .strike-scene-briefing > div { min-height: 0; overflow: auto; pointer-events: auto; overscroll-behavior: contain; }
+  .strike-scene-title { margin: 8px 0; font: 700 26px 'Cinzel', serif; color: var(--white); overflow-wrap: anywhere; text-shadow: 0 2px 6px #000; }
+  .strike-scene-mission { margin: 8px 0; color: var(--gold); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+  .strike-scene-copy { max-width: 48ch; margin: 10px 0; color: #e3e9e4; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; text-shadow: 0 1px 4px #000; }
+  .strike-scene-summary { display: grid; flex-shrink: 0; gap: 9px; margin: 0; }
+  .strike-scene-summary div { display: grid; grid-template-columns: 78px minmax(0,1fr); gap: 10px; align-items: start; }
+  .strike-scene-summary dt { color: var(--green); font-size: 10px; line-height: 1.6; }
+  .strike-scene-summary .negative dt { color: #e1aa8f; }
+  .strike-scene-summary .forced dt { color: var(--gold); }
+  .strike-scene-summary dd { margin: 0; color: var(--white); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
   @media (prefers-reduced-motion: reduce) { .planet-preview-leader path, .planet-region-art { transition: none; } }
   .war-system-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
   .war-system-facts div { min-width: 0; }
@@ -1593,6 +1607,9 @@
     .reach-sector-panel-head { padding: 12px; }
     .reach-sector-panel-body { padding: 12px; }
     .reach-sector-panel { display: none; position: static; width: 100%; min-width: 0; transform: none; box-shadow: none; }
+    .strike-scene-briefing { position: static; padding: 18px 14px; gap: 14px; background: #050b07; }
+    .strike-scene-title { font-size: 21px; }
+    .reach-planet-stage[data-view="strike"]::after { background: rgba(0,0,0,.2); }
     .reach-map-shell.has-sector-panel .reach-sector-panel { display: flex; }
     .reach-sector-panel-body { overflow: visible; }
     .reach-desktop-index { display: none; }
@@ -2125,6 +2142,10 @@ function hashStr(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return h;
+}
+
+function geographyOrbitTilt(body) {
+  return ((hashStr(body.id) / 0xffffffff) * 2 - 1) * Math.PI * 16 / 180;
 }
 
 function formationName(m) {
@@ -5764,6 +5785,22 @@ const warView = { data: null, error: "", busy: false, planet: "", strike: "", su
 
 const planetView = {id: "", controller: null, generation: 0, module: null, selectionVersion: 0, regionManifest: null, loading: null, finishLoad: null};
 
+function strikeSceneBriefingHtml(offer, body) {
+  const recipe = offer.recipe;
+  return `<div><span class="field-label">${escapeHtml(body.name)} / ${escapeHtml(objectiveDisplayTag(offer))}</span><h2 class="strike-scene-title">${escapeHtml(offer.name)}</h2><p class="strike-scene-mission">${escapeHtml(offer.aar_mission || "")} / ${escapeHtml(offer.aar_difficulty || "")}</p>${offer.briefing ? `<p class="strike-scene-copy">${escapeHtml(offer.briefing)}</p>` : ""}</div>${recipe ? `<dl class="strike-scene-summary" aria-label="Modifier summary"><div class="positive"><dt>Positive</dt><dd>${escapeHtml(recipe.positive)}</dd></div><div class="negative"><dt>Negatives</dt><dd>${recipe.negatives.map(name => escapeHtml(name)).join(" / ")}</dd></div>${recipe.forced?.length ? `<div class="forced"><dt>Mandatory</dt><dd>${recipe.forced.map(name => escapeHtml(name)).join(" / ")}</dd></div>` : ""}</dl>` : ""}`;
+}
+
+function refreshStrikeSceneBriefing() {
+  const host = document.getElementById("strike-scene-briefing");
+  const stage = document.getElementById("reach-planet-stage");
+  const body = state.reachMapLevel === "strike" && state.geography?.bodies.find(item => item.id === warView.planet);
+  const offer = body && (warView.data?.boards[body.id] || []).find(item => item.id === warView.strike);
+  if (stage) stage.dataset.view = offer ? "strike" : "planet";
+  if (!host) return;
+  host.hidden = !offer;
+  host.innerHTML = offer ? strikeSceneBriefingHtml(offer, body) : "";
+}
+
 function strikeRegionArtwork(planetId, offer, manifest) {
   if (manifest?.schemaVersion !== 1) return "";
   const entry = manifest.regions?.[planetId];
@@ -5868,6 +5905,8 @@ function closePlanetView() {
   hidePlanetStrikePreview();
   const host = document.getElementById("reach-planet-stage");
   if (host) host.hidden = true;
+  const briefing = document.getElementById("strike-scene-briefing");
+  if (briefing) { briefing.hidden = true; briefing.innerHTML = ""; }
   host?.querySelectorAll("canvas").forEach(canvas => canvas.remove());
   document.querySelector(".reach-map-shell")?.classList.remove("planet-mode");
 }
@@ -5895,12 +5934,14 @@ async function syncPlanetView() {
   }
   const target = offers.find(offer => offer.id === warView.strike);
   document.getElementById("planet-stage-target").textContent = target?.name || `${offers.length} deployment sectors`;
+  refreshStrikeSceneBriefing();
   if (planetView.id === body.id && planetView.controller) {
     planetView.controller.update(offers);
     if (warView.strike && state.reachMapLevel !== "strike") planetView.controller.focus(warView.strike);
     return;
   }
   closePlanetView(); host.hidden = false;
+  refreshStrikeSceneBriefing();
   document.querySelector(".reach-map-shell")?.classList.add("planet-mode");
   planetView.id = body.id;
   const generation = ++planetView.generation;
@@ -6029,14 +6070,12 @@ function warConsoleHtml() {
     const specialistCovered = !!offer.specialist_id || signup?.specialist_fulfilled === true;
     const specialist = offer.required_rank ? `<p class="strike-context">Required specialist: <strong>${escapeHtml(offer.required_rank)}</strong>${specialistCovered ? " / Covered" : " / Needed"}</p>` : "";
     return `<section id="war-console" aria-label="Strike deployment"><button type="button" class="btn-dossier-action strike-panel-back" data-strike-back>Return to planet</button><article class="strike-detail">
-      <span class="field-label">${escapeHtml(objectiveDisplayTag(offer))}</span><p class="strike-mission-line">${escapeHtml(offer.aar_mission)} / ${escapeHtml(offer.aar_difficulty || "")}</p>
       <div class="strike-action-bar">${primary || `<span class="strike-context">${escapeHtml(titleCase(offer.status))}</span>`}<span class="strike-capacity">${offer.participants.length} / ${offer.capacity} joined</span>${reason ? `<p class="strike-action-reason">${escapeHtml(reason)}</p>` : ""}</div>
       <section class="strike-section" aria-label="Strike roster"><h3>Roster</h3>${specialist}<ol class="strike-roster">${Array.from({length: offer.capacity}, (_, index) => {
         const identity = offer.participants[index];
         return identity ? `<li><span class="strike-slot-number">${index + 1}</span><span>${escapeHtml(war.participant_names?.[identity] || identity)}${identity === war.actor.id ? " (You)" : ""}${offer.specialist_id === identity ? `<small>Required specialist</small>` : ""}</span></li>` : `<li class="empty"><span class="strike-slot-number">${index + 1}</span><span>${offer.required_rank && !specialistCovered && index === offer.capacity - 1 ? `Open / ${escapeHtml(offer.required_rank)} requirement` : "Open slot"}</span></li>`;
       }).join("")}</ol></section>
       <section class="strike-section" aria-label="Strike modifiers"><h3>Modifiers</h3>${recipe ? `<div class="strike-modifier-group positive"><h4>Positive / 1</h4>${modifier(recipe.positive)}</div><div class="strike-modifier-group negative"><h4>Negative / ${recipe.negatives.length}</h4>${recipe.negatives.map(modifier).join("")}</div>${recipe.forced?.length ? `<div class="strike-modifier-group forced"><h4>Mandatory faction conversion / additional</h4>${recipe.forced.map(modifier).join("")}</div>` : ""}` : `<p class="strike-context">No additional stratagem recipe assigned.</p>`}</section>
-      ${offer.briefing ? `<section class="strike-section"><h3>Briefing</h3><p class="strike-context">${escapeHtml(offer.briefing)}</p></section>` : ""}
       ${recipe ? `<details class="strike-secondary" data-war-section="strike-evidence"><summary>Evidence and adaptation</summary><p>Evidence must show the assigned stratagems and operation result. Independent staff approval is required.</p>${(recipe.notes || []).map(note => `<p>${escapeHtml(note)}</p>`).join("")}</details>` : ""}
       ${offer.attempt_id ? `<details class="strike-secondary"><summary>Strike reference</summary><p><code>${escapeHtml(offer.attempt_id)}</code></p></details>` : ""}
       ${locked && (joined || master) ? `<details class="strike-secondary" data-war-section="strike-cancel"><summary>Cancel roster</summary><label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}</details>` : ""}
@@ -6146,6 +6185,7 @@ function refreshWarConsole() {
     element.textContent = status === "critical" ? "Contested" : titleCase(status);
   });
   if (typeof syncPlanetView === "function") void syncPlanetView();
+  if (typeof refreshStrikeSceneBriefing === "function") refreshStrikeSceneBriefing();
 }
 
 document.addEventListener("change", async event => {
@@ -6577,8 +6617,9 @@ function geographyBodySvg(body, system, index) {
   const orbitRadiusX = 32 + index * 24;
   const orbitRadiusY = orbitRadiusX * .42;
   const angle = body.orbitAngle * Math.PI / 180;
-  const x = system.x + Math.cos(angle) * orbitRadiusX;
-  const y = system.y + Math.sin(angle) * orbitRadiusY;
+  const orbitRotation = geographyOrbitTilt(body);
+  const x = system.x + orbitRadiusX * (Math.cos(angle) * Math.cos(orbitRotation) - Math.sin(angle) * .42 * Math.sin(orbitRotation));
+  const y = system.y + orbitRadiusX * (Math.cos(angle) * Math.sin(orbitRotation) + Math.sin(angle) * .42 * Math.cos(orbitRotation));
   const artRadius = Math.max(4, Math.min(9, body.displayRadius));
   const hasArt = Boolean(WORLD_ART[body.kind]);
   const art = hasArt
@@ -6587,7 +6628,7 @@ function geographyBodySvg(body, system, index) {
       ? `<circle cx="${x}" cy="${y}" r="${artRadius}" fill="#140f06" stroke="var(--gold)" stroke-width="1" vector-effect="non-scaling-stroke"/><path d="M ${x - artRadius} ${y} L ${x + artRadius} ${y} M ${x} ${y - artRadius} L ${x} ${y + artRadius}" stroke="var(--gold)" stroke-width=".8" vector-effect="non-scaling-stroke"/>`
       : `<circle cx="${x}" cy="${y}" r="${artRadius}" fill="#101810" stroke="var(--green-dim)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
   return `<g class="reach-body" data-body="${escapeHtml(body.id)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(body.name)}">
-    <ellipse class="reach-system-orbit detail" cx="${system.x}" cy="${system.y}" rx="${orbitRadiusX}" ry="${orbitRadiusY}"/>
+    <ellipse class="reach-system-orbit detail" cx="0" cy="0" rx="${orbitRadiusX}" ry="${orbitRadiusX}" transform="translate(${system.x} ${system.y}) scale(1 .42) rotate(${orbitRotation * 180 / Math.PI})"/>
     <circle class="reach-body-hit" cx="${x}" cy="${y}" r="${artRadius + 7}"/>
     <g class="reach-system-art">${art}</g>
     <circle class="reach-planet-body" cx="${x}" cy="${y}" r="${artRadius}" fill="none"/>
@@ -7350,13 +7391,19 @@ function setupGeographyCanvas() {
     // Outer orbits drift slower, like real orbital mechanics; a full lap takes minutes, not seconds.
     const degreesPerMs = .0028 / (body.orbitIndex + 1.4);
     const angle = (body.orbitAngle + (reducedMotion.matches ? 0 : now) * degreesPerMs) * Math.PI / 180;
+    const orbitRotation = geographyOrbitTilt(body);
+    const cosine = Math.cos(orbitRotation);
+    const sine = Math.sin(orbitRotation);
+    const localX = Math.cos(angle);
+    const localY = Math.sin(angle) * .46;
     return {
-      x: centerX + Math.cos(angle) * radius,
-      y: centerY + Math.sin(angle) * radius * .46,
+      x: centerX + radius * (localX * cosine - localY * sine),
+      y: centerY + radius * (localX * sine + localY * cosine),
       centerX,
       centerY,
       orbitX: radius,
-      orbitY: radius * .46
+      orbitY: radius * (Math.abs(sine) + .46 * Math.abs(cosine)),
+      orbitRotation
     };
   }
 
@@ -7693,8 +7740,13 @@ function setupGeographyCanvas() {
           if (revealOrbits) {
             context.strokeStyle = "rgba(79,214,122,.42)";
             context.lineWidth = .7;
+            context.save();
+            context.translate(orbitCenter.x, orbitCenter.y);
+            context.scale(camera.zoom, camera.zoom * .46);
+            context.rotate(position.orbitRotation);
             context.beginPath();
-            context.ellipse(orbitCenter.x, orbitCenter.y, position.orbitX * camera.zoom, position.orbitY * camera.zoom, 0, 0, Math.PI * 2);
+            context.ellipse(0, 0, position.orbitX, position.orbitX, 0, 0, Math.PI * 2);
+            context.restore();
             context.stroke();
           }
           const radius = canvasClamp(body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12);
@@ -7721,7 +7773,7 @@ function setupGeographyCanvas() {
         context.font = `${canvasClamp(10 + ratio * .3, 10, 14)}px 'Share Tech Mono', monospace`;
         context.textAlign = "center";
         const textWidth = context.measureText(system.name).width;
-        const orbitHeight = Math.max(0, ...bodies.filter(body => body.kind !== "star").map(body => (5 + body.orbitIndex * 4) * .46 * camera.zoom));
+        const orbitHeight = Math.max(0, ...bodies.filter(body => body.kind !== "star").map(body => (5 + body.orbitIndex * 4) * (Math.abs(Math.sin(geographyOrbitTilt(body))) + .46 * Math.abs(Math.cos(geographyOrbitTilt(body)))) * camera.zoom));
         const bodyRadius = Math.max(0, ...bodies.filter(body => body.kind !== "star").map(body => canvasClamp(body.displayRadius * Math.sqrt(ratio) * .42, 2.2, 12)));
         const labelY = center.y + orbitHeight + bodyRadius + 28;
         const labelBox = { left: center.x - textWidth / 2 - 4, right: center.x + textWidth / 2 + 4, top: labelY - 14, bottom: labelY + 3 };
@@ -8307,7 +8359,7 @@ function geographySectorPanelHtml(sectorId, selectedSystemId) {
   return `<div class="reach-sector-panel-head">
       <div>
         <div class="reach-sector-panel-kicker">${strikeBody ? `${escapeHtml(strikeBody.name)} / Strike deployment` : selectedBody ? escapeHtml(selectedSystem.name) : selectedSystem ? "Selected system" : `Sector ${String(sector.number).padStart(2, "0")} // ${systems.length} systems`}</div>
-        <h2 class="reach-sector-panel-title">${escapeHtml(selectedOffer?.name || selectedBody?.name || selectedSystem?.name || sector.name)}</h2>
+        <h2 class="reach-sector-panel-title">${escapeHtml(selectedOffer ? "Deployment" : selectedBody?.name || selectedSystem?.name || sector.name)}</h2>
         <div class="reach-sector-panel-meta">${escapeHtml(sector.status === "critical" ? "Contested" : titleCase(sector.status))} · ${selectedSystem ? "Planetary system" : "Charted systems"}</div>
       </div>
       <div class="reach-sector-panel-actions">
@@ -8338,6 +8390,7 @@ function updateGeographySectorPanel() {
     warView.planet = "";
   }
   panel.innerHTML = open ? geographySectorPanelHtml(sectorId, state.selectedSystem) : "";
+  refreshStrikeSceneBriefing();
   if (open && state.auth.authenticated && !warView.data && !warView.error) void loadWar().then(refreshWarConsole);
 }
 
@@ -8396,6 +8449,7 @@ function renderReach() {
         <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))}` : ""}</div>
         <div class="reach-tooltip" id="reach-tooltip" hidden></div>
       </div>
+      <section id="strike-scene-briefing" class="strike-scene-briefing" aria-label="Strike mission briefing" hidden></section>
       <aside id="reach-sector-panel" class="reach-sector-panel" aria-hidden="${String(!selectedSector)}">
         ${geographyLive && selectedSector ? geographySectorPanelHtml(selectedSector.id, state.selectedSystem) : ""}
       </aside>

@@ -22,6 +22,8 @@ opens one detail view without filtering away the rest of the system. Counts desc
 the selected system's current pool, while details distinguish the game mission from
 its briefing theme. Changing selections or refreshing campaign data keeps the map
 canvas mounted and preserves the strike-list scroll position.
+Planetary orbit rings use small, deterministic per-world tilts so occasional
+alignments remain possible without every orbit sharing the same visible axis.
 
 The right panel replaces its contents by map level instead of stacking directories.
 In System overview, the right-side panel summarizes every planet:
@@ -125,6 +127,12 @@ catalogues use a readable general/specialist fallback. Board generation is uncha
 The strike panel puts the primary Join/Withdraw/Report action and filled-slot count
 first, followed by a fixed three- or five-place roster. Positive, negative and mandatory
 faction-conversion modifiers have separate labelled groups and canonical effects.
+On desktop, the selected strike's title, Atlas tag, operation, difficulty and briefing
+sit over the left-side artwork, with a compact modifier-name summary near its lower
+edge. Detailed strike art is dimmed by 20% with additional text-edge gradients;
+planet overview stays undimmed. Phones place the same briefing below the image.
+Full modifier effects and all participation/report controls remain in the panel,
+without repeating the briefing paragraph.
 Briefing/evidence/adaptation/reference/cancellation are secondary. Available actions
 and specialist coverage are provided by the bot using the same validator as actual
 signup, which is rechecked transactionally. A blocked slot explains why; Join and
