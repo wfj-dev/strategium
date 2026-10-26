@@ -93,7 +93,11 @@ let action=c.strikeActionBarHtml(offer);assert.match(action,/data-war-action="jo
 offer.viewer_signup={can_join:true,reason:'',specialist_fulfilled:true};markup=c.warConsoleHtml();assert.match(markup,/Covered/);assert.doesNotMatch(markup,/Open \/ Bladeguard requirement/);
 offer.capacity=5;assert.equal((c.warConsoleHtml().match(/strike-slot-number/g)||[]).length,5);
 offer.status='locked';offer.participants=['42','43','44','45','46'];markup=c.warConsoleHtml();action=c.strikeActionBarHtml(offer);assert.match(action,/data-war-action="report"/);assert.doesNotMatch(markup,/data-war-action="report"|data-war-action="join"/);assert.match(markup,/Brother Tester \(You\)/);
-offer.status='available';offer.participants=[];c.state.geographyStatus='error';assert.match(c.warConsoleHtml(),/data-war-action="join"/);
+offer.status='available';offer.participants=[];c.warView.data.sandbox={viewing:true};
+assert.equal(c.strikeActionBarHtml(offer),'');markup=c.warConsoleHtml();
+assert.match(markup,/<details class="strike-secondary strike-test-tools" data-war-section="strike-testing"><summary>Invasion testing \/ TEST \/ NO REAL REWARDS<\/summary>/);
+assert.match(markup,/data-war-action="simulate_completion"/);assert.doesNotMatch(markup,/data-war-action="join"/);
+c.warView.data.sandbox=null;c.state.geographyStatus='error';assert.match(c.warConsoleHtml(),/data-war-action="join"/);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html"), str(server.ROOT / "data" / "reach_geography.json")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr

@@ -750,15 +750,16 @@
   .strike-secondary p { color: var(--green-dim); font-size: 11px; line-height: 1.65; overflow-wrap: anywhere; }
   .reach-planet-stage[data-view="strike"]::after { content: ""; position: absolute; z-index: 2; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,.65), transparent 48%), linear-gradient(0deg, rgba(0,0,0,.78), transparent 42%), rgba(0,0,0,.2); }
   .reach-planet-stage[data-view="strike"] .planet-stage-heading, .reach-planet-stage[data-view="strike"] .planet-stage-target { visibility: hidden; }
-  .strike-scene-briefing { position: absolute; z-index: 6; inset: 22px calc(min(460px, 48%) + 22px) 76px 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-width: 0; pointer-events: none; }
+  .strike-scene-briefing { position: absolute; z-index: 6; inset: 22px calc(min(460px, 48%) + 22px) 76px 22px; display: flex; flex-direction: column; justify-content: flex-start; gap: 14px; min-width: 0; pointer-events: none; }
   .strike-scene-briefing[hidden] { display: none; }
   .strike-scene-briefing > div:first-child { min-height: 0; overflow: auto; pointer-events: auto; overscroll-behavior: contain; }
-  .strike-scene-command { order: 1; flex-shrink: 0; padding: 9px 0; border-top: 1px solid rgba(79,214,122,.3); border-bottom: 1px solid rgba(79,214,122,.3); background: rgba(2,8,5,.78); pointer-events: auto; }
-  .strike-scene-command .strike-action-bar { position: static; grid-template-columns: minmax(0,1fr) auto; padding: 0; border: 0; background: transparent; }
+  .strike-scene-command { order: 1; align-self: flex-start; width: fit-content; max-width: 100%; flex-shrink: 0; pointer-events: auto; }
+  .strike-scene-command .strike-action-bar { position: static; display: flex; width: fit-content; max-width: 100%; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 0; border: 0; background: transparent; }
+  .strike-scene-command .strike-action-reason { flex-basis: 100%; }
   .strike-scene-title { margin: 8px 0; font: 700 26px 'Cinzel', serif; color: var(--white); overflow-wrap: anywhere; text-shadow: 0 2px 6px #000; }
   .strike-scene-mission { margin: 8px 0; color: var(--gold); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
   .strike-scene-copy { max-width: 48ch; margin: 10px 0; color: #e3e9e4; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; text-shadow: 0 1px 4px #000; }
-  .strike-scene-summary { order: 2; display: grid; flex-shrink: 0; gap: 9px; margin: 0; }
+  .strike-scene-summary { order: 2; display: grid; flex-shrink: 0; gap: 9px; margin: auto 0 0; }
   .strike-scene-summary div { display: grid; grid-template-columns: 78px minmax(0,1fr); gap: 10px; align-items: start; }
   .strike-scene-summary dt { color: var(--green); font-size: 10px; line-height: 1.6; }
   .strike-scene-summary .negative dt { color: #e1aa8f; }
@@ -5793,16 +5794,16 @@ function strikeActionBarHtml(offer) {
     const recruiting = ["available", "recruiting"].includes(offer.status);
     const locked = ["locked", "deployed"].includes(offer.status);
     const testing = war.sandbox?.viewing === true;
+    if (testing) return "";
     const canParticipate = !testing && war.actor.watch_brother === true && war.actor.active !== false;
     const signup = offer.viewer_signup;
     const canJoin = canParticipate && (signup ? signup.can_join === true : true);
     const button = (action, label, extra = "", disabled = false) => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy || disabled ? " disabled" : ""}>${label}</button>`;
     let primary = "";
-    if (testing && offer.status === "available") primary = button("simulate_completion", "Simulate completion", `data-strike="${escapeHtml(offer.id)}" `);
-    else if (!testing && recruiting && joined) primary = button("leave", "Withdraw", `data-strike="${escapeHtml(offer.id)}" `);
-    else if (!testing && recruiting) primary = button("join", "Join strike", `data-strike="${escapeHtml(offer.id)}" `, !canJoin);
-    else if (!testing && locked && joined) primary = button("report", "Report completion", `data-strike="${escapeHtml(offer.id)}" `);
-    const reason = testing ? "Test simulation / no real rewards" : recruiting && !joined ? signup?.reason || (!canParticipate ? "Active membership and the Watch Brother role are required." : "") : offer.status === "review_pending" ? "Evidence awaiting independent review." : locked ? "Roster locked" : "";
+    if (recruiting && joined) primary = button("leave", "Withdraw", `data-strike="${escapeHtml(offer.id)}" `);
+    else if (recruiting) primary = button("join", "Join strike", `data-strike="${escapeHtml(offer.id)}" `, !canJoin);
+    else if (locked && joined) primary = button("report", "Report completion", `data-strike="${escapeHtml(offer.id)}" `);
+    const reason = recruiting && !joined ? signup?.reason || (!canParticipate ? "Active membership and the Watch Brother role are required." : "") : offer.status === "review_pending" ? "Evidence awaiting independent review." : locked ? "Roster locked" : "";
     return `<div class="strike-action-bar">${primary || `<span class="strike-context">${escapeHtml(titleCase(offer.status))}</span>`}<span class="strike-capacity">${offer.participants.length} / ${offer.capacity} joined</span>${reason ? `<p class="strike-action-reason">${escapeHtml(reason)}</p>` : ""}</div>`;
 }
 
@@ -5821,9 +5822,11 @@ function refreshStrikeSceneBriefing() {
   host.hidden = !offer;
   if (!offer) { host.innerHTML = ""; return; }
   host.innerHTML = strikeSceneBriefingHtml(offer, body);
+  const actionMarkup = strikeActionBarHtml(offer);
+  if (!actionMarkup) return;
   const command = document.createElement("div");
   command.className = "strike-scene-command";
-  command.innerHTML = strikeActionBarHtml(offer);
+  command.innerHTML = actionMarkup;
   const summary = host.querySelector(".strike-scene-summary");
   if (summary) summary.before(command);
   else host.append(command);
@@ -6055,6 +6058,7 @@ function warConsoleHtml() {
   const select = (name, label, options, disabled = false) => `<label>${label}<select class="reach-select" data-war-field="${name}" aria-label="${label}"${warView.busy || disabled ? " disabled" : ""}>${options}</select></label>`;
   const option = (value, label, selected = false) => `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
   const button = (action, label, extra = "", disabled = false) => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy || disabled ? " disabled" : ""}>${label}</button>`;
+  const testCompletionTools = offer => testing && offer.status === "available" ? `<details class="strike-secondary strike-test-tools" data-war-section="strike-testing"><summary>Invasion testing / TEST / NO REAL REWARDS</summary><p>Simulated completion only; no real AARs or rewards.</p>${button("simulate_completion", "Simulate completion", `data-strike="${escapeHtml(offer.id)}" `)}</details>` : "";
   const commitments = Object.entries(war.commitments).filter(([, target]) => target === sectorId);
   const pool = warView.pool === "omega" ? "omega" : "vanilla";
   const systemPlanetIds = selectedSystem ? new Set(war.planets.filter(planet => (planet.system_id || planet.systemId || state.geography?.bodies?.find(body => body.id === planet.id)?.systemId) === selectedSystem.id).map(planet => planet.id)) : null;
@@ -6092,6 +6096,7 @@ function warConsoleHtml() {
     const modifier = name => `<div class="strike-modifier-row"><strong>${escapeHtml(name)}</strong>${war.content?.stratagems?.[name]?.description ? `<p>${escapeHtml(war.content.stratagems[name].description)}</p>` : ""}</div>`;
     const specialistCovered = !!offer.specialist_id || signup?.specialist_fulfilled === true;
     const specialist = offer.required_rank ? `<p class="strike-context">Required specialist: <strong>${escapeHtml(offer.required_rank)}</strong>${specialistCovered ? " / Covered" : " / Needed"}</p>` : "";
+    const testingTools = testCompletionTools(offer);
     return `<section id="war-console" aria-label="Strike deployment">${backFallback}<article class="strike-detail">
       ${actionFallback}
       <section class="strike-section" aria-label="Strike roster"><h3>Roster</h3>${specialist}<ol class="strike-roster">${Array.from({length: offer.capacity}, (_, index) => {
@@ -6099,6 +6104,7 @@ function warConsoleHtml() {
         return identity ? `<li><span class="strike-slot-number">${index + 1}</span><span>${escapeHtml(war.participant_names?.[identity] || identity)}${identity === war.actor.id ? " (You)" : ""}${offer.specialist_id === identity ? `<small>Required specialist</small>` : ""}</span></li>` : `<li class="empty"><span class="strike-slot-number">${index + 1}</span><span>${offer.required_rank && !specialistCovered && index === offer.capacity - 1 ? `Open / ${escapeHtml(offer.required_rank)} requirement` : "Open slot"}</span></li>`;
       }).join("")}</ol></section>
       <section class="strike-section" aria-label="Strike modifiers"><h3>Modifiers</h3>${recipe ? `<div class="strike-modifier-group positive"><h4>Positive / 1</h4>${modifier(recipe.positive)}</div><div class="strike-modifier-group negative"><h4>Negative / ${recipe.negatives.length}</h4>${recipe.negatives.map(modifier).join("")}</div>${recipe.forced?.length ? `<div class="strike-modifier-group forced"><h4>Mandatory faction conversion / additional</h4>${recipe.forced.map(modifier).join("")}</div>` : ""}` : `<p class="strike-context">No additional stratagem recipe assigned.</p>`}</section>
+      ${testingTools}
       ${recipe ? `<details class="strike-secondary" data-war-section="strike-evidence"><summary>Evidence and adaptation</summary><p>Evidence must show the assigned stratagems and operation result. Independent staff approval is required.</p>${(recipe.notes || []).map(note => `<p>${escapeHtml(note)}</p>`).join("")}</details>` : ""}
       ${offer.attempt_id ? `<details class="strike-secondary"><summary>Strike reference</summary><p><code>${escapeHtml(offer.attempt_id)}</code></p></details>` : ""}
       ${locked && (joined || master) ? `<details class="strike-secondary" data-war-section="strike-cancel"><summary>Cancel roster</summary><label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}</details>` : ""}
@@ -6110,7 +6116,7 @@ function warConsoleHtml() {
       ${campaign ? `<span>${campaign.resolution_pending ? "Awaiting on-time reports" : escapeHtml(titleCase(campaign.status))} / Tyranids / ${Number(campaign.balance).toFixed(2)}%</span><progress max="100" value="${Number(campaign.balance)}" aria-label="Deathwatch balance of power"></progress><span>${escapeHtml(new Date(campaign.deadline).toLocaleString())}</span>` : `<span>Secure</span>`}
       ${canInvade && !testing && campaign?.status !== "contested" ? button("invade", "Declare Tyranid invasion") : ""}
     </div>
-    ${canInvade ? `<details class="war-command-tools"${testing ? " open" : ""}><summary>Invasion testing${testing ? " / TEST / NO REAL REWARDS" : ""}</summary>
+    ${canInvade ? `<details class="war-command-tools"><summary>Invasion testing${testing ? " / TEST / NO REAL REWARDS" : ""}</summary>
       <div class="reach-toolbar">${war.sandbox ? `${testing ? `<span>Test clock: ${escapeHtml(new Date(war.sandbox.clock).toLocaleString())}</span>${button("exit_test_view", "Return to live campaign")}${select("test_hours", "Advance test clock", [1, 24, 72, 336].map(hours => option(hours, `${hours} hours`)).join(""))}${button("advance_test_time", "Advance test time")}${button("send_test_notice", "Send Test Notice")}${button("revert_test_invasion", "Revert Test Invasion")}` : button("enter_test_view", "Resume Test Invasion")}` : button("start_test_invasion", "Start Test Invasion")}</div>
     </details>` : ""}
     ${geographySystemDirectoryHtml(sectorId)}
@@ -6145,7 +6151,7 @@ function warConsoleHtml() {
       ${offer.attempt_id && ["locked", "deployed"].includes(offer.status) ? `<p>Strike ID: <code>${escapeHtml(offer.attempt_id)}</code></p>` : ""}<div class="tools">
       ${!testing && ["available", "recruiting"].includes(offer.status) && (canParticipate || offer.participants.includes(war.actor.id)) ? button(offer.participants.includes(war.actor.id) ? "leave" : "join", offer.participants.includes(war.actor.id) ? "Withdraw" : "Join strike", `data-strike="${escapeHtml(offer.id)}" `) : ""}
       ${!testing && ["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", "Report Completion", `data-strike="${escapeHtml(offer.id)}" `) : ""}
-      ${testing && offer.status === "available" ? button("simulate_completion", "Simulate Completion", `data-strike="${escapeHtml(offer.id)}" `) : ""}
+      ${testCompletionTools(offer)}
     </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("") || (warView.planet && !board.length ? `<p class="aar-empty">No strikes assigned to this planet.</p>` : "")}</div>
     ` : ""}
     ${reviewPanel ? `<details class="war-review-tools"><summary>Evidence review and credit corrections</summary>${reviewPanel}</details>` : ""}

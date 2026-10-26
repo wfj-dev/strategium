@@ -131,7 +131,9 @@ the briefing and a compact modifier-name summary. Detailed strike art is dimmed 
 the same briefing and action below the image. The right panel is reserved for the
 fixed three- or five-place roster, specialist status, full canonical modifier effects
 and evidence details. It does not repeat the action, briefing or return-to-planet link.
-Positive, negative and mandatory faction-conversion modifiers have separate labelled groups.
+The test-only simulated-completion action is kept in a collapsed Invasion testing
+disclosure, not on the artwork. Positive, negative and mandatory faction-conversion
+modifiers have separate labelled groups.
 Briefing/evidence/adaptation/reference/cancellation are secondary. Available actions
 and specialist coverage are provided by the bot using the same validator as actual
 signup, which is rechecked transactionally. A blocked slot explains why; Join and
