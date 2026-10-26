@@ -5801,10 +5801,12 @@ function strikeActionBarHtml(offer) {
     const button = (action, label, extra = "", disabled = false) => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy || disabled ? " disabled" : ""}>${label}</button>`;
     let primary = "";
     if (recruiting && joined) primary = button("leave", "Withdraw", `data-strike="${escapeHtml(offer.id)}" `);
-    else if (recruiting) primary = button("join", "Join strike", `data-strike="${escapeHtml(offer.id)}" `, !canJoin);
+    else if (recruiting) primary = button("join", "Sign Up", `data-strike="${escapeHtml(offer.id)}" `, !canJoin);
     else if (locked && joined) primary = button("report", "Report completion", `data-strike="${escapeHtml(offer.id)}" `);
     const reason = recruiting && !joined ? signup?.reason || (!canParticipate ? "Active membership and the Watch Brother role are required." : "") : offer.status === "review_pending" ? "Evidence awaiting independent review." : locked ? "Roster locked" : "";
-    return `<div class="strike-action-bar">${primary || `<span class="strike-context">${escapeHtml(titleCase(offer.status))}</span>`}<span class="strike-capacity">${offer.participants.length} / ${offer.capacity} joined</span>${reason ? `<p class="strike-action-reason">${escapeHtml(reason)}</p>` : ""}</div>`;
+    const replacement = recruiting && !joined && canJoin && signup?.replaces_strike?.name ? `Signing up will remove you from ${signup.replaces_strike.name}.` : "";
+    const message = reason || replacement;
+    return `<div class="strike-action-bar">${primary || `<span class="strike-context">${escapeHtml(titleCase(offer.status))}</span>`}<span class="strike-capacity">${offer.participants.length} / ${offer.capacity} joined</span>${message ? `<p class="strike-action-reason">${escapeHtml(message)}</p>` : ""}</div>`;
 }
 
 function strikeSceneBriefingHtml(offer, body) {
@@ -6103,7 +6105,7 @@ function warConsoleHtml() {
         const identity = offer.participants[index];
         return identity ? `<li><span class="strike-slot-number">${index + 1}</span><span>${escapeHtml(war.participant_names?.[identity] || identity)}${identity === war.actor.id ? " (You)" : ""}${offer.specialist_id === identity ? `<small>Required specialist</small>` : ""}</span></li>` : `<li class="empty"><span class="strike-slot-number">${index + 1}</span><span>${offer.required_rank && !specialistCovered && index === offer.capacity - 1 ? `Open / ${escapeHtml(offer.required_rank)} requirement` : "Open slot"}</span></li>`;
       }).join("")}</ol></section>
-      <section class="strike-section" aria-label="Strike modifiers"><h3>Modifiers</h3>${recipe ? `<div class="strike-modifier-group positive"><h4>Positive / 1</h4>${modifier(recipe.positive)}</div><div class="strike-modifier-group negative"><h4>Negative / ${recipe.negatives.length}</h4>${recipe.negatives.map(modifier).join("")}</div>${recipe.forced?.length ? `<div class="strike-modifier-group forced"><h4>Mandatory faction conversion / additional</h4>${recipe.forced.map(modifier).join("")}</div>` : ""}` : `<p class="strike-context">No additional stratagem recipe assigned.</p>`}</section>
+      <details class="strike-secondary strike-modifier-details" data-war-section="strike-modifiers"><summary>Modifier effects</summary><section class="strike-section" aria-label="Strike modifiers">${recipe ? `<div class="strike-modifier-group positive"><h4>Positive / 1</h4>${modifier(recipe.positive)}</div><div class="strike-modifier-group negative"><h4>Negative / ${recipe.negatives.length}</h4>${recipe.negatives.map(modifier).join("")}</div>${recipe.forced?.length ? `<div class="strike-modifier-group forced"><h4>Mandatory faction conversion / additional</h4>${recipe.forced.map(modifier).join("")}</div>` : ""}` : `<p class="strike-context">No additional stratagem recipe assigned.</p>`}</section></details>
       ${testingTools}
       ${recipe ? `<details class="strike-secondary" data-war-section="strike-evidence"><summary>Evidence and adaptation</summary><p>Evidence must show the assigned stratagems and operation result. Independent staff approval is required.</p>${(recipe.notes || []).map(note => `<p>${escapeHtml(note)}</p>`).join("")}</details>` : ""}
       ${offer.attempt_id ? `<details class="strike-secondary"><summary>Strike reference</summary><p><code>${escapeHtml(offer.attempt_id)}</code></p></details>` : ""}

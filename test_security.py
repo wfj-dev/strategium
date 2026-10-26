@@ -85,6 +85,8 @@ c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,false);assert.equal
 assert.equal(sceneHost.action.className,'strike-scene-command');assert.match(sceneHost.action.innerHTML,/data-war-action="join"/);
 assert.equal((sceneHost.action.innerHTML.match(/data-war-action=/g)||[]).length,1);
 assert.match(sceneHost.action.innerHTML,/0 \/ 3 joined/);assert.doesNotMatch(sceneHost.action.innerHTML,/Carry twice as much Equipment/);
+offer.viewer_signup={can_join:true,reason:'',specialist_fulfilled:false,replaces_strike:{id:'old',name:'Previous strike'}};
+const replacementAction=c.strikeActionBarHtml(offer);assert.match(replacementAction,/Sign Up/);assert.match(replacementAction,/Signing up will remove you from Previous strike/);
 c.state.reachMapLevel='planet';c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(sceneHost.innerHTML,'');assert.equal(stage.dataset.view,'planet');
 c.state.reachMapLevel='strike';c.warView.strike='removed';c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(sceneHost.innerHTML,'');
 c.warView.strike='one';const savedWar=c.warView.data;c.warView.data=null;c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(stage.dataset.view,'planet');c.warView.data=savedWar;

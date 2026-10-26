@@ -136,8 +136,11 @@ disclosure, not on the artwork. Positive, negative and mandatory faction-convers
 modifiers have separate labelled groups.
 Briefing/evidence/adaptation/reference/cancellation are secondary. Available actions
 and specialist coverage are provided by the bot using the same validator as actual
-signup, which is rechecked transactionally. A blocked slot explains why; Join and
-Withdraw are one-click commands with in-progress feedback and preserved keyboard focus.
+signup, which is rechecked transactionally. A brother can hold one recruiting signup;
+signing up to another recruiting strike atomically moves the open signup, and the UI
+names the strike being replaced. Locked rosters cannot be changed. The linked AAR must
+contain exactly the locked roster's participants. A blocked slot explains why; signup
+and withdrawal are one-click commands with in-progress feedback and preserved keyboard focus.
 
 Hovering or keyboard-focusing a strike in the planet panel rotates to its marker;
 it does not zoom, select or expose signup controls. Hovering a marker on the globe
