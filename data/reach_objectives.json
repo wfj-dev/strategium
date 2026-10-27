@@ -7,29 +7,35 @@
       "category": "general",
       "settings": [
         "agri|asteroid",
+        "agri|desert",
         "agri|starship",
-        "agri|underhive",
         "cemetery|jungle",
         "cemetery|warzone",
         "civilised|industrial",
         "civilised|jungle",
+        "civilised|ocean",
         "dead|desert",
+        "dead|gasgiant",
         "dead|ice",
         "dead|jungle",
+        "dead|ocean",
         "dead|starship",
         "death|jungle",
         "death|warzone",
         "feral|asteroid",
-        "feral|underhive",
+        "feral|ice",
         "feral|warzone",
+        "feudal|gasgiant",
         "feudal|jungle",
         "feudal|warzone",
         "forge|desert",
         "forge|ice",
         "forge|jungle",
+        "hive|industrial",
         "hive|jungle",
+        "hive|ocean",
         "hive|starship",
-        "hive|underhive"
+        "research|gasgiant"
       ],
       "tag": "PURIFICATION"
     },
@@ -44,19 +50,23 @@
         "cemetery|asteroid",
         "cemetery|desert",
         "cemetery|industrial",
-        "cemetery|underhive",
+        "cemetery|jungle",
         "civilised|asteroid",
         "civilised|ice",
         "civilised|industrial",
         "civilised|warzone",
         "dead|industrial",
         "dead|warzone",
+        "death|gasgiant",
         "death|jungle",
         "feral|jungle",
+        "feral|ocean",
+        "feudal|desert",
+        "feudal|gasgiant",
         "feudal|industrial",
         "feudal|jungle",
-        "feudal|underhive",
         "forge|ice",
+        "forge|ocean",
         "forge|starship",
         "hive|desert",
         "hive|warzone",
@@ -72,29 +82,35 @@
       "category": "general",
       "settings": [
         "agri|jungle",
-        "agri|underhive",
+        "agri|ocean",
+        "cemetery|ocean",
         "cemetery|starship",
         "cemetery|warzone",
         "civilised|desert",
+        "civilised|gasgiant",
+        "civilised|ice",
         "civilised|jungle",
         "civilised|starship",
-        "civilised|underhive",
         "dead|ice",
         "dead|jungle",
         "death|asteroid",
+        "death|gasgiant",
+        "death|ocean",
         "feral|asteroid",
         "feral|desert",
         "feral|industrial",
         "feral|warzone",
         "feudal|ice",
         "feudal|jungle",
-        "feudal|underhive",
+        "feudal|ocean",
         "hive|desert",
         "hive|ice",
         "hive|industrial",
         "research|desert",
+        "research|gasgiant",
+        "research|ice",
         "research|jungle",
-        "research|underhive"
+        "research|ocean"
       ],
       "tag": "RECOVERY"
     },
@@ -105,24 +121,28 @@
       "settings": [
         "agri|asteroid",
         "agri|warzone",
-        "cemetery|underhive",
+        "cemetery|gasgiant",
+        "cemetery|warzone",
         "civilised|asteroid",
         "civilised|warzone",
+        "death|desert",
         "death|starship",
-        "death|underhive",
         "feral|asteroid",
+        "feral|gasgiant",
         "feral|jungle",
         "feral|starship",
         "feudal|asteroid",
         "feudal|desert",
         "feudal|ice",
         "feudal|industrial",
+        "feudal|ocean",
         "forge|asteroid",
         "forge|ice",
         "forge|industrial",
         "forge|warzone",
         "hive|asteroid",
         "hive|jungle",
+        "hive|ocean",
         "hive|starship",
         "hive|warzone",
         "research|jungle",
@@ -137,23 +157,28 @@
       "category": "general",
       "settings": [
         "agri|industrial",
+        "agri|ocean",
         "agri|starship",
         "cemetery|asteroid",
+        "cemetery|gasgiant",
         "cemetery|ice",
         "cemetery|jungle",
         "cemetery|starship",
         "civilised|desert",
         "civilised|starship",
-        "civilised|underhive",
+        "civilised|warzone",
         "dead|desert",
+        "dead|ice",
         "dead|starship",
-        "dead|underhive",
+        "death|ocean",
         "death|warzone",
         "feral|ice",
         "feral|warzone",
+        "forge|gasgiant",
         "forge|industrial",
-        "forge|underhive",
+        "forge|ocean",
         "forge|warzone",
+        "hive|gasgiant",
         "hive|ice",
         "hive|warzone",
         "research|asteroid",
@@ -169,20 +194,25 @@
       "category": "general",
       "settings": [
         "agri|jungle",
+        "agri|ocean",
         "agri|warzone",
         "cemetery|asteroid",
         "cemetery|industrial",
         "civilised|asteroid",
-        "civilised|underhive",
+        "civilised|gasgiant",
+        "civilised|industrial",
+        "civilised|ocean",
         "civilised|warzone",
         "dead|asteroid",
         "dead|desert",
         "death|desert",
         "death|starship",
+        "feral|gasgiant",
         "feral|ice",
         "feudal|desert",
+        "feudal|jungle",
+        "feudal|ocean",
         "feudal|starship",
-        "feudal|underhive",
         "forge|industrial",
         "hive|desert",
         "hive|industrial",
@@ -190,8 +220,8 @@
         "research|asteroid",
         "research|ice",
         "research|industrial",
-        "research|starship",
-        "research|underhive"
+        "research|ocean",
+        "research|starship"
       ],
       "tag": "ESCORT"
     },
@@ -201,30 +231,35 @@
       "category": "general",
       "settings": [
         "agri|asteroid",
+        "agri|gasgiant",
         "agri|ice",
         "agri|jungle",
         "cemetery|starship",
         "civilised|ice",
         "civilised|jungle",
-        "dead|underhive",
+        "dead|gasgiant",
+        "dead|industrial",
         "death|asteroid",
         "death|industrial",
         "death|jungle",
         "feral|industrial",
+        "feral|ocean",
         "feudal|asteroid",
         "feudal|ice",
         "feudal|starship",
         "feudal|warzone",
         "forge|asteroid",
+        "forge|gasgiant",
         "forge|industrial",
         "forge|jungle",
         "forge|starship",
         "forge|warzone",
         "hive|asteroid",
+        "hive|gasgiant",
         "hive|industrial",
         "hive|starship",
         "research|industrial",
-        "research|underhive"
+        "research|ocean"
       ],
       "tag": "DEMOLITION"
     },
@@ -234,27 +269,31 @@
       "category": "general",
       "settings": [
         "agri|desert",
+        "agri|gasgiant",
         "agri|warzone",
         "cemetery|desert",
         "cemetery|ice",
         "cemetery|industrial",
-        "cemetery|underhive",
+        "cemetery|ocean",
         "civilised|industrial",
         "civilised|starship",
         "dead|asteroid",
+        "dead|gasgiant",
         "dead|industrial",
+        "dead|ocean",
         "death|desert",
         "death|ice",
         "death|industrial",
         "death|starship",
-        "death|underhive",
+        "death|warzone",
         "feral|desert",
         "feudal|starship",
         "feudal|warzone",
         "forge|asteroid",
         "forge|desert",
-        "forge|underhive",
+        "forge|ocean",
         "hive|asteroid",
+        "hive|gasgiant",
         "hive|ice",
         "research|desert",
         "research|warzone"
@@ -268,28 +307,32 @@
       "settings": [
         "agri|desert",
         "agri|industrial",
-        "agri|underhive",
+        "agri|jungle",
+        "cemetery|gasgiant",
+        "civilised|ocean",
         "dead|asteroid",
+        "dead|desert",
         "dead|industrial",
         "dead|jungle",
-        "dead|underhive",
         "dead|warzone",
         "death|asteroid",
+        "death|gasgiant",
         "death|ice",
         "death|jungle",
-        "death|underhive",
+        "death|ocean",
         "feral|desert",
         "feral|ice",
         "feral|industrial",
+        "feral|ocean",
         "feral|starship",
-        "feral|underhive",
         "feudal|asteroid",
         "feudal|desert",
+        "feudal|gasgiant",
         "feudal|industrial",
         "forge|desert",
+        "forge|gasgiant",
         "forge|starship",
-        "forge|underhive",
-        "hive|underhive",
+        "hive|ocean",
         "hive|warzone"
       ],
       "tag": "TRIANGULATION"
@@ -299,30 +342,36 @@
       "name": "No Brother Lost",
       "category": "general",
       "settings": [
+        "agri|gasgiant",
         "agri|ice",
         "agri|industrial",
         "agri|warzone",
         "cemetery|desert",
         "cemetery|ice",
         "cemetery|jungle",
+        "cemetery|ocean",
         "cemetery|warzone",
         "civilised|desert",
+        "civilised|gasgiant",
         "civilised|ice",
         "dead|ice",
+        "dead|ocean",
         "dead|starship",
         "dead|warzone",
         "death|desert",
         "death|ice",
         "death|industrial",
         "death|warzone",
+        "feral|desert",
+        "feral|gasgiant",
         "feral|jungle",
         "feral|starship",
-        "feral|underhive",
         "forge|jungle",
+        "hive|desert",
         "hive|jungle",
-        "hive|underhive",
         "research|asteroid",
-        "research|desert"
+        "research|desert",
+        "research|gasgiant"
       ],
       "tag": "RESCUE"
     },
@@ -332,6 +381,7 @@
       "category": "specialist",
       "settings": [
         "agri|asteroid",
+        "agri|gasgiant",
         "agri|jungle",
         "cemetery|jungle",
         "civilised|asteroid",
@@ -340,8 +390,8 @@
         "feral|jungle",
         "forge|ice"
       ],
-      "track": "Hall of Blades",
-      "tag": "ASSAULT"
+      "tag": "ASSAULT",
+      "track": "Hall of Blades"
     },
     {
       "id": "champion",
@@ -349,17 +399,18 @@
       "category": "specialist",
       "settings": [
         "civilised|desert",
-        "dead|underhive",
+        "dead|ocean",
         "dead|warzone",
         "death|desert",
         "feudal|desert",
-        "feudal|underhive",
+        "feudal|ocean",
+        "hive|gasgiant",
+        "hive|ice",
         "hive|industrial",
-        "hive|underhive",
         "hive|warzone"
       ],
-      "track": "Hall of Blades",
-      "tag": "CHALLENGE"
+      "tag": "CHALLENGE",
+      "track": "Hall of Blades"
     },
     {
       "id": "forlorn",
@@ -367,15 +418,17 @@
       "category": "specialist",
       "settings": [
         "agri|desert",
+        "agri|ocean",
+        "civilised|gasgiant",
         "civilised|industrial",
         "death|industrial",
-        "death|underhive",
+        "death|ocean",
         "feral|industrial",
         "feudal|desert",
         "forge|industrial"
       ],
-      "track": "Hall of Blades",
-      "tag": "REARGUARD"
+      "tag": "REARGUARD",
+      "track": "Hall of Blades"
     },
     {
       "id": "judgment",
@@ -384,30 +437,35 @@
       "settings": [
         "cemetery|asteroid",
         "cemetery|desert",
+        "cemetery|gasgiant",
         "cemetery|warzone",
         "dead|jungle",
         "death|desert",
+        "death|gasgiant",
         "feral|warzone",
         "feudal|industrial"
       ],
-      "track": "Hall of Blades",
-      "tag": "EXECUTION"
+      "tag": "EXECUTION",
+      "track": "Hall of Blades"
     },
     {
       "id": "rally",
       "name": "Litania Fidei",
       "category": "specialist",
       "settings": [
+        "agri|gasgiant",
         "agri|ice",
         "civilised|industrial",
         "civilised|jungle",
         "civilised|warzone",
+        "feudal|gasgiant",
         "feudal|warzone",
-        "forge|underhive",
+        "forge|gasgiant",
+        "forge|jungle",
         "forge|warzone"
       ],
-      "track": "Reclusiam",
-      "tag": "MUSTER"
+      "tag": "MUSTER",
+      "track": "Reclusiam"
     },
     {
       "id": "unbowed",
@@ -420,11 +478,12 @@
         "civilised|ice",
         "feudal|ice",
         "feudal|starship",
+        "hive|gasgiant",
         "hive|starship",
         "research|warzone"
       ],
-      "track": "Reclusiam",
-      "tag": "LAST STAND"
+      "tag": "LAST STAND",
+      "track": "Reclusiam"
     },
     {
       "id": "corruption",
@@ -432,15 +491,16 @@
       "category": "specialist",
       "settings": [
         "agri|industrial",
-        "agri|underhive",
+        "agri|starship",
         "cemetery|industrial",
-        "civilised|underhive",
+        "civilised|desert",
+        "civilised|jungle",
         "death|industrial",
         "feudal|industrial",
-        "forge|underhive"
+        "forge|asteroid"
       ],
-      "track": "Reclusiam",
-      "tag": "HERESY"
+      "tag": "HERESY",
+      "track": "Reclusiam"
     },
     {
       "id": "vivisection",
@@ -448,16 +508,17 @@
       "category": "specialist",
       "settings": [
         "agri|desert",
+        "dead|gasgiant",
         "dead|starship",
         "death|jungle",
         "forge|ice",
+        "research|gasgiant",
         "research|ice",
         "research|starship",
-        "research|underhive",
         "research|warzone"
       ],
-      "track": "Apothecarion",
-      "tag": "VIVISECTION"
+      "tag": "VIVISECTION",
+      "track": "Apothecarion"
     },
     {
       "id": "geneseed",
@@ -467,30 +528,32 @@
         "cemetery|desert",
         "cemetery|ice",
         "dead|desert",
-        "dead|underhive",
+        "dead|jungle",
         "death|asteroid",
         "death|ice",
         "death|warzone",
         "hive|desert"
       ],
-      "track": "Apothecarion",
-      "tag": "GENE-SEED"
+      "tag": "GENE-SEED",
+      "track": "Apothecarion"
     },
     {
       "id": "contagion",
       "name": "Plague Ward",
       "category": "specialist",
       "settings": [
+        "agri|industrial",
         "agri|jungle",
+        "agri|ocean",
         "agri|starship",
-        "agri|underhive",
         "civilised|starship",
         "death|starship",
+        "feudal|gasgiant",
         "feudal|jungle",
         "research|jungle"
       ],
-      "track": "Apothecarion",
-      "tag": "CONTAINMENT"
+      "tag": "CONTAINMENT",
+      "track": "Apothecarion"
     },
     {
       "id": "psyhunt",
@@ -499,31 +562,34 @@
       "settings": [
         "civilised|starship",
         "dead|ice",
+        "dead|ocean",
         "death|jungle",
+        "feral|gasgiant",
         "feral|jungle",
         "feudal|starship",
         "research|ice",
         "research|jungle"
       ],
-      "track": "Librarius",
-      "tag": "DIVINATION"
+      "tag": "DIVINATION",
+      "track": "Librarius"
     },
     {
       "id": "archive",
       "name": "Forbidden Lore",
       "category": "specialist",
       "settings": [
-        "cemetery|underhive",
+        "cemetery|ocean",
         "civilised|asteroid",
-        "civilised|underhive",
+        "civilised|ocean",
         "dead|starship",
         "death|starship",
-        "feudal|underhive",
-        "hive|underhive",
-        "research|asteroid"
+        "feudal|ocean",
+        "hive|ocean",
+        "research|asteroid",
+        "research|ocean"
       ],
-      "track": "Librarius",
-      "tag": "PROSCRIPTION"
+      "tag": "PROSCRIPTION",
+      "track": "Librarius"
     },
     {
       "id": "veil",
@@ -536,10 +602,12 @@
         "feral|asteroid",
         "feral|ice",
         "hive|asteroid",
-        "research|asteroid"
+        "hive|ocean",
+        "research|asteroid",
+        "research|ocean"
       ],
-      "track": "Librarius",
-      "tag": "BANISHMENT"
+      "tag": "BANISHMENT",
+      "track": "Librarius"
     },
     {
       "id": "salvage",
@@ -556,8 +624,8 @@
         "forge|jungle",
         "hive|industrial"
       ],
-      "track": "Armory",
-      "tag": "RESTORATION"
+      "tag": "RESTORATION",
+      "track": "Armory"
     },
     {
       "id": "archeo",
@@ -568,43 +636,50 @@
         "civilised|ice",
         "dead|ice",
         "dead|industrial",
+        "forge|gasgiant",
+        "forge|ocean",
         "forge|warzone",
         "hive|ice",
         "research|desert"
       ],
-      "track": "Armory",
-      "tag": "EXCAVATION"
+      "tag": "EXCAVATION",
+      "track": "Armory"
     },
     {
       "id": "awaken",
       "name": "Iron Sleeper",
       "category": "specialist",
       "settings": [
+        "cemetery|gasgiant",
         "cemetery|industrial",
-        "cemetery|underhive",
+        "cemetery|ocean",
+        "civilised|gasgiant",
+        "civilised|ocean",
         "civilised|warzone",
         "forge|industrial",
         "forge|starship",
         "hive|starship"
       ],
-      "track": "Armory",
-      "tag": "AWAKENING"
+      "tag": "AWAKENING",
+      "track": "Armory"
     },
     {
       "id": "knife",
       "name": "Nightfall",
       "category": "specialist",
       "settings": [
+        "feral|gasgiant",
         "feral|ice",
         "feral|industrial",
         "feudal|warzone",
         "forge|desert",
+        "forge|ocean",
         "hive|warzone",
         "research|desert",
         "research|industrial"
       ],
-      "track": "Black Vault",
-      "tag": "ASSASSINATION"
+      "tag": "ASSASSINATION",
+      "track": "Black Vault"
     },
     {
       "id": "net",
@@ -613,15 +688,16 @@
       "settings": [
         "agri|warzone",
         "dead|desert",
+        "dead|gasgiant",
         "death|ice",
-        "death|underhive",
+        "death|ocean",
         "feral|desert",
-        "feral|underhive",
+        "feral|ocean",
         "feudal|asteroid",
         "feudal|ice"
       ],
-      "track": "Black Vault",
-      "tag": "ENCIRCLEMENT"
+      "tag": "ENCIRCLEMENT",
+      "track": "Black Vault"
     },
     {
       "id": "capture",
@@ -629,15 +705,17 @@
       "category": "specialist",
       "settings": [
         "death|asteroid",
+        "death|gasgiant",
         "feral|asteroid",
         "feral|desert",
+        "feral|ocean",
         "feral|warzone",
         "feudal|jungle",
-        "research|starship",
-        "research|underhive"
+        "research|gasgiant",
+        "research|starship"
       ],
-      "track": "Black Vault",
-      "tag": "CAPTURE"
+      "tag": "CAPTURE",
+      "track": "Black Vault"
     }
   ]
 }

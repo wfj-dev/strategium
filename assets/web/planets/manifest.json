@@ -39,10 +39,8 @@
     "forge-industrial-2.webp"
   ],
   "hive|industrial": [
-    "hive-industrial-1.webp"
-  ],
-  "hive|underhive": [
-    "hive-underhive-1.webp"
+    "hive-industrial-1.webp",
+    "hive-industrial-2.webp"
   ],
   "research_station|ice": [
     "research_station-ice-1.webp"

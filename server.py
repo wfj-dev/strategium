@@ -197,6 +197,8 @@ REACH_STATUSES = {
 PAGE_PATHS = {"/", "/submit-aar", "/manage-aars", "/reach", "/record-of-blood", "/rank-guide"}
 
 SECURITY_LOG = logging.getLogger("strategium.security")
+WAR_LOG = logging.getLogger("strategium.war")
+MAX_WAR_RESPONSE_BYTES = 1024 * 1024
 
 _LOCK = threading.RLock()
 _GEOGRAPHY_CACHE: tuple[Path, int, int, bytes] | None = None
@@ -404,6 +406,7 @@ def _war_request(user_id: str, payload: dict[str, Any]) -> tuple[int, dict[str, 
     intake = _bot_aar_intake_target(BOT_AAR_INTAKE_URL)
     secret = _bot_aar_shared_secret()
     if not secret or not intake:
+        WAR_LOG.warning("Campaign relay is not configured")
         return None
     body = _json_bytes(payload)
     timestamp = str(int(time.time()))
@@ -417,15 +420,23 @@ def _war_request(user_id: str, payload: dict[str, Any]) -> tuple[int, dict[str, 
     try:
         opener = urllib.request.build_opener(_NoRedirectHandler)
         with opener.open(request, timeout=15) as response:
-            payload = json.loads(response.read(1024 * 1024))
+            raw = response.read(MAX_WAR_RESPONSE_BYTES + 1)
+            if len(raw) > MAX_WAR_RESPONSE_BYTES:
+                WAR_LOG.warning("Campaign relay response exceeded %s bytes", MAX_WAR_RESPONSE_BYTES)
+                return None
+            payload = json.loads(raw)
+            if not isinstance(payload, dict):
+                raise ValueError("Invalid campaign response shape")
             return response.status, payload
     except urllib.error.HTTPError as error:
+        WAR_LOG.warning("Campaign relay returned HTTP %s", error.code)
         try:
             payload = json.loads(error.read(16384))
         except (UnicodeDecodeError, json.JSONDecodeError):
             payload = {"error": "war_request_failed"}
         return error.code, payload
-    except (OSError, ValueError, urllib.error.URLError):
+    except (OSError, ValueError, urllib.error.URLError) as error:
+        WAR_LOG.warning("Campaign relay failed (%s)", type(error).__name__)
         return None
 
 
@@ -692,6 +703,7 @@ def _static_asset_path(path: str) -> Path | None:
         DISCORD_MARK_URL: DISCORD_MARK_PATH,
         OXBLOOD_CURSOR_URL: OXBLOOD_CURSOR_PATH,
         "/assets/planet-view.mjs": WEB_ASSETS_DIR / "planet-view.mjs",
+        "/assets/kill-team-commitment.webp": WEB_ASSETS_DIR / "kill-team-commitment.webp",
         "/assets/vendor/three.module.min.js": WEB_ASSETS_DIR / "vendor" / "three.module.min.js",
         "/assets/strike-regions/manifest.json": ROOT / "data" / "strike_region_art.json",
         FORTRESS_MAP_URL: FORTRESS_MAP_PATH,
@@ -701,6 +713,8 @@ def _static_asset_path(path: str) -> Path | None:
         REACH_SECTOR_EDGES_URL: REACH_SECTOR_EDGES_PATH,
         FORTRESS_HOVER_MASK_URL: FORTRESS_HOVER_MASK_PATH,
     }
+    fixed.update({f"/assets/company-symbols/{name}.png": ROOT / "assets" / f"{name}.png"
+                  for name in ("Primus", "Secundus", "Tertius", "Quartus", "Quintus")})
     if path in fixed:
         return _existing(fixed[path])
     if path.startswith("/assets/strike-regions/"):
@@ -710,7 +724,7 @@ def _static_asset_path(path: str) -> Path | None:
         return _existing(WEB_ASSETS_DIR / "strike-regions" / filename)
     if path.startswith("/assets/planets/"):
         filename = path.removeprefix("/assets/planets/")
-        if not re.fullmatch(r"(?:hive|forge|agri|civilised|feral|feudal|death|dead|cemetery|research|research_station)-(?:jungle|desert|ice|industrial|warzone|underhive|starship|asteroid)-(?:[1-9]|1[0-9]|20)\.webp", filename):
+        if not re.fullmatch(r"(?:hive|forge|agri|civilised|feral|feudal|death|dead|cemetery|research|research_station)-(?:jungle|desert|ice|industrial|warzone|starship|asteroid|ocean|gasgiant)-(?:[1-9]|1[0-9]|20)\.webp", filename):
             return None
         return _existing(WEB_ASSETS_DIR / "planets" / filename)
     if path.startswith("/assets/galactic-map/"):

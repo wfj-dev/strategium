@@ -39,6 +39,63 @@ def test_planet_renderer_modules_are_local_allowlisted_javascript(local_site, pa
     assert server._static_asset_path("/assets/vendor/../server.py") is None
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for Sector Operations navigation")
+def test_sector_operations_navigation_returns_to_full_map():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const context={state:{page:'fortress',auth:{},reachStatus:'live',reachMapLevel:'planet',selectedSector:'29',selectedSystem:'system',reachCanvasCamera:{}},warView:{planet:'world',strike:'strike',subsector:'29'},
+ recordNavigation:()=>{},returnTargetFor:()=>({}),closePlanetView:()=>{},closePlanetModal:()=>{},pauseBloodAudio:()=>{},render:()=>{},
+ resetGeographyCamera:()=>{},updateGeographySectorPanel:()=>{},performance:{now:()=>1},renderReach:()=>{},
+ document:{getElementById:()=>({classList:{remove:()=>{}}})},window:{location:{protocol:'http:'},scrollTo:()=>{}},history:{pushState:()=>{}}};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('async function setPage('),html.indexOf('async function loadChapterLore(')),context);
+vm.runInContext(html.slice(html.indexOf('function showReachLevel()'),html.indexOf('function showSectorLevel(')),context);
+(async()=>{
+ for(const previousPage of ['fortress','reach']){
+  context.state.page=previousPage;context.state.reachMapLevel='planet';context.state.selectedSector='29';context.state.selectedSystem='system';
+  context.warView.planet='world';context.warView.strike='strike';context.warView.subsector='29';
+  await context.setPage('reach',true);
+  assert.equal(context.state.reachMapLevel,'reach');assert.equal(context.state.selectedSector,null);assert.equal(context.state.selectedSystem,null);
+  assert.equal(context.warView.planet,'');assert.equal(context.warView.strike,'');assert.equal(context.warView.subsector,'');
+ }
+})().catch(error=>{console.error(error);process.exit(1);});
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
+def test_kill_team_commitment_emblem_is_served_as_allowlisted_webp(local_site):
+    with urllib.request.urlopen(local_site + "/assets/kill-team-commitment.webp") as response:
+        assert response.headers.get_content_type() == "image/webp"
+        assert len(response.read()) > 100
+    assert server._static_asset_path("/assets/Luminous_green_cyber_skull_emblem.png") is None
+
+
+@pytest.mark.parametrize("name", ["Primus", "Secundus", "Tertius", "Quartus", "Quintus"])
+def test_company_symbols_serve_the_supplied_pngs(local_site, name):
+    with urllib.request.urlopen(local_site + f"/assets/company-symbols/{name}.png") as response:
+        assert response.headers.get_content_type() == "image/png"
+        assert response.read() == (server.ROOT / "assets" / f"{name}.png").read_bytes()
+    assert server._static_asset_path("/assets/company-symbols/Unknown.png") is None
+    assert server._static_asset_path("/assets/company-symbols/../Primus.png") is None
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for company artwork mapping")
+def test_company_artwork_mapping_is_shared_by_docket_and_galactic_map():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8'),context={};vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('const COMPANY_NAMES ='),html.indexOf('const FORMATION_COLORS ='))+'\nglobalThis.symbols=COMPANY_SYMBOLS;globalThis.sigils=COMPANY_SIGILS;',context);
+for(const [id,name] of Object.entries({1:'Primus',2:'Secundus',3:'Tertius',4:'Quartus',5:'Quintus'})){
+ assert.equal(context.symbols[id],`/assets/company-symbols/${name}.png`);
+ assert(context.sigils[id].includes(context.symbols[id]));assert(!context.sigils[id].includes('<svg'));
+}
+const markers=html.slice(html.indexOf('  function drawArt('),html.indexOf('  function drawEasternApproach('));
+assert.match(markers,/COMPANY_SYMBOLS\[company\]/);assert.match(markers,/context\.drawImage\(image/);assert.doesNotMatch(markers,/fillText\(`C/);
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
 def test_strike_region_manifest_and_region_paths_are_constrained(local_site):
     with urllib.request.urlopen(local_site + "/assets/strike-regions/manifest.json") as response:
@@ -71,7 +128,10 @@ assert.equal(c.objectiveDisplayTag({objective_id:'vanguard'}),'ASSAULT');
 assert.equal(c.objectiveDisplayTag({objective_id:'unknown'}),'General objective');
 let markup=c.warConsoleHtml();
 assert(markup.indexOf('aria-label="Strike roster"')<markup.indexOf('aria-label="Strike modifiers"'));
-assert.doesNotMatch(markup,/data-war-action="join"|data-strike-back/);
+assert.doesNotMatch(markup,/data-strike-back/);
+assert.equal((markup.match(/class="strike-slot-join"/g)||[]).length,3);
+assert.match(markup,/data-war-action="join" data-strike="one"/);
+assert.match(markup,/Click \/ tap to join/);
 assert.equal((markup.match(/strike-slot-number/g)||[]).length,3);
 assert.match(markup,/Positive \/ 1/);assert.match(markup,/Negative \/ 3/);assert.match(markup,/Mandatory faction conversion \/ additional/);
 assert.match(markup,/Carry twice as much Equipment/);assert.doesNotMatch(markup,/Complete the assigned operation/);
@@ -92,6 +152,7 @@ c.state.reachMapLevel='strike';c.warView.strike='removed';c.refreshStrikeSceneBr
 c.warView.strike='one';const savedWar=c.warView.data;c.warView.data=null;c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(stage.dataset.view,'planet');c.warView.data=savedWar;
 offer.viewer_signup={can_join:false,reason:'The remaining slot must fulfill the required rank',specialist_fulfilled:false};offer.required_rank='Bladeguard';
 let action=c.strikeActionBarHtml(offer);assert.match(action,/data-war-action="join"[^>]*disabled/);assert.match(action,/remaining slot/);
+markup=c.warConsoleHtml();assert.match(markup,/class="strike-slot-join"[^>]*disabled/);assert.match(markup,/remaining slot/);assert.doesNotMatch(markup,/Click \/ tap to join/);
 offer.viewer_signup={can_join:true,reason:'',specialist_fulfilled:true};markup=c.warConsoleHtml();assert.match(markup,/Covered/);assert.doesNotMatch(markup,/Open \/ Bladeguard requirement/);
 offer.capacity=5;assert.equal((c.warConsoleHtml().match(/strike-slot-number/g)||[]).length,5);
 offer.status='locked';offer.participants=['42','43','44','45','46'];markup=c.warConsoleHtml();action=c.strikeActionBarHtml(offer);assert.match(action,/data-war-action="report"/);assert.doesNotMatch(markup,/data-war-action="report"|data-war-action="join"/);assert.match(markup,/Brother Tester \(You\)/);
@@ -398,6 +459,37 @@ def test_management_proxy_reads_bounded_complete_responses(monkeypatch):
     assert server._aar_management_request("42", "list", {}) == (200, json.loads(response_body))
     response_body = b"x" * (server.MAX_AAR_MANAGEMENT_RESPONSE_BYTES + 10)
     assert server._aar_management_request("42", "list", {}) is None
+
+
+def test_campaign_relay_reports_transport_and_response_failures_without_secrets(monkeypatch, caplog):
+    monkeypatch.setattr(server, "_bot_aar_shared_secret", lambda: "private-relay-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    body = b'{"campaigns":{}}'
+    class Response:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def read(self, limit):
+            return body[:limit]
+    class Opener:
+        def open(self, *args, **kwargs):
+            return Response()
+    monkeypatch.setattr(server.urllib.request, "build_opener", lambda *args: Opener())
+    assert server._war_request("42", {"action": "snapshot"}) == (200, {"campaigns": {}})
+    body = b"x" * (server.MAX_WAR_RESPONSE_BYTES + 1)
+    assert server._war_request("42", {"action": "snapshot"}) is None
+    assert "exceeded" in caplog.text
+    body = b"invalid-json"
+    assert server._war_request("42", {"action": "snapshot"}) is None
+    assert "JSONDecodeError" in caplog.text
+    def timeout(*args, **kwargs):
+        raise TimeoutError("private-relay-secret must never be logged")
+    monkeypatch.setattr(Opener, "open", timeout)
+    assert server._war_request("42", {"action": "snapshot"}) is None
+    assert "TimeoutError" in caplog.text
+    assert "private-relay-secret" not in caplog.text
 
 
 def test_staff_preview_proxy_binds_review_to_selected_record(local_site, monkeypatch):
@@ -729,7 +821,7 @@ def test_planet_portraits_are_served_for_every_catalogued_variant(local_site):
 
     with urllib.request.urlopen(local_site + "/api/geography") as response:
         catalog = json.loads(response.read())["planetArt"]
-    assert len(catalog) == 16
+    assert len(catalog) == 15
     assert sum(map(len, catalog.values())) == 19
     for filenames in catalog.values():
         for filename in filenames:
@@ -776,8 +868,8 @@ const phase=35*Math.PI/180,tilt=orbitPosition.orbitRotation;
 assert(Math.abs(orbitPosition.x-(10+13*(Math.cos(phase)*Math.cos(tilt)-.46*Math.sin(phase)*Math.sin(tilt))))<1e-9);
 assert(Math.abs(orbitPosition.y-(20+13*(Math.cos(phase)*Math.sin(tilt)+.46*Math.sin(phase)*Math.cos(tilt))))<1e-9);
 vm.runInContext(html.slice(html.indexOf('const GEOGRAPHY_WORLD_TYPES ='),html.indexOf('function openGeographySystem(')),context);
-const body={id:'unrelated_sector_world',name:'Unrelated Name',kind:'hive_world',biome:'underhive'};
-assert.equal(context.geographyBodyArtwork(body),'/assets/planets/hive-underhive-1.webp');
+const body={id:'unrelated_sector_world',name:'Unrelated Name',kind:'hive_world',biome:'industrial'};
+assert.match(context.geographyBodyArtwork(body),/^\/assets\/planets\/hive-industrial-[12]\.webp$/);
 assert.equal(context.geographyBodyArtwork({...body,name:'Vhaloris'}),context.geographyBodyArtwork(body));
 assert.equal(context.geographyBodyArtwork({...body,biome:'ice'}),'');
 assert.equal(context.geographyBodyArtwork({...body,kind:'star'}),'');
@@ -1923,6 +2015,10 @@ let markup=c.warConsoleHtml();
 assert.match(markup,/data-sector-system="one"/);assert.match(markup,/data-sector-system="two"/);
 assert.doesNotMatch(markup,/data-war-nav="planet"|Vhaloris|Kael Tertius|Theryn|System strikes|Kill-team assignment/);
 assert.match(markup,/Company commitment/);
+c.warView.data.assignments={'1-team':'one','1-other':'two'};c.warView.data.kill_teams=[{id:'1-team',name:'Kill Team Alpha'},{id:'1-other',name:'Kill Team Beta'}];
+markup=c.geographySystemDirectoryHtml('alpha');assert.equal((markup.match(/class="system-commitment-emblem"/g)||[]).length,2);
+assert.match(markup,/title="Kill Team Alpha committed"/);assert.match(markup,/title="Kill Team Beta committed"/);
+c.warView.data.assignments={};assert.doesNotMatch(c.geographySystemDirectoryHtml('alpha'),/system-commitment-emblem/);
 c.state.selectedSystem='one';markup=c.warConsoleHtml();
 assert.match(markup,/data-war-nav="system"/);assert.match(markup,/data-war-nav="planet"/);
 assert.match(markup,/Vhaloris/);assert.match(markup,/Kael Tertius/);
@@ -2861,6 +2957,31 @@ vm.runInContext(selector, context);
 assert.deepEqual(context.formationEquerries('armory').map(member => member.id), ['specialist']);
 assert.equal(vm.runInContext('FORMATIONS.armory.ranks.includes("honored_dreadnought")', context), true);
 assert.equal(vm.runInContext('RANK_LABELS.honored_dreadnought', context), 'Honored Dreadnought');
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the Equerry name regression")
+def test_equerry_display_name_strips_title_once():
+    source = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const titles = html.slice(html.indexOf('const EQUERRY_TITLES = {'), html.indexOf('const FORMATION_MEMBER_RANKS = '));
+const names = html.slice(html.indexOf('function displayName(name) {'), html.indexOf('function dropcapHtml(text) {'));
+const context = {};
+vm.createContext(context);
+vm.runInContext(titles + names, context);
+for (const title of ['High Blade', 'Forge Adept', 'Lexicanum Primus', 'Primus Medicae', 'Reclusiarch', 'Venator Primus']) {
+    assert.equal(context.displayName(`${title} Asphyxia`), 'Asphyxia');
+    assert.equal(context.displayName(`${title.toUpperCase()} ${title} ASPHYXIA`), 'Asphyxia');
+}
+assert.equal(`High Blade ${context.displayName('High Blade Asphyxia')}`, 'High Blade Asphyxia');
+assert.equal(context.displayName('First Blade High Blade Asphyxia'), 'Asphyxia');
+assert.equal(context.displayName('Asphyxia'), 'Asphyxia');
+assert.equal(context.displayName('High Blade'), 'High Blade');
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr

@@ -55,6 +55,10 @@ def build_pauldron(name: str) -> Path:
     return target
 
 
+def build_commitment_emblem() -> None:
+    _save(ASSETS / "Luminous_green_cyber_skull_emblem.png", WEB / "kill-team-commitment.webp", max_size=(96, 114), quality=90)
+
+
 def build_map_icons() -> None:
     import cv2
     import numpy as np
@@ -248,8 +252,12 @@ def main() -> None:
     parser.add_argument("--map-icons-only", action="store_true")
     parser.add_argument("--planet-art-only", action="store_true")
     parser.add_argument("--strike-region-art-only", action="store_true")
+    parser.add_argument("--commitment-emblem-only", action="store_true")
     parser.add_argument("--pauldron", help="Build only the named Chapter pauldron thumbnail")
     args = parser.parse_args()
+    if args.commitment_emblem_only:
+        build_commitment_emblem()
+        return
     if args.strike_region_art_only:
         build_strike_region_art()
         return
@@ -267,6 +275,7 @@ def main() -> None:
         return
     import numpy as np
 
+    build_commitment_emblem()
     build_planet_art()
     for source in pauldron_sources():
         _save(source, WEB / "pauldrons" / f"{source.stem}.webp", max_size=(192, 192))
