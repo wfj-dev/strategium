@@ -492,6 +492,18 @@ def test_campaign_relay_reports_transport_and_response_failures_without_secrets(
     assert "private-relay-secret" not in caplog.text
 
 
+@pytest.mark.parametrize("body", [b"null", b"[]", b"42", b'"not an object"'])
+def test_campaign_relay_normalizes_non_object_error_responses(monkeypatch, body):
+    import io
+    monkeypatch.setattr(server, "_bot_aar_shared_secret", lambda: "test-secret")
+    monkeypatch.setattr(server, "BOT_AAR_INTAKE_URL", "http://127.0.0.1:8080/v1/aar/submissions")
+    class Opener:
+        def open(self, *args, **kwargs):
+            raise urllib.error.HTTPError("http://127.0.0.1/war", 503, "Unavailable", {}, io.BytesIO(body))
+    monkeypatch.setattr(server.urllib.request, "build_opener", lambda *args: Opener())
+    assert server._war_request("42", {"action": "snapshot"}) == (503, {"error": "war_request_failed"})
+
+
 def test_staff_preview_proxy_binds_review_to_selected_record(local_site, monkeypatch):
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
     monkeypatch.setattr(server, "_aar_access", lambda user: {"allowed": True, "aar_management": {"can_edit": True, "can_delete": False}})

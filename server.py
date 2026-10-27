@@ -434,7 +434,7 @@ def _war_request(user_id: str, payload: dict[str, Any]) -> tuple[int, dict[str, 
             payload = json.loads(error.read(16384))
         except (UnicodeDecodeError, json.JSONDecodeError):
             payload = {"error": "war_request_failed"}
-        return error.code, payload
+        return error.code, payload if isinstance(payload, dict) else {"error": "war_request_failed"}
     except (OSError, ValueError, urllib.error.URLError) as error:
         WAR_LOG.warning("Campaign relay failed (%s)", type(error).__name__)
         return None

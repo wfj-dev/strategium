@@ -57,6 +57,7 @@ def validate_objective_catalog(payload: Any) -> dict[str, Any]:
         raise ValueError("objectiveCatalog must have schemaVersion 1")
     objectives = []
     identities: set[str] = set()
+    valid_settings = {f"{world}|{biome}" for world in WORLD_TYPES for biome in BIOMES}
     for raw in _objects(payload.get("objectives"), 100, "objectives"):
         identity = _unique_id(raw, identities, "objective")
         category = raw.get("category")
@@ -67,7 +68,7 @@ def validate_objective_catalog(payload: Any) -> dict[str, Any]:
             raise ValueError(f"objective {identity} has invalid settings")
         seen: set[str] = set()
         for setting in settings:
-            if not isinstance(setting, str) or setting not in {f"{world}|{biome}" for world in WORLD_TYPES for biome in BIOMES} or setting in seen:
+            if not isinstance(setting, str) or setting not in valid_settings or setting in seen:
                 raise ValueError(f"objective {identity} has invalid or duplicate setting")
             seen.add(setting)
         objective = {"id": identity, "name": _text(raw.get("name"), "objective name"), "category": category, "settings": settings.copy()}
