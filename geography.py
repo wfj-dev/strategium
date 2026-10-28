@@ -20,7 +20,7 @@ _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_]{0,79}$")
 _SOURCES = {"canon", "local_reference", "homebrew"}
 _ROUTE_STATUSES = {"open", "restricted", "closed"}
 _RISKS = {"low", "moderate", "high", "extreme"}
-BIOMES = frozenset({"jungle", "desert", "ice", "industrial", "warzone", "underhive", "starship", "asteroid"})
+BIOMES = frozenset({"jungle", "desert", "ice", "industrial", "warzone", "starship", "asteroid", "ocean", "gasgiant"})
 WORLD_TYPES = frozenset({"hive", "forge", "agri", "civilised", "feral", "feudal", "death", "dead", "cemetery", "research"})
 WORLD_CLASSES = {
     "agri": {"name": "Alpha", "symbol": "\u03b1"},
@@ -37,7 +37,7 @@ WORLD_CLASSES = {
 
 
 def validate_planet_art(payload: Any) -> dict[str, list[str]]:
-    if not isinstance(payload, dict) or len(payload) > 88:
+    if not isinstance(payload, dict) or len(payload) > (len(WORLD_TYPES) + 1) * len(BIOMES):
         raise ValueError("planetArt must be a bounded pairing catalogue")
     result = {}
     for setting, filenames in payload.items():
@@ -57,17 +57,18 @@ def validate_objective_catalog(payload: Any) -> dict[str, Any]:
         raise ValueError("objectiveCatalog must have schemaVersion 1")
     objectives = []
     identities: set[str] = set()
+    valid_settings = {f"{world}|{biome}" for world in WORLD_TYPES for biome in BIOMES}
     for raw in _objects(payload.get("objectives"), 100, "objectives"):
         identity = _unique_id(raw, identities, "objective")
         category = raw.get("category")
         if category not in {"general", "specialist"}:
             raise ValueError(f"objective {identity} has invalid category")
         settings = raw.get("settings")
-        if not isinstance(settings, list) or len(settings) > 80:
+        if not isinstance(settings, list) or len(settings) > len(WORLD_TYPES) * len(BIOMES):
             raise ValueError(f"objective {identity} has invalid settings")
         seen: set[str] = set()
         for setting in settings:
-            if not isinstance(setting, str) or setting not in {f"{world}|{biome}" for world in WORLD_TYPES for biome in BIOMES} or setting in seen:
+            if not isinstance(setting, str) or setting not in valid_settings or setting in seen:
                 raise ValueError(f"objective {identity} has invalid or duplicate setting")
             seen.add(setting)
         objective = {"id": identity, "name": _text(raw.get("name"), "objective name"), "category": category, "settings": settings.copy()}

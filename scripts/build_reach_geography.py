@@ -26,7 +26,7 @@ DEFAULT_OUTPUT = ROOT / "data" / "reach_geography.json"
 OBJECTIVES_PATH = ROOT / "data" / "reach_objectives.json"
 SECTOR_29_SYSTEMS = (
     ("Solenne Crown", (
-        ("Vhaloris", "hive_world", "underhive"),
+        ("Vhaloris", "hive_world", "industrial"),
         ("Kael Tertius", "forge_world", "industrial"),
         ("Edris", "civilized_world", "desert"),
         ("Namarra", "agri_world", "jungle"),
@@ -506,7 +506,7 @@ def build_war_definition(geography: dict, sector_mask: np.ndarray, definition: d
         "feral_world": "feral", "death_world": "death", "dead_world": "dead",
         "station": "research", "research_world": "research", "cemetery_world": "cemetery",
     }
-    biomes = {"hive": "underhive", "forge": "industrial", "agri": "jungle", "civilised": "warzone", "feral": "jungle", "death": "jungle", "dead": "desert", "research": "jungle", "cemetery": "warzone"}
+    biomes = {"hive": "industrial", "forge": "industrial", "agri": "jungle", "civilised": "warzone", "feral": "jungle", "death": "jungle", "dead": "desert", "research": "jungle", "cemetery": "warzone"}
     planets = {identity: dict(metadata) for identity, metadata in definition.get("planets", {}).items()}
     for body in geography["bodies"]:
         if body.get("battleEligible") is not True:

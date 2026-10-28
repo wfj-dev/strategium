@@ -131,9 +131,9 @@ def test_full_asset_build_imports_numpy_for_sparse_fortress_layers(tmp_path, mon
 
 def test_planet_art_validation_preserves_pairings_and_rejects_untrusted_paths():
     payload = _sample_geography()
-    payload["planetArt"] = {"hive|underhive": ["hive-underhive-1.webp"]}
+    payload["planetArt"] = {"hive|industrial": ["hive-industrial-1.webp"]}
     assert validate_geography(payload)["planetArt"] == payload["planetArt"]
-    for invalid in ({"hive|ocean": ["hive-ocean-1.webp"]}, {"hive|underhive": ["../secret.webp"]}, {"hive|underhive": []}, {"hive|underhive": ["hive-underhive-2.webp"]}):
+    for invalid in ({"hive|unknown": ["hive-unknown-1.webp"]}, {"hive|underhive": ["hive-underhive-1.webp"]}, {"hive|industrial": ["../secret.webp"]}, {"hive|industrial": []}, {"hive|industrial": ["hive-industrial-2.webp"]}):
         payload["planetArt"] = invalid
         with pytest.raises(ValueError, match="planetArt"):
             validate_geography(payload)
@@ -178,7 +178,19 @@ def test_objective_import_uses_only_authored_expression_settings():
     ]}
 
 
-@pytest.mark.parametrize("biome", [None, [], "", "unknown", "Wasteland/Warzone"])
+@pytest.mark.parametrize("biome", ["ocean", "gasgiant"])
+def test_updated_atlas_biomes_survive_import_and_geography_validation(biome):
+    payload = _sample_geography()
+    payload["bodies"][0]["biome"] = biome
+    setting = f"research|{biome}"
+    cards = [{"id": "purge", "name": "Purge", "spec": False, "expressions": [{"settings": [setting]}]}]
+    payload["objectiveCatalog"] = import_objectives('<script id="cards-data">' + json.dumps({"cards": cards}) + '</script>')
+    result = validate_geography(payload)
+    assert result["bodies"][0]["biome"] == biome
+    assert result["objectiveCatalog"]["objectives"][0]["settings"] == [setting]
+
+
+@pytest.mark.parametrize("biome", [None, [], "", "unknown", "underhive", "Wasteland/Warzone"])
 def test_biome_rejects_invalid_values(biome):
     payload = _sample_geography()
     payload["bodies"][0]["biome"] = biome
@@ -194,7 +206,7 @@ def test_biome_rejected_on_stars():
 
 
 @pytest.mark.parametrize("changes", [
-    {"settings": ["hive|ocean"]}, {"settings": ["hive|ice", "hive|ice"]},
+    {"settings": ["hive|unknown"]}, {"settings": ["hive|ice", "hive|ice"]},
     {"settings": [None]}, {"settings": "hive|ice"}, {"settings": ["hive|ice"] * 81},
     {"category": "unknown"}, {"category": "specialist"}, {"name": ""},
 ])
@@ -538,7 +550,7 @@ def test_sector_29_has_the_authored_systems_world_types_and_biomes():
     assert next(sector for sector in geography["sectors"] if sector["id"] == "sector_29")["name"] == "The Canticle Reach"
     expected = [
         ("Solenne Crown", [
-            ("Vhaloris", "hive_world", "underhive"), ("Kael Tertius", "forge_world", "industrial"),
+            ("Vhaloris", "hive_world", "industrial"), ("Kael Tertius", "forge_world", "industrial"),
             ("Edris", "civilized_world", "desert"), ("Namarra", "agri_world", "jungle"),
             ("Sepulcris", "cemetery_world", "warzone"),
         ]),

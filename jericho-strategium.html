@@ -330,7 +330,7 @@
   .map-node .formation-plate-lead, .map-node .company-plate-captain { font-size: 10px; }
   .map-node .formation-plate-count, .map-node .company-plate-count { font-size: 9px; }
   .map-node .company-sigil { width: 22px; height: 22px; flex-basis: 22px; }
-  .map-node .company-sigil svg { width: 18px; height: 18px; }
+  .map-node .company-sigil img { width: 22px; height: 22px; }
   .formation-slot-armory { grid-column: 1; grid-row: 1; }
   .formation-slot-apothecarion { grid-column: 5; grid-row: 1; }
   .formation-slot-black_vault { grid-column: 2; grid-row: 3; }
@@ -526,12 +526,11 @@
 
   .company-sigil {
     position: static; flex: 0 0 22px;
-    width: 22px; height: 22px; border-radius: 50%;
-    background: #030303; color: #d8352b;
+    width: 22px; height: 22px;
     display: flex; align-items: center; justify-content: center;
-    border: 1px solid #3a3a3a;
   }
-  .company-sigil svg { width: 15px; height: 15px; }
+  .company-sigil img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .company-commitment-symbol { display: inline-block; width: 24px; height: 24px; object-fit: contain; vertical-align: middle; }
 
   .unit-detail-header { position: relative; min-height: 48px; padding-right: 64px; margin: 6px 0 16px; }
   .unit-detail-title { margin: 0 0 16px; font-family: inherit; font-weight: 400; overflow-wrap: anywhere; }
@@ -539,12 +538,10 @@
   .unit-detail-symbol .formation-symbol { width: 48px; height: 48px; }
   .unit-detail-meta { font-size: 11.5px; line-height: 1.5; color: var(--green-dim); }
   .company-sigil-lg {
-    width: 48px; height: 48px; flex-basis: 48px; border-radius: 50%;
-    background: #030303; color: #d8352b;
+    width: 48px; height: 48px; flex-basis: 48px;
     display: flex; align-items: center; justify-content: center;
-    border: 2px solid #3a3a3a; flex-shrink: 0;
+    flex-shrink: 0;
   }
-  .company-sigil-lg svg { width: 27px; height: 27px; }
 
   .company-note {
     font-size: 11.5px; color: var(--green-faint); font-style: italic;
@@ -735,6 +732,11 @@
   .strike-roster { display: grid; gap: 6px; list-style: none; padding: 0; margin: 0; }
   .strike-roster li { display: flex; gap: 10px; align-items: center; min-height: 44px; padding: 7px 9px; background: rgba(79,214,122,.035); color: var(--white); font-size: 12px; overflow-wrap: anywhere; }
   .strike-roster .empty { color: var(--green-dim); border: 1px dashed var(--border-dim); background: none; }
+  .strike-roster .empty { padding: 0; }
+  .strike-slot-join { display: flex; gap: 10px; align-items: center; width: 100%; min-height: 48px; padding: 9px; border: 0; background: transparent; color: var(--green); font: inherit; text-align: left; cursor: pointer; }
+  .strike-slot-join:not(:disabled):hover, .strike-slot-join:focus-visible { background: rgba(79,214,122,.14); outline: 1px solid var(--green); outline-offset: -1px; }
+  .strike-slot-join:disabled { color: var(--green-dim); cursor: default; }
+  .strike-slot-join small { color: inherit; }
   .strike-slot-number { flex: 0 0 18px; color: var(--green-dim); font-size: 10px; }
   .strike-roster small { display: block; margin-top: 3px; color: var(--gold); font-size: 10px; }
   .strike-modifier-group { margin: 12px 0; padding-left: 10px; border-left: 2px solid var(--green); }
@@ -1133,10 +1135,12 @@
   .reach-sector-panel-body > details > summary { cursor: pointer; color: var(--green-dim); font-size: 11px; padding: 8px 0; }
   .reach-mobile-index { display: none; }
   .reach-mobile-toolbar, .reach-mobile-map-back { display: none; }
-  .reach-sector-system { display: block; width: 100%; margin: 0 0 6px; padding: 10px; border: 1px solid var(--border-dim); border-left: 2px solid var(--green-faint); background: rgba(79,214,122,.025); color: var(--green-dim); text-align: left; cursor: pointer; }
+  .reach-sector-system { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 12px; align-items: center; width: 100%; margin: 0 0 6px; padding: 10px; border: 1px solid var(--border-dim); border-left: 2px solid var(--green-faint); background: rgba(79,214,122,.025); color: var(--green-dim); text-align: left; cursor: pointer; }
   .reach-sector-system:hover, .reach-sector-system[aria-pressed="true"] { border-color: var(--gold-dim); border-left-color: var(--gold); background: rgba(207,174,104,.055); }
   .reach-sector-system-name { display: block; color: var(--white); font: 600 12px 'Cinzel', serif; overflow-wrap: anywhere; }
-  .reach-sector-system-meta { display: block; margin-top: 4px; color: var(--green-faint); font-size: 9px; line-height: 1.4; }
+  .reach-sector-system-meta { display: block; grid-column: 1; margin-top: 4px; color: var(--green-faint); font-size: 9px; line-height: 1.4; }
+  .system-commitments { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 126px; }
+  .system-commitment-emblem { width: 36px; height: 44px; object-fit: contain; }
   .reach-sector-system-worlds { display: grid; gap: 4px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--border-dim); color: var(--green-dim); font-size: 9px; }
   .reach-sector-system-worlds span { overflow-wrap: anywhere; }
   .reach-sector-empty { padding: 14px 10px; color: var(--green-faint); font-size: 10px; }
@@ -1286,6 +1290,8 @@
     border: 1px solid var(--border-dim); padding: 8px 10px; text-transform: uppercase; letter-spacing: 0.06em;
   }
   .reach-legend-item { display: flex; align-items: center; gap: 7px; }
+  .reach-legend-item.company-legend { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .company-legend-symbols { display: flex; gap: 4px; }
   .reach-legend-swatch { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--swatch); flex-shrink: 0; }
   .reach-hint { position: absolute; right: 12px; bottom: 10px; font-size: 10px; color: var(--green-faint); pointer-events: none; }
   .reach-tooltip {
@@ -2086,18 +2092,10 @@ const KILL_TEAM_ROSTER_RANKS = ["watch_brother", "watch_veteran", "oathsworn"];
 
 const COMPANY_NAMES = { 1: "Primus", 2: "Secundus", 3: "Tertius", 4: "Quartus", 5: "Quintus" };
 
-/* Exact Watch Company markings: a black circle, plain for Primus, marked
-   with a red line for the others — horizontal (Secundus), vertical
-   (Tertius), diagonal NW-SE (Quartus), diagonal NE-SW (Quintus). */
 const COMPANY_MARKINGS = { 1: "I", 2: "II", 3: "III", 4: "IV", 5: "V" };
 
-const COMPANY_SIGILS = {
-  1: '<svg viewBox="0 0 24 24"></svg>',
-  2: '<svg viewBox="0 0 24 24"><line x1="0" y1="12" x2="24" y2="12" stroke="currentColor" stroke-width="10"/></svg>',
-  3: '<svg viewBox="0 0 24 24"><line x1="12" y1="0" x2="12" y2="24" stroke="currentColor" stroke-width="10"/></svg>',
-  4: '<svg viewBox="0 0 24 24"><line x1="4.5" y1="4.5" x2="19.5" y2="19.5" stroke="currentColor" stroke-width="10"/></svg>',
-  5: '<svg viewBox="0 0 24 24"><line x1="19.5" y1="4.5" x2="4.5" y2="19.5" stroke="currentColor" stroke-width="10"/></svg>'
-};
+const COMPANY_SYMBOLS = Object.fromEntries(Object.entries(COMPANY_NAMES).map(([id, name]) => [id, `/assets/company-symbols/${name}.png`]));
+const COMPANY_SIGILS = Object.fromEntries(Object.entries(COMPANY_SYMBOLS).map(([id, source]) => [id, `<img src="${source}" width="48" height="48" alt="">`]));
 
 /* Specialist Formation colours. */
 const FORMATION_COLORS = {
@@ -5271,7 +5269,8 @@ function displayName(name) {
     "Watch Apothecary", "Watch Techmarine", "Watch Sergeant", "Watch Captain",
     "Veteran Sergeant", "Honored Dreadnought", "High Chaplain", "Blade Master",
     "Forge Master", "Forgemaster", "Hunt Master", "Huntmaster", "Watch Master",
-    "First Blade", "Bladeguard", "Watch Veteran", "Watch Brother", "Oathsworn"
+    "First Blade", "Bladeguard", "Watch Veteran", "Watch Brother", "Oathsworn",
+    ...Object.values(EQUERRY_TITLES)
   ];
   let changed = true;
   while (changed) {
@@ -5707,12 +5706,27 @@ async function setPage(page, push, originEl = null) {
   if (page === "submit-aar" && !state.auth.aar_allowed) return;
   if (page === "manage-aars" && state.auth.aar_management?.can_edit !== true) return;
   if (page === state.page) {
+    if (page === "reach" && push) {
+      recordNavigation(returnTargetFor(originEl));
+      showReachLevel();
+    }
     if (page === "manage-aars") await loadAarReviewLocation();
     if (page === "fortress" && push) navigate("strategium", {}, null, "out");
     return;
   }
   if (push) recordNavigation(returnTargetFor(originEl));
   state.page = page;
+  if (page === "reach" && push) {
+    closePlanetView();
+    warView.planet = "";
+    warView.strike = "";
+    warView.subsector = "";
+    state.reachMapLevel = "reach";
+    state.selectedSector = null;
+    state.selectedSystem = null;
+    state.reachView = null;
+    state.reachCanvasCamera = null;
+  }
   if (page !== "reach" && typeof closePlanetView === "function") closePlanetView();
   if (page === "fortress") state.view = "strategium";
   if (page !== "blood") {
@@ -6097,13 +6111,15 @@ function warConsoleHtml() {
     const recipe = offer.recipe;
     const modifier = name => `<div class="strike-modifier-row"><strong>${escapeHtml(name)}</strong>${war.content?.stratagems?.[name]?.description ? `<p>${escapeHtml(war.content.stratagems[name].description)}</p>` : ""}</div>`;
     const specialistCovered = !!offer.specialist_id || signup?.specialist_fulfilled === true;
+    const canJoinSlot = canParticipate && !joined && ["available", "recruiting"].includes(offer.status) && (signup ? signup.can_join === true : true);
+    const slotReason = joined ? "Already signed up" : locked ? "Roster locked" : signup?.reason || (!canParticipate ? "Active Watch Brother membership required" : "Signup unavailable");
     const specialist = offer.required_rank ? `<p class="strike-context">Required specialist: <strong>${escapeHtml(offer.required_rank)}</strong>${specialistCovered ? " / Covered" : " / Needed"}</p>` : "";
     const testingTools = testCompletionTools(offer);
     return `<section id="war-console" aria-label="Strike deployment">${backFallback}<article class="strike-detail">
       ${actionFallback}
       <section class="strike-section" aria-label="Strike roster"><h3>Roster</h3>${specialist}<ol class="strike-roster">${Array.from({length: offer.capacity}, (_, index) => {
         const identity = offer.participants[index];
-        return identity ? `<li><span class="strike-slot-number">${index + 1}</span><span>${escapeHtml(war.participant_names?.[identity] || identity)}${identity === war.actor.id ? " (You)" : ""}${offer.specialist_id === identity ? `<small>Required specialist</small>` : ""}</span></li>` : `<li class="empty"><span class="strike-slot-number">${index + 1}</span><span>${offer.required_rank && !specialistCovered && index === offer.capacity - 1 ? `Open / ${escapeHtml(offer.required_rank)} requirement` : "Open slot"}</span></li>`;
+        return identity ? `<li><span class="strike-slot-number">${index + 1}</span><span>${escapeHtml(war.participant_names?.[identity] || identity)}${identity === war.actor.id ? " (You)" : ""}${offer.specialist_id === identity ? `<small>Required specialist</small>` : ""}</span></li>` : `<li class="empty"><button class="strike-slot-join" type="button"${canJoinSlot ? ` data-war-action="join" data-strike="${escapeHtml(offer.id)}"` : ""} aria-label="Join strike, open slot ${index + 1}"${warView.busy || !canJoinSlot ? " disabled" : ""}><span class="strike-slot-number">${index + 1}</span><span>${offer.required_rank && !specialistCovered && index === offer.capacity - 1 ? `Open / ${escapeHtml(offer.required_rank)} requirement` : "Open slot"}<small>${canJoinSlot ? "Click / tap to join" : escapeHtml(slotReason)}</small></span></button></li>`;
       }).join("")}</ol></section>
       <details class="strike-secondary strike-modifier-details" data-war-section="strike-modifiers"><summary>Modifier effects</summary><section class="strike-section" aria-label="Strike modifiers">${recipe ? `<div class="strike-modifier-group positive"><h4>Positive / 1</h4>${modifier(recipe.positive)}</div><div class="strike-modifier-group negative"><h4>Negative / ${recipe.negatives.length}</h4>${recipe.negatives.map(modifier).join("")}</div>${recipe.forced?.length ? `<div class="strike-modifier-group forced"><h4>Mandatory faction conversion / additional</h4>${recipe.forced.map(modifier).join("")}</div>` : ""}` : `<p class="strike-context">No additional stratagem recipe assigned.</p>`}</section></details>
       ${testingTools}
@@ -6125,7 +6141,7 @@ function warConsoleHtml() {
     ${(commander && !selectedSystem) || (selectedSystem && (commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant"))) ? `<details class="war-command-tools" data-war-section="${selectedSystem ? "team-orders" : "company-orders"}"><summary>${selectedSystem ? "Kill-team orders" : "Company orders"}</summary>` : ""}
     ${!selectedSystem ? `
     <div class="reach-toolbar">
-      ${commitments.map(([identity]) => `<span class="status-tag">Company ${escapeHtml(COMPANY_NAMES[identity] || identity)}</span>`).join("") || "No companies committed"}
+      ${commitments.map(([identity]) => `<span class="status-tag">${COMPANY_NAMES[identity] ? `<img class="company-commitment-symbol" src="/assets/company-symbols/${escapeHtml(COMPANY_NAMES[identity])}.png" width="24" height="24" alt=""> ` : ""}Company ${escapeHtml(COMPANY_NAMES[identity] || identity)}</span>`).join("") || "No companies committed"}
     </div>
     ${commander ? `<section class="war-order-section" aria-label="Company commitment"><h3>Company commitment</h3><div class="reach-toolbar">${select("company_id", "Company", option("", "Select company", !orderCompany) + Object.entries(COMPANY_NAMES).filter(([identity]) => master || identity === company).map(([identity, name]) => option(identity, name, identity === orderCompany)).join(""))}<span>Destination: ${escapeHtml(state.geography?.sectors.find(sector => sector.id === sectorId)?.name || sectorId)}</span>${button("commit", pendingCommitment ? "Awaiting approval" : roles.has("Watch Lieutenant") && !master && !roles.has("Watch Captain") ? "Request commitment" : committedSector && committedSector !== sectorId ? "Move company" : "Commit company", "", !orderCompany || campaign?.status !== "contested" || committedSector === sectorId || pendingCommitment)}</div><p class="war-order-current">Current commitment: ${escapeHtml(state.geography?.sectors.find(sector => sector.id === committedSector)?.name || (committedSector || "Uncommitted"))}</p></section>` : ""}
     ${(war.proposals || []).map(proposal => `<div class="reach-toolbar"><span>Company ${escapeHtml(COMPANY_NAMES[proposal.company_id])}: ${escapeHtml(state.geography?.sectors.find(sector => sector.id === proposal.subsector_id)?.name || proposal.subsector_id)}</span>${master || roles.has("Watch Captain") ? button("approve", "Approve", `data-proposal="${escapeHtml(proposal.id)}" `) + button("reject", "Reject", `data-proposal="${escapeHtml(proposal.id)}" `) : "Pending approval"}</div>`).join("")}
@@ -6781,7 +6797,8 @@ const GEOGRAPHY_WORLD_TYPES = {
 };
 const GEOGRAPHY_BIOMES = {
   jungle: "Jungle", desert: "Desert", ice: "Ice", industrial: "Industrial",
-  warzone: "Wasteland / Warzone", underhive: "Underhive", starship: "Starship / Space Hulk", asteroid: "Lifeless / Asteroid"
+  warzone: "Wasteland / Warzone", starship: "Starship / Space Hulk", asteroid: "Lifeless / Asteroid",
+  ocean: "Ocean", gasgiant: "Gas Giant"
 };
 
 function geographyBodyLabel(body) {
@@ -7331,13 +7348,12 @@ function setupGeographyCanvas() {
       const companies = Object.entries(warView.data?.commitments || {}).filter(([, target]) => target === sector.id);
       const point = worldToScreen(sector.label[0], sector.label[1], camera);
       companies.forEach(([company], index) => {
-        const left = point.x + (index - (companies.length - 1) / 2) * 26;
-        context.fillStyle = "#07130c";
-        context.strokeStyle = "#cfae68";
-        context.lineWidth = 1.5;
-        context.beginPath(); context.rect(left - 11, point.y - 9, 22, 18); context.fill(); context.stroke();
-        context.fillStyle = "#cfae68";
-        context.fillText(`C${company}`, left, point.y + 4);
+        const source = COMPANY_SYMBOLS[company];
+        if (!source) return;
+        const image = reachArtImage(`company-${company}`, source);
+        if (!image) return;
+        const left = point.x + (index - (companies.length - 1) / 2) * 40;
+        context.drawImage(image, left - 18, point.y - 18, 36, 36);
       });
     });
     context.restore();
@@ -8337,9 +8353,13 @@ function geographySystemDirectoryHtml(sectorId) {
     const bodies = state.geography.bodies.filter(body => body.systemId === system.id);
     const star = bodies.find(body => body.kind === "star");
     const worlds = bodies.filter(body => body.kind !== "star").sort((a, b) => a.orbitIndex - b.orbitIndex || a.name.localeCompare(b.name));
+    const assignedTeams = Object.entries(state.auth.authenticated && warView.data ? warView.data.assignments || {} : {})
+      .filter(([, systemId]) => systemId === system.id)
+      .map(([identity]) => warView.data.kill_teams?.find(team => team.id === identity)?.name || identity);
     return `<button class="reach-sector-system" type="button" data-sector-system="${escapeHtml(system.id)}">
       <span class="reach-sector-system-name">${escapeHtml(system.name)}</span>
       <span class="reach-sector-system-meta">${worlds.length} worlds${star?.stellarClass ? ` · Class ${escapeHtml(star.stellarClass)} star` : ""} · Select to focus</span>
+      ${assignedTeams.length ? `<span class="system-commitments" aria-label="Committed Kill Teams">${assignedTeams.map(name => `<img class="system-commitment-emblem" src="/assets/kill-team-commitment.webp" width="36" height="44" alt="${escapeHtml(name)} committed" title="${escapeHtml(name)} committed">`).join("")}</span>` : ""}
     </button>`;
   }).join("");
   return `<section class="war-system-directory" aria-label="Systems in ${escapeHtml(sector.name)}"><h3>Systems (${systems.length})</h3>${systemCards || `<p class="aar-empty">No charted systems in this sector.</p>`}</section>`;
@@ -8475,7 +8495,7 @@ function renderReach() {
           <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#4fd67a"></span>Secure</div>
           <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#cf934b"></span>Contested</div>
           <div class="reach-legend-item"><span class="reach-legend-swatch" style="--swatch:#bd4d3f"></span>Lost</div>
-          <div class="reach-legend-item"><span style="color:var(--gold)">C1–C5</span>Company commitments</div>
+          <div class="reach-legend-item company-legend"><span class="company-legend-symbols">${Object.entries(COMPANY_SYMBOLS).map(([id, source]) => `<img class="company-commitment-symbol" src="${source}" width="24" height="24" alt="Company ${COMPANY_NAMES[id]}" title="Company ${COMPANY_NAMES[id]}">`).join("")}</span><span>Company commitments</span></div>
         </div>
         <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))}` : ""}</div>
         <div class="reach-tooltip" id="reach-tooltip" hidden></div>
@@ -8714,6 +8734,9 @@ function resetGeographyCamera() {
 
 function showReachLevel() {
   if (typeof closePlanetView === "function") closePlanetView();
+  warView.planet = "";
+  warView.strike = "";
+  warView.subsector = "";
   state.reachMapLevel = "reach";
   state.selectedSector = null;
   state.selectedSystem = null;
