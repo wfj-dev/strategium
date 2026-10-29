@@ -704,6 +704,8 @@ def _static_asset_path(path: str) -> Path | None:
         OXBLOOD_CURSOR_URL: OXBLOOD_CURSOR_PATH,
         "/assets/planet-view.mjs": WEB_ASSETS_DIR / "planet-view.mjs",
         "/assets/kill-team-commitment.webp": WEB_ASSETS_DIR / "kill-team-commitment.webp",
+        "/assets/tyranid-contested.png": ROOT / "assets" / "tyranid-contested.png",
+        "/assets/tyranid-lost.png": ROOT / "assets" / "tyranid-lost.png",
         "/assets/vendor/three.module.min.js": WEB_ASSETS_DIR / "vendor" / "three.module.min.js",
         "/assets/strike-regions/manifest.json": ROOT / "data" / "strike_region_art.json",
         FORTRESS_MAP_URL: FORTRESS_MAP_PATH,

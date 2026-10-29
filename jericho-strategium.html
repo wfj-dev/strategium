@@ -7347,6 +7347,15 @@ function setupGeographyCanvas() {
     geography.sectors.forEach(sector => {
       const companies = Object.entries(warView.data?.commitments || {}).filter(([, target]) => target === sector.id);
       const point = worldToScreen(sector.label[0], sector.label[1], camera);
+      const campaign = warView.data?.campaigns?.[sector.id];
+      const emblem = campaign?.faction === "tyranids" ? {
+        contested: "/assets/tyranid-contested.png",
+        lost: "/assets/tyranid-lost.png"
+      }[campaign.status] : null;
+      if (emblem) {
+        const image = reachArtImage(`tyranid-${campaign.status}`, emblem);
+        if (image) context.drawImage(image, point.x - 22, point.y - 22 - (companies.length ? 46 : 0), 44, 44);
+      }
       companies.forEach(([company], index) => {
         const source = COMPANY_SYMBOLS[company];
         if (!source) return;

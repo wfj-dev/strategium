@@ -80,6 +80,42 @@ def test_company_symbols_serve_the_supplied_pngs(local_site, name):
     assert server._static_asset_path("/assets/company-symbols/../Primus.png") is None
 
 
+@pytest.mark.parametrize("status", ["contested", "lost"])
+def test_tyranid_sector_emblems_serve_the_supplied_pngs(local_site, status):
+    filename = f"tyranid-{status}.png"
+    with urllib.request.urlopen(local_site + f"/assets/{filename}") as response:
+        assert response.headers.get_content_type() == "image/png"
+        assert response.read() == (server.ROOT / "assets" / filename).read_bytes()
+    assert server._static_asset_path("/assets/tyranid-secure.png") is None
+    assert server._static_asset_path("/assets/../tyranid-lost.png") is None
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for Tyranid sector markers")
+def test_tyranid_sector_emblems_follow_campaign_status_and_preserve_company_markers():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8'),draws=[];
+const context={state:{selectedSector:null,selectedSystem:null},hoveredTarget:null,
+ REACH_ART:{x:0,y:0,scale:1,width:100,height:100},canvasSmoothstep:()=>0,
+ worldToScreen:(x,y)=>({x,y}),COMPANY_SYMBOLS:{1:'/assets/company-symbols/Primus.png'},
+ reachArtImage:(key,url)=>({url}),context:{save:()=>{},restore:()=>{},drawImage:(image,x,y,width,height)=>draws.push({url:image.url,x,y,width,height})},
+ geography:{sectors:[{id:'one',number:1,status:'critical',label:[100,100]}]},
+ warView:{data:{campaigns:{},commitments:{}}}};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('  function drawSectors('),html.indexOf('  function drawEasternApproach(')),context);
+function render(campaign,commitments={}){draws.length=0;context.warView.data={campaigns:campaign?{one:campaign}:{},commitments};context.drawSectors({zoom:1},1);return draws.filter(draw=>!draw.url.includes('/galactic-map/'));}
+assert.equal(render({faction:'tyranids',status:'contested'})[0].url,'/assets/tyranid-contested.png');
+assert.equal(render({faction:'tyranids',status:'lost'})[0].url,'/assets/tyranid-lost.png');
+for(const campaign of [null,{faction:'tyranids',status:'secure'},{faction:'chaos',status:'contested'},{faction:'chaos',status:'lost'}]) assert.equal(render(campaign).length,0);
+const markers=render({faction:'tyranids',status:'contested'},{1:'one'});
+assert.equal(markers.length,2);assert.equal(markers[1].url,'/assets/company-symbols/Primus.png');
+assert(markers[0].y+markers[0].height<markers[1].y);
+assert.equal(markers[0].width,44);assert.equal(markers[0].height,44);
+draws.length=0;context.canvasSmoothstep=()=>1;context.drawSectors({zoom:5},5);assert.equal(draws.length,0);
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for company artwork mapping")
 def test_company_artwork_mapping_is_shared_by_docket_and_galactic_map():
     source = r"""
