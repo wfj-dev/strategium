@@ -1965,6 +1965,8 @@ vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function strikeActionBarHtml('),html.indexOf('function strikeRegionArtwork(')),context);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
 const markup = context.warConsoleHtml();
+assert.match(markup,/<dt>Assigned strikes<\/dt>/);
+assert.doesNotMatch(markup,/<dt>(Deployment|Orbit)<\/dt>/);
 assert.match(markup,/Roster locked/);
 assert.match(markup,/data-war-action="report"/);
 assert.match(markup,/data-war-action="cancel"/);
@@ -2167,6 +2169,7 @@ assert.doesNotMatch(host.innerHTML,/battle eligible/i);
 assert.doesNotMatch(html,/battle eligible/i);
 assert.match(host.innerHTML,/1 Vanilla \/ 1 Omega \/ 1 available/);
 assert.match(host.innerHTML,/1 recruiting \/ 0 locked/);
+assert.doesNotMatch(host.innerHTML,/ \/ Orbit \d/);
 assert.match(host.innerHTML,/data-war-strike="v"/);assert.match(host.innerHTML,/data-war-strike="o"/);
 assert.match(host.innerHTML,/Non-combat location/);assert.match(host.innerHTML,/No deployments assigned/);
 assert.equal((host.innerHTML.match(/class="system-world-briefing"/g)||[]).length,2);
@@ -2180,6 +2183,9 @@ assert.match(offline,/Live strike information unavailable/);assert.match(offline
 context.warView.planet='world';
 const planet=context.geographyBrowseDetailsHtml(context.state.geography.systems[0]);
 assert.match(planet,/aria-label="Planet details"/);assert.match(planet,/Hive spires and transit vaults/);
+assert.match(planet,/<dt>System<\/dt><dd>Solenne Crown<\/dd>/);
+assert.doesNotMatch(planet,/<dt>(Deployment|Orbit)<\/dt>|Strike theatre/);
+assert.doesNotMatch(html,/<dt>(Deployment|Orbit)<\/dt>/);
 assert.doesNotMatch(html,/reach-system-intel|refreshSystemIntel/);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
