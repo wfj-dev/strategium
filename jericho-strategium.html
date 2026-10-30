@@ -2149,6 +2149,11 @@ function geographyOrbitTilt(body) {
   return ((hashStr(body.id) / 0xffffffff) * 2 - 1) * Math.PI * 16 / 180;
 }
 
+function geographyOrbitPhase(body) {
+  const random = mulberry32(hashStr(`orbit-phase:${body.systemId || ""}:${body.id}`));
+  return ((Number(body.orbitAngle) || 0) + random() * 360) % 360;
+}
+
 function formationName(m) {
   const f = FORMATIONS[m.formation];
   return f ? f.name : "Fortress";
@@ -2577,9 +2582,12 @@ function backstoryLimitError(text) {
 /* ---------------------------------------------------------------------- */
 
 function companyCommand(companyId) {
-  return COMPANY_COMMAND_RANKS.map(rank => ({
-    rank, member: state.members.find(m => m.rank === rank && m.company === companyId) || null
-  }));
+  return COMPANY_COMMAND_RANKS.map(rank => {
+    const member = state.members.find(m => m.rank === rank && m.company === companyId)
+      || (rank === "watch_captain" ? state.members.find(m => m.rank === "watch_master" && m.company === companyId && (m.killTeam || m.killTeamName)) : null)
+      || null;
+    return { rank, member, dutyLabel: member && member.rank !== rank ? "ACTING CAPTAIN" : "" };
+  });
 }
 
 function killTeamLead(roster) {
@@ -2978,7 +2986,7 @@ function renderLanding() {
     if (atlasMobileQuery.matches) return;
     const pointerSequence = ++atlasPointerSequence;
     const region = await atlasRegionAtPoint(event.clientX, event.clientY);
-    if (pointerSequence !== atlasPointerSequence) return;
+    if (pointerSequence !== atlasPointerSequence || !imageWrap.isConnected || atlasMobileQuery.matches) return;
     setAtlasHighlight(region, { x: event.clientX, y: event.clientY });
   });
   imageWrap.addEventListener("pointerleave", () => {
@@ -2987,13 +2995,22 @@ function renderLanding() {
   });
   imageWrap.addEventListener("click", async event => {
     if (atlasMobileQuery.matches) return;
+    const pointerSequence = ++atlasPointerSequence;
     const region = await atlasRegionAtPoint(event.clientX, event.clientY);
-    if (!region) return;
+    if (!region || pointerSequence !== atlasPointerSequence || !imageWrap.isConnected || atlasMobileQuery.matches) return;
     openAtlasLocation(region.dataset.atlasLocation, region);
   });
 }
 
 const atlasMobileQuery = window.matchMedia("(max-width: 760px)");
+
+function invalidateAtlasPointerHover() {
+  atlasPointerSequence += 1;
+  if (!atlasMobileQuery.matches) setAtlasHighlight(null);
+}
+
+document.addEventListener("scroll", invalidateAtlasPointerHover, {capture: true, passive: true});
+window.addEventListener("resize", invalidateAtlasPointerHover, {passive: true});
 
 function selectAtlasEntry(id) {
   let selectedLocation = null;
@@ -3006,12 +3023,32 @@ function selectAtlasEntry(id) {
   });
   const image = document.getElementById("atlas-highlight-layer");
   if (!image) return;
+  const sequence = ++atlasHighlightSequence;
   if (selectedLocation?.layer) {
-    image.src = `/assets/fortress-layers/${encodeURIComponent(selectedLocation.layer)}.webp?v=${FORTRESS_MAP_ASSET_VERSION}`;
-    image.classList.add("visible");
+    setAtlasLayer(image, `/assets/fortress-layers/${encodeURIComponent(selectedLocation.layer)}.webp?v=${FORTRESS_MAP_ASSET_VERSION}`, () => sequence === atlasHighlightSequence);
   } else {
     image.classList.remove("visible");
+    image.style.visibility = "hidden";
   }
+}
+
+function setAtlasLayer(image, source, isCurrent) {
+  const reveal = () => {
+    if (!isCurrent() || document.getElementById("atlas-highlight-layer") !== image || image.getAttribute("src") !== source) return;
+    image.style.visibility = "";
+    image.classList.add("visible");
+  };
+  image.onload = reveal;
+  image.onerror = () => {
+    if (!isCurrent()) return;
+    image.classList.remove("visible");
+    image.style.visibility = "hidden";
+  };
+  if (image.getAttribute("src") !== source) {
+    image.classList.remove("visible");
+    image.style.visibility = "hidden";
+    image.src = source;
+  } else if (image.complete && image.naturalWidth > 0) reveal();
 }
 
 async function atlasRegionAtPoint(clientX, clientY) {
@@ -3019,7 +3056,9 @@ async function atlasRegionAtPoint(clientX, clientY) {
   if (!imageWrap) return null;
   try {
     const mask = atlasHitMask || await loadAtlasHitMask();
+    if (!imageWrap.isConnected) return null;
     const rect = imageWrap.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
     const x = Math.floor((clientX - rect.left) / rect.width * mask.width);
     const y = Math.floor((clientY - rect.top) / rect.height * mask.height);
     if (x < 0 || y < 0 || x >= mask.width || y >= mask.height) return null;
@@ -3068,14 +3107,14 @@ function setAtlasHighlight(region, pointerAnchor = null) {
   const sequence = ++atlasHighlightSequence;
   if (!locationId || !layer) {
     image.classList.remove("visible");
+    image.style.visibility = "hidden";
     callout.classList.remove("pending", "loading");
     callout.hidden = true;
     leaderLine.classList.remove("drawing");
     leaderLine.setAttribute("d", "");
     return;
   }
-  if (image.getAttribute("src") !== source) image.src = source;
-  image.classList.add("visible");
+  setAtlasLayer(image, source, () => sequence === atlasHighlightSequence && activeAtlasLocationId === locationId);
 
   const location = ATLAS_LOCATIONS.find(item => item.id === region.dataset.atlasLocation);
   if (!location) return;
@@ -3144,15 +3183,16 @@ function renderStrategium() {
 
   const companies = Object.keys(COMPANY_NAMES).map(cid => {
     const id = Number(cid);
-    const captain = state.members.find(m => m.rank === "watch_captain" && m.company === id);
-    const lieutenant = state.members.find(m => m.rank === "watch_lieutenant" && m.company === id);
+    const command = companyCommand(id);
+    const { member: captain, dutyLabel: captainDuty } = command.find(({ rank }) => rank === "watch_captain");
+    const { member: lieutenant } = command.find(({ rank }) => rank === "watch_lieutenant");
     const count = state.members.filter(m => m.company === id).length;
     const isUnformed = count === 0 && !captain && !lieutenant;
     return `
       <div class="map-node company-slot company-slot-${id}">
       <button class="company-plate ${isUnformed ? 'unit-unformed' : ''}" data-nav="company" data-company="${id}" type="button">
         <span class="company-plate-label"><span class="company-sigil" aria-hidden="true">${COMPANY_SIGILS[id]}</span><span class="company-plate-name">Company ${COMPANY_NAMES[id]}</span></span>
-        ${captain ? `<span class="company-plate-captain">Watch Captain ${escapeHtml(displayName(captain.name))}</span>` : ""}
+        ${captain ? `<span class="company-plate-captain">${captainDuty ? "Acting Captain" : "Watch Captain"} ${escapeHtml(displayName(captain.name))}</span>` : ""}
         ${lieutenant ? `<span class="company-plate-captain">Watch Lieutenant ${escapeHtml(displayName(lieutenant.name))}</span>` : ""}
         ${isUnformed ? `<span class="unit-unformed-tag">&mdash; Unfounded &mdash;</span>` : `<span class="company-plate-count">${count} sworn</span>`}
         ${isUnformed ? "" : `<span class="company-plate-blurb">${escapeHtml(COMPANY_LORE[id] || "This company serves the Fortress wherever the Vigil calls.")}</span>`}
@@ -3275,9 +3315,9 @@ function renderCompany(companyId) {
   const numeral = COMPANY_MARKINGS[companyId];
   const companyDirective = (state.directiveStats && state.directiveStats.companies && state.directiveStats.companies[`Watch Company ${COMPANY_NAMES[companyId]}`]) || {};
   const cmd = companyCommand(companyId).filter(({ member }) => member);
-  const cmdHtml = cmd.map(({ rank, member }) =>
+  const cmdHtml = cmd.map(({ rank, member, dutyLabel }) =>
     plateHtml({
-      id: member.id, member, name: member.name, rankLabel: RANK_LABELS[rank],
+      id: member.id, member, name: member.name, rankLabel: RANK_LABELS[member.rank], dutyLabel,
       accent: rank === "watch_captain" ? "gold" : "steel", vacant: false
     })
   ).join("");
@@ -6155,7 +6195,7 @@ function warConsoleHtml() {
     </div><p class="war-order-current">Current assignment: ${escapeHtml((state.geography?.systems || []).find(system => system.id === war.assignments?.[orderTeam])?.name || "Unassigned")}</p></section>` : ""}
     ${(commander && !selectedSystem) || (selectedSystem && (commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant"))) ? "</details>" : ""}
     ${selectedSystem ? `
-    ${selectedPlanet ? `<section aria-label="Planet details"><div class="war-planet-overview">${geographyBodyIcon(selectedPlanet)}<div><h3>${escapeHtml(selectedPlanet.name)}</h3><p>${escapeHtml(geographyBodyLabel(selectedPlanet))}${selectedPlanet.description ? `<br>${escapeHtml(selectedPlanet.description)}` : ""}</p></div></div><dl class="war-overview-facts"><div><dt>System</dt><dd>${escapeHtml(selectedSystem.name)}</dd></div><div><dt>Deployment</dt><dd>${selectedPlanet.battleEligible ? "Battle eligible" : "No strike board"}</dd></div>${Number.isFinite(selectedPlanet.orbitIndex) ? `<div><dt>Orbit</dt><dd>${selectedPlanet.orbitIndex}</dd></div>` : ""}<div><dt>Assigned strikes</dt><dd>${board.filter(offer => offer.planet_id === selectedPlanet.id).length} ${escapeHtml(pool === "omega" ? "Omega" : "Vanilla")}</dd></div></dl>${geographyObjectivesHtml(selectedPlanet)}</section>` : geographySystemOverviewHtml(selectedSystem, true)}
+    ${selectedPlanet ? `<section aria-label="Planet details"><div class="war-planet-overview">${geographyBodyIcon(selectedPlanet)}<div><h3>${escapeHtml(selectedPlanet.name)}</h3><p>${escapeHtml(geographyBodyLabel(selectedPlanet))}${selectedPlanet.description ? `<br>${escapeHtml(selectedPlanet.description)}` : ""}</p></div></div><dl class="war-overview-facts"><div><dt>System</dt><dd>${escapeHtml(selectedSystem.name)}</dd></div><div><dt>Deployment</dt><dd>${selectedPlanet.battleEligible ? "Strike theatre" : "Non-combat location"}</dd></div>${Number.isFinite(selectedPlanet.orbitIndex) ? `<div><dt>Orbit</dt><dd>${selectedPlanet.orbitIndex}</dd></div>` : ""}<div><dt>Assigned strikes</dt><dd>${board.filter(offer => offer.planet_id === selectedPlanet.id).length} ${escapeHtml(pool === "omega" ? "Omega" : "Vanilla")}</dd></div></dl>${geographyObjectivesHtml(selectedPlanet)}</section>` : geographySystemOverviewHtml(selectedSystem, true)}
     <div class="war-pools" role="group" aria-label="Strike format">
       <button class="btn-dossier-action" type="button" data-war-pool="vanilla" aria-pressed="${pool === "vanilla"}"${warView.busy ? " disabled" : ""}>Vanilla</button>
       <button class="btn-dossier-action" type="button" data-war-pool="omega" aria-pressed="${pool === "omega"}"${warView.busy ? " disabled" : ""}>Omega</button>
@@ -6644,7 +6684,7 @@ function geographySystemSvg(system, showLabel) {
   const subtitle = isFortress ? "WATCH FORTRESS" : isErioch ? "WATCH STATION" : "";
   const orbitRadiusX = hasArt ? radius + 8 : 0;
   const orbitRadiusY = orbitRadiusX * .42;
-  const orbitAngle = primaryBody ? primaryBody.orbitAngle * Math.PI / 180 : 0;
+  const orbitAngle = primaryBody ? geographyOrbitPhase(primaryBody) * Math.PI / 180 : 0;
   const bodyX = hasArt ? system.x + Math.cos(orbitAngle) * orbitRadiusX : system.x;
   const bodyY = hasArt ? system.y + Math.sin(orbitAngle) * orbitRadiusY : system.y;
   const art = hasArt
@@ -6663,7 +6703,7 @@ function geographySystemSvg(system, showLabel) {
 function geographyBodySvg(body, system, index) {
   const orbitRadiusX = 32 + index * 24;
   const orbitRadiusY = orbitRadiusX * .42;
-  const angle = body.orbitAngle * Math.PI / 180;
+  const angle = geographyOrbitPhase(body) * Math.PI / 180;
   const orbitRotation = geographyOrbitTilt(body);
   const x = system.x + orbitRadiusX * (Math.cos(angle) * Math.cos(orbitRotation) - Math.sin(angle) * .42 * Math.sin(orbitRotation));
   const y = system.y + orbitRadiusX * (Math.cos(angle) * Math.sin(orbitRotation) + Math.sin(angle) * .42 * Math.cos(orbitRotation));
@@ -6824,14 +6864,11 @@ function geographyCompatibleObjectives(body, catalog) {
 function geographyObjectivesHtml(body) {
   if (body.kind === "star") return "";
   const objectives = geographyCompatibleObjectives(body, state.geography.objectiveCatalog);
+  const tags = objectives && [...new Set(objectives.map(objective => objective.tag).filter(Boolean))];
   const content = objectives === null ? "<p>Objective compatibility not recorded.</p>"
-    : objectives.length === 0 ? "<p>No authored objectives for this setting yet.</p>"
-    : ["general", "specialist"].map(category => {
-      const matches = objectives.filter(objective => objective.category === category);
-      if (!matches.length) return "";
-      return `<h4>${category === "general" ? "General" : "Specialist"}</h4><ul>${matches.map(objective => `<li>${escapeHtml(objective.name)}${objective.track ? ` &middot; ${escapeHtml(objective.track)}` : ""}</li>`).join("")}</ul>`;
-    }).join("");
-  return `<details class="geography-objectives"><summary aria-label="Objective types for ${escapeHtml(body.name)}">Objective Types${objectives === null ? "" : ` (${objectives.length})`}</summary>${content}</details>`;
+    : tags.length === 0 ? "<p>No objective tags recorded for this setting.</p>"
+    : `<ul>${tags.map(tag => `<li>${escapeHtml(tag)}</li>`).join("")}</ul>`;
+  return `<details class="geography-objectives"><summary aria-label="Objective types for ${escapeHtml(body.name)}">Objective Types${tags === null ? "" : ` (${tags.length})`}</summary>${content}</details>`;
 }
 
 function geographyBodyArtwork(body) {
@@ -6870,7 +6907,7 @@ function openGeographySystem(systemId) {
     <div class="modal-rank">${escapeHtml(sector ? sector.name : "Uncharted Sector")} &middot; ${escapeHtml(titleCase(system.classification))}</div>
     <div class="modal-name">${escapeHtml(system.name)}</div>
     <div class="directive-section-label">System Bodies</div>
-    ${bodies.map(body => `<div class="modal-row geography-body-row"><span>${geographyBodyIcon(body)}${escapeHtml(body.name)}</span><span>${escapeHtml(geographyBodyLabel(body))}${body.battleEligible ? " &middot; Battle eligible" : ""}</span></div>${geographyObjectivesHtml(body)}`).join("")}
+    ${bodies.map(body => `<div class="modal-row geography-body-row"><span>${geographyBodyIcon(body)}${escapeHtml(body.name)}</span><span>${escapeHtml(geographyBodyLabel(body))}${body.battleEligible ? " &middot; Strike theatre" : ""}</span></div>${geographyObjectivesHtml(body)}`).join("")}
     <div class="directive-section-label">Charted Warp Routes</div>
     <div class="modal-row"><span>Connections</span><span>${routes.length}</span></div>`;
   const overlay = document.getElementById("planet-modal");
@@ -6975,6 +7012,7 @@ function setupGeographyCanvas() {
   let animationFrame = 0;
   let zoomAnchor = null;
   let hoveredTarget = null;
+  let lastHoverPointer = null;
   let tooltipResolveTimer = 0;
   let needsResize = true;
   let lastDrawAt = 0;
@@ -7446,7 +7484,7 @@ function setupGeographyCanvas() {
     }
     // Outer orbits drift slower, like real orbital mechanics; a full lap takes minutes, not seconds.
     const degreesPerMs = .0028 / (body.orbitIndex + 1.4);
-    const angle = (body.orbitAngle + (reducedMotion.matches ? 0 : now) * degreesPerMs) * Math.PI / 180;
+    const angle = (geographyOrbitPhase(body) + (reducedMotion.matches ? 0 : now) * degreesPerMs) * Math.PI / 180;
     const orbitRotation = geographyOrbitTilt(body);
     const cosine = Math.cos(orbitRotation);
     const sine = Math.sin(orbitRotation);
@@ -8002,6 +8040,7 @@ function setupGeographyCanvas() {
     const aimed = clampToArt(camera.targetX, camera.targetY, camera.targetZoom);
     camera.targetX = aimed.x;
     camera.targetY = aimed.y;
+    refreshCanvasHover(timestamp);
     context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
     context.clearRect(0, 0, width, height);
     const ratio = camera.zoom / camera.baseZoom;
@@ -8032,7 +8071,26 @@ function setupGeographyCanvas() {
 
   function localPoint(event) {
     const rectangle = canvas.getBoundingClientRect();
-    return { x: event.clientX - rectangle.left, y: event.clientY - rectangle.top };
+    return {
+      x: (event.clientX - rectangle.left) * width / rectangle.width,
+      y: (event.clientY - rectangle.top) * height / rectangle.height
+    };
+  }
+
+  function clearCanvasHover() {
+    hoveredTarget = null;
+    canvas.style.cursor = "grab";
+    window.clearTimeout(tooltipResolveTimer);
+    if (tooltip) {
+      tooltip.classList.remove("pending", "loading");
+      tooltip.dataset.targetKey = "";
+      tooltip.hidden = true;
+    }
+  }
+
+  function refreshCanvasHover(timestamp) {
+    if (!lastHoverPointer || pointerId !== null || viewport.classList.contains("dragging")) return;
+    updateCanvasHover(lastHoverPointer, timestamp);
   }
 
   function clearSectorSelection() {
@@ -8065,11 +8123,16 @@ function setupGeographyCanvas() {
     tooltip.style.top = `${top}px`;
   }
 
-  function updateCanvasHover(event) {
+  function updateCanvasHover(event, now = performance.now()) {
+    lastHoverPointer = {clientX: event.clientX, clientY: event.clientY};
     const point = localPoint(event);
+    if (point.x < 0 || point.y < 0 || point.x > width || point.y > height) {
+      lastHoverPointer = null;
+      clearCanvasHover();
+      return;
+    }
     const camera = state.reachCanvasCamera;
     const ratio = camera.zoom / camera.baseZoom;
-    const now = performance.now();
     let target = null;
     if (ratio > BODY_HOVER_RATIO) {
       geography.systems.forEach(system => (bodiesBySystem.get(system.id) || [])
@@ -8083,7 +8146,7 @@ function setupGeographyCanvas() {
             target = {
               kind: "body", id: body.id, systemId: system.id, sectorId: system.sectorId,
               name: body.name,
-              meta: `${geographyBodyLabel(body)}${body.battleEligible ? " · Battle eligible" : ""}`,
+              meta: `${geographyBodyLabel(body)}${body.battleEligible ? " · Strike theatre" : ""}`,
               body,
               worldX: position.x, worldY: position.y, distance
             };
@@ -8118,8 +8181,7 @@ function setupGeographyCanvas() {
       }
     }
     const sameTarget = target && hoveredTarget && target.kind === hoveredTarget.kind && target.id === hoveredTarget.id;
-    if (sameTarget) target = hoveredTarget;
-    else if (target) target = { ...target, startedAt: performance.now() };
+    if (target) target.startedAt = sameTarget ? hoveredTarget.startedAt : now;
     hoveredTarget = target;
     canvas.style.cursor = target ? "pointer" : "grab";
     if (!tooltip) return;
@@ -8144,6 +8206,7 @@ function setupGeographyCanvas() {
         tooltip.classList.remove("pending");
       }, MAP_HOVER_STAGE_MS);
     }
+    if (sameTarget) positionCanvasTooltip(target);
   }
 
   canvas.addEventListener("wheel", event => {
@@ -8179,6 +8242,8 @@ function setupGeographyCanvas() {
 
   canvas.addEventListener("pointerdown", event => {
     if (event.button !== 0) return;
+    lastHoverPointer = null;
+    clearCanvasHover();
     const camera = state.reachCanvasCamera;
     camera.targetX = camera.x;
     camera.targetY = camera.y;
@@ -8246,6 +8311,7 @@ function setupGeographyCanvas() {
     pointerId = null;
     previousPointer = null;
     viewport.classList.remove("dragging");
+    if (event.pointerType === "mouse" || event.pointerType === "pen") updateCanvasHover(event);
     if (cancelled || dragDistance > 7) return;
     const camera = state.reachCanvasCamera;
     const ratio = camera.zoom / camera.baseZoom;
@@ -8286,15 +8352,9 @@ function setupGeographyCanvas() {
   canvas.addEventListener("pointercancel", event => finishPointer(event, true));
   canvas.addEventListener("lostpointercapture", event => finishPointer(event, true));
   canvas.addEventListener("pointerleave", () => {
+    lastHoverPointer = null;
     if (pointerId !== null) return;
-    hoveredTarget = null;
-    canvas.style.cursor = "grab";
-    window.clearTimeout(tooltipResolveTimer);
-    if (tooltip) {
-      tooltip.classList.remove("pending", "loading");
-      tooltip.dataset.targetKey = "";
-      tooltip.hidden = true;
-    }
+    clearCanvasHover();
   });
 
   viewport.querySelector(".reach-controls").addEventListener("click", event => {
@@ -8383,7 +8443,7 @@ function geographySystemOverviewHtml(system, expanded = false) {
   const liveAvailable = state.auth.authenticated && !!warView.data;
   const assignments = Object.entries(liveAvailable ? warView.data.assignments || {} : {}).filter(([, systemId]) => systemId === system.id).map(([identity]) => warView.data.kill_teams.find(team => team.id === identity)?.name || identity);
   return `<section class="war-system-overview" aria-label="System overview"><h3>${escapeHtml(system.name)}</h3>
-    <dl class="war-overview-facts"><div><dt>Primary star</dt><dd>${star ? escapeHtml(star.name) + (star.stellarClass ? ` / Class ${escapeHtml(star.stellarClass)}` : "") : "Not recorded"}</dd></div><div><dt>Planets</dt><dd>${worlds.length} / ${worlds.filter(world => world.battleEligible).length} battle eligible</dd></div><div><dt>Warp routes</dt><dd>${routes.length}</dd></div><div><dt>Kill teams</dt><dd>${liveAvailable ? escapeHtml(assignments.join(", ") || "None assigned") : "Live assignments unavailable"}</dd></div></dl>
+    <dl class="war-overview-facts"><div><dt>Primary star</dt><dd>${star ? escapeHtml(star.name) + (star.stellarClass ? ` / Class ${escapeHtml(star.stellarClass)}` : "") : "Not recorded"}</dd></div><div><dt>Strike theatres</dt><dd>${worlds.filter(world => world.battleEligible).length} of ${worlds.length} worlds</dd></div><div><dt>Warp lanes</dt><dd>${routes.length}</dd></div><div><dt>Kill-team deployments</dt><dd>${liveAvailable ? escapeHtml(assignments.join(", ") || "None deployed") : "Deployment status unavailable"}</dd></div></dl>
     ${system.description ? `<p class="war-order-current">${escapeHtml(system.description)}</p>` : ""}
     <h4>Planets (${worlds.length})</h4><div class="war-planet-directory">${worlds.map(world => {
       const boardAvailable = liveAvailable && Object.prototype.hasOwnProperty.call(warView.data.boards || {}, world.id);
@@ -8393,9 +8453,9 @@ function geographySystemOverviewHtml(system, expanded = false) {
       const available = offers.filter(offer => offer.status === "available").length;
       const recruiting = offers.filter(offer => offer.status === "recruiting").length;
       const locked = offers.filter(offer => ["locked", "deployed", "review_pending"].includes(offer.status)).length;
-      const counts = world.battleEligible ? boardAvailable ? `${vanilla.length} Vanilla / ${omega.length} Omega / ${available} available` : "Live strike information unavailable" : "No strike board";
+      const counts = world.battleEligible ? boardAvailable ? `${vanilla.length} Vanilla / ${omega.length} Omega / ${available} available` : "Live strike information unavailable" : "Non-combat location";
       const themes = [...new Set(offers.map(offer => offer.name))];
-      const planet = `<button class="war-world-select" type="button" data-war-planet="${escapeHtml(world.id)}" aria-label="Focus ${escapeHtml(world.name)}">${geographyBodyIcon(world)}<span><strong>${escapeHtml(world.name)}</strong><small>${escapeHtml(geographyBodyLabel(world))}${world.battleEligible ? " / Battle eligible" : ""}</small><small>${escapeHtml(counts)}</small></span></button>`;
+      const planet = `<button class="war-world-select" type="button" data-war-planet="${escapeHtml(world.id)}" aria-label="Focus ${escapeHtml(world.name)}">${geographyBodyIcon(world)}<span><strong>${escapeHtml(world.name)}</strong><small>${escapeHtml(geographyBodyLabel(world))}${world.battleEligible ? " / Strike theatre" : ""}</small><small>${escapeHtml(counts)}</small></span></button>`;
       if (!expanded) return planet;
       return `<article class="system-world-briefing" aria-label="${escapeHtml(world.name)} briefing">${planet}${world.description ? `<p>${escapeHtml(world.description)}</p>` : ""}<p>${world.battleEligible ? boardAvailable ? `${recruiting} recruiting / ${locked} locked or awaiting review` : "Live deployment status unavailable" : "Non-combat location"}${Number.isFinite(world.orbitIndex) ? ` / Orbit ${world.orbitIndex}` : ""}</p>${themes.length ? `<p>Objectives: ${escapeHtml(themes.slice(0, 4).join(" / "))}${themes.length > 4 ? ` / +${themes.length - 4} more` : ""}</p>` : ""}${boardAvailable || !world.battleEligible ? `<details data-world-intel="${escapeHtml(world.id)}"><summary>${offers.length} strike assignments</summary><ul class="system-strike-summary">${offers.map(offer => `<li><button type="button" data-war-strike="${escapeHtml(offer.id)}" data-war-strike-planet="${escapeHtml(world.id)}"><strong>${escapeHtml(offer.name)}</strong><small>${escapeHtml(offer.aar_mission || "")} / ${escapeHtml(offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla"))} / ${escapeHtml(titleCase(offer.status))} / ${offer.participants.length}/${offer.capacity}${offer.required_rank ? ` / ${escapeHtml(offer.required_rank)}` : ""}</small></button></li>`).join("") || `<li><p>${world.battleEligible ? "No strikes currently issued." : "No deployments assigned."}</p></li>`}</ul></details>` : ""}</article>`;
     }).join("") || `<p class="aar-empty">No planets recorded.</p>`}</div>
@@ -8405,7 +8465,7 @@ function geographySystemOverviewHtml(system, expanded = false) {
 function geographyBrowseDetailsHtml(system) {
   const body = state.geography?.bodies.find(item => item.id === warView.planet && item.systemId === system.id && item.kind !== "star");
   if (!body) return geographySystemOverviewHtml(system, true);
-  return `<section aria-label="Planet details"><div class="war-planet-overview">${geographyBodyIcon(body)}<div><h3>${escapeHtml(body.name)}</h3><p>${escapeHtml(geographyBodyLabel(body))}</p></div></div>${body.description ? `<p class="war-order-current">${escapeHtml(body.description)}</p>` : ""}<dl class="war-overview-facts"><div><dt>System</dt><dd>${escapeHtml(system.name)}</dd></div><div><dt>Deployment</dt><dd>${body.battleEligible ? "Battle eligible" : "No strike board"}</dd></div>${Number.isFinite(body.orbitIndex) ? `<div><dt>Orbit</dt><dd>${body.orbitIndex}</dd></div>` : ""}</dl><p class="war-order-current">Live strike information unavailable</p>${geographyObjectivesHtml(body)}</section>`;
+  return `<section aria-label="Planet details"><div class="war-planet-overview">${geographyBodyIcon(body)}<div><h3>${escapeHtml(body.name)}</h3><p>${escapeHtml(geographyBodyLabel(body))}</p></div></div>${body.description ? `<p class="war-order-current">${escapeHtml(body.description)}</p>` : ""}<dl class="war-overview-facts"><div><dt>System</dt><dd>${escapeHtml(system.name)}</dd></div><div><dt>Deployment</dt><dd>${body.battleEligible ? "Strike theatre" : "Non-combat location"}</dd></div>${Number.isFinite(body.orbitIndex) ? `<div><dt>Orbit</dt><dd>${body.orbitIndex}</dd></div>` : ""}</dl><p class="war-order-current">Live strike information unavailable</p>${geographyObjectivesHtml(body)}</section>`;
 }
 
 function geographySectorPanelHtml(sectorId, selectedSystemId) {

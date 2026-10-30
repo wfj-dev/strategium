@@ -132,6 +132,49 @@ assert.match(markers,/COMPANY_SYMBOLS\[company\]/);assert.match(markers,/context
     subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for atlas image races")
+def test_atlas_highlight_never_displays_a_stale_loading_layer():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8');
+function element(){const attrs={},classes=new Set();return {style:{},hidden:true,classList:{add:name=>classes.add(name),remove:(...names)=>names.forEach(name=>classes.delete(name)),contains:name=>classes.has(name)},getAttribute:name=>attrs[name],setAttribute:(name,value)=>attrs[name]=value,getBoundingClientRect:()=>({left:0,top:0,width:200,height:100}),attrs};}
+const image=element();Object.defineProperty(image,'src',{get:()=>image.attrs.src,set:value=>{image.attrs.src=value;image.complete=false;image.naturalWidth=0;}});
+const nodes=Object.fromEntries(['atlas-highlight-layer','atlas-callout','atlas-leaders','atlas-leader-line','atlas-leader-point','atlas-callout-kicker','atlas-callout-title','atlas-callout-lore'].map(id=>[id,id==='atlas-highlight-layer'?image:element()]));
+const context={ATLAS_LOCATIONS:[{id:'01',name:'Armory',layer:'armory'},{id:'02',name:'Librarius',layer:'librarius'}],ATLAS_LORE:{},activeAtlasLocationId:null,atlasHighlightSequence:0,atlasHitMask:null,FORTRESS_MAP_ASSET_VERSION:1,MAP_HOVER_STAGE_MS:0,window:{innerWidth:1000,innerHeight:800},document:{getElementById:id=>nodes[id],querySelector:()=>null},setTimeout:()=>{}};
+vm.createContext(context);vm.runInContext(html.slice(html.indexOf('function setAtlasLayer('),html.indexOf('function setAtlasHighlight('))+html.slice(html.indexOf('function setAtlasHighlight('),html.indexOf('function terminalTransmissionHtml(')),context);
+const region=id=>({dataset:{atlasLocation:id,atlasLayer:id==='01'?'armory':'librarius'},getBoundingClientRect:()=>({left:200,top:200,width:0,height:0})});
+context.setAtlasHighlight(region('01'));const firstLoad=image.onload;assert.equal(image.style.visibility,'hidden');
+context.setAtlasHighlight(region('02'));firstLoad();assert.equal(image.classList.contains('visible'),false);
+image.complete=true;image.naturalWidth=1672;image.onload();assert.equal(image.classList.contains('visible'),true);assert.equal(image.style.visibility,'');
+const oldLoad=image.onload;context.setAtlasHighlight(null);oldLoad();assert.equal(image.classList.contains('visible'),false);assert.equal(image.style.visibility,'hidden');
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for camera-aligned map picking")
+def test_map_hover_tracks_camera_with_a_stationary_pointer_and_css_scaling():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8');let now=10;
+const context={width:400,height:300,lastHoverPointer:null,hoveredTarget:null,pointerId:null,tooltipResolveTimer:0,tooltip:null,
+ canvas:{style:{},getBoundingClientRect:()=>({left:10,top:20,width:200,height:150})},viewport:{classList:{contains:()=>false}},window:{clearTimeout:()=>{}},
+ state:{reachCanvasCamera:{x:0,y:0,zoom:1,baseZoom:1}},performance:{now:()=>now},BODY_HOVER_RATIO:10,SYSTEM_HOVER_RATIO:1,
+ geography:{systems:[{id:'one',name:'One',x:0,y:0,primaryBodyId:'star-one'},{id:'two',name:'Two',x:100,y:0,primaryBodyId:'star-two'}],routes:[]},
+ bodiesBySystem:new Map(),stellarClass:()=>'',geographySectorAt:()=>null};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('  function worldToScreen('),html.indexOf('  // Keep the view on the Reach artwork')),context);
+vm.runInContext(html.slice(html.indexOf('  function localPoint('),html.indexOf('  function clearSectorSelection(')),context);
+vm.runInContext(html.slice(html.indexOf('  function updateCanvasHover('),html.indexOf('  canvas.addEventListener("wheel"')),context);
+const point=context.localPoint({clientX:110,clientY:95});assert.equal(point.x,200);assert.equal(point.y,150);
+context.updateCanvasHover({clientX:110,clientY:95});assert.equal(context.hoveredTarget.id,'one');
+context.state.reachCanvasCamera.x=100;context.refreshCanvasHover(20);assert.equal(context.hoveredTarget.id,'two');
+context.state.reachCanvasCamera.x=300;context.refreshCanvasHover(30);assert.equal(context.hoveredTarget,null);
+context.state.reachCanvasCamera.x=0;context.refreshCanvasHover(40);assert.equal(context.hoveredTarget.id,'one');
+context.updateCanvasHover({clientX:0,clientY:0});assert.equal(context.hoveredTarget,null);assert.equal(context.lastHoverPointer,null);
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for planet marker determinism")
 def test_strike_region_manifest_and_region_paths_are_constrained(local_site):
     with urllib.request.urlopen(local_site + "/assets/strike-regions/manifest.json") as response:
@@ -790,8 +833,8 @@ const vm = require('node:vm');
 const html = fs.readFileSync(process.argv[1], 'utf8');
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 const catalog = {objectives: [
-    {id:'purge',name:'<Purge>',category:'general',settings:['research|ice','hive|industrial']},
-    {id:'study',name:'Study',category:'specialist',track:'<Librarius>',settings:['research|ice']},
+    {id:'purge',name:'<Purge>',tag:'PURIFICATION',category:'general',settings:['research|ice','hive|industrial']},
+    {id:'study',name:'Study',tag:'<INTELLIGENCE>',category:'specialist',track:'<Librarius>',settings:['research|ice']},
     {id:'purge',name:'Duplicate',category:'general',settings:['research|ice']},
     {id:'absent',name:'Absent',category:'general',settings:['hive|ice']}
 ]};
@@ -817,11 +860,15 @@ assert.equal(context.geographyBodyLabel({kind:'dead_world',biome:'asteroid'}),'D
 assert.equal(context.geographyBodyLabel({kind:'cemetery_world',biome:'warzone'}),'Cemetery World / Wasteland / Warzone');
 const rendered = context.geographyObjectivesHtml(station);
 assert.match(rendered,/Objective Types \(2\)/);
-assert.match(rendered,/General/);assert.match(rendered,/Specialist/);
-assert.match(rendered,/&lt;Purge&gt;/);assert.match(rendered,/&lt;Librarius&gt;/);assert.match(rendered,/&lt;Calyx&gt;/);
-assert(!rendered.includes('<Purge>'));assert(!rendered.includes('Absent'));
+assert.match(rendered,/<li>PURIFICATION<\/li>/);assert.match(rendered,/<li>&lt;INTELLIGENCE&gt;<\/li>/);
+assert.match(rendered,/&lt;Calyx&gt;/);
+assert.doesNotMatch(rendered,/General|Specialist|Purge|Study|Librarius|Absent|<INTELLIGENCE>|<h4>/);
+assert.equal((rendered.match(/<ul>/g)||[]).length,1);
+catalog.objectives.push({id:'another-purge',name:'Another name',tag:'PURIFICATION',category:'specialist',settings:['research|ice']});
+const deduplicated=context.geographyObjectivesHtml(station);
+assert.match(deduplicated,/Objective Types \(2\)/);assert.equal((deduplicated.match(/<li>PURIFICATION<\/li>/g)||[]).length,1);
 assert.match(context.geographyObjectivesHtml({kind:'planet'}),/not recorded/);
-assert.match(context.geographyObjectivesHtml({...station,kind:'forge_world'}),/No authored objectives/);
+assert.match(context.geographyObjectivesHtml({...station,kind:'forge_world'}),/No objective tags recorded/);
 assert.equal(context.geographyObjectivesHtml({kind:'star'}),'');
 const geography = JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 context.state.geography = geography;
@@ -905,6 +952,7 @@ const context={state:{geography},escapeHtml:value=>String(value),STELLAR_TYPES:{
     context:{drawImage:(...args)=>draws.push(args),beginPath:()=>{},arc:(...args)=>arcs.push(args),stroke:()=>{}}};
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function hashStr('),html.indexOf('function formationName(')),context);
+vm.runInContext(html.slice(html.indexOf('function mulberry32('),html.indexOf('function relativeTime(')),context);
 assert.equal(context.geographyOrbitTilt({id:'stable-world'}),context.geographyOrbitTilt({id:'stable-world'}));
 assert(Math.abs(context.geographyOrbitTilt({id:'stable-world'}))<=Math.PI*16/180);
 context.bodiesBySystem=new Map();context.reducedMotion={matches:true};
@@ -912,9 +960,21 @@ vm.runInContext(html.slice(html.indexOf('  function bodyPosition('),html.indexOf
 const orbitBody={id:'stable-world',kind:'hive_world',orbitIndex:2,orbitAngle:35};
 const orbitPosition=context.bodyPosition({id:'system',x:10,y:20},orbitBody);
 assert.equal(orbitPosition.orbitRotation,context.geographyOrbitTilt(orbitBody));
-const phase=35*Math.PI/180,tilt=orbitPosition.orbitRotation;
+const phase=context.geographyOrbitPhase(orbitBody)*Math.PI/180,tilt=orbitPosition.orbitRotation;
 assert(Math.abs(orbitPosition.x-(10+13*(Math.cos(phase)*Math.cos(tilt)-.46*Math.sin(phase)*Math.sin(tilt))))<1e-9);
 assert(Math.abs(orbitPosition.y-(20+13*(Math.cos(phase)*Math.sin(tilt)+.46*Math.sin(phase)*Math.cos(tilt))))<1e-9);
+const phasedBodies=Array.from({length:12},(_,index)=>({id:`system-world-${index+1}`,systemId:'system',kind:'planet',orbitIndex:index+1,orbitAngle:30+index}));
+const phases=phasedBodies.map(body=>context.geographyOrbitPhase(body));
+assert(new Set(phases.map(angle=>Math.floor(angle/90))).size>=3);
+for(const body of phasedBodies){
+ assert.equal(context.geographyOrbitPhase(body),context.geographyOrbitPhase({...body}));
+ assert.deepEqual(context.bodyPosition({id:'system',x:10,y:20},body,0),context.bodyPosition({id:'system',x:10,y:20},body,60000));
+}
+context.reducedMotion.matches=false;
+const initial=context.bodyPosition({id:'system',x:10,y:20},phasedBodies[0],0);
+const moved=context.bodyPosition({id:'system',x:10,y:20},phasedBodies[0],60000);
+assert(Math.hypot(moved.x-initial.x,moved.y-initial.y)>1);
+assert.equal(initial.orbitX,moved.orbitX);assert.equal(initial.orbitY,moved.orbitY);
 vm.runInContext(html.slice(html.indexOf('const GEOGRAPHY_WORLD_TYPES ='),html.indexOf('function openGeographySystem(')),context);
 const body={id:'unrelated_sector_world',name:'Unrelated Name',kind:'hive_world',biome:'industrial'};
 assert.match(context.geographyBodyArtwork(body),/^\/assets\/planets\/hive-industrial-[12]\.webp$/);
@@ -2099,15 +2159,24 @@ context.state.auth={authenticated:true};
 context.geographyObjectivesHtml=()=>'';
 host.innerHTML=context.geographySystemOverviewHtml(context.state.geography.systems[0],true);
 assert.match(host.innerHTML,/Hive spires and transit vaults/);
+assert.match(host.innerHTML,/<dt>Strike theatres<\/dt><dd>1 of 2 worlds<\/dd>/);
+assert.match(host.innerHTML,/<dt>Warp lanes<\/dt>/);
+assert.match(host.innerHTML,/<dt>Kill-team deployments<\/dt><dd>None deployed<\/dd>/);
+assert.match(host.innerHTML,/Strike theatre/);
+assert.doesNotMatch(host.innerHTML,/battle eligible/i);
+assert.doesNotMatch(html,/battle eligible/i);
 assert.match(host.innerHTML,/1 Vanilla \/ 1 Omega \/ 1 available/);
 assert.match(host.innerHTML,/1 recruiting \/ 0 locked/);
 assert.match(host.innerHTML,/data-war-strike="v"/);assert.match(host.innerHTML,/data-war-strike="o"/);
 assert.match(host.innerHTML,/Non-combat location/);assert.match(host.innerHTML,/No deployments assigned/);
 assert.equal((host.innerHTML.match(/class="system-world-briefing"/g)||[]).length,2);
+context.warView.data.assignments={'alpha':'one','beta':'other'};context.warView.data.kill_teams=[{id:'alpha',name:'Kill Team Alpha'},{id:'beta',name:'Kill Team Beta'}];
+const deployed=context.geographySystemOverviewHtml(context.state.geography.systems[0],true);
+assert.match(deployed,/<dt>Kill-team deployments<\/dt><dd>Kill Team Alpha<\/dd>/);assert.doesNotMatch(deployed,/Kill Team Beta/);
 context.warView.data=null;
 const offline=context.geographyBrowseDetailsHtml(context.state.geography.systems[0]);
 assert.match(offline,/Hive spires and transit vaults/);assert.match(offline,/Vhaloris/);
-assert.match(offline,/Live strike information unavailable/);assert.doesNotMatch(offline,/0 Vanilla|None assigned/);
+assert.match(offline,/Live strike information unavailable/);assert.match(offline,/Deployment status unavailable/);assert.doesNotMatch(offline,/0 Vanilla|None deployed/);
 context.warView.planet='world';
 const planet=context.geographyBrowseDetailsHtml(context.state.geography.systems[0]);
 assert.match(planet,/aria-label="Planet details"/);assert.match(planet,/Hive spires and transit vaults/);
@@ -2181,7 +2250,7 @@ const context={activePointers:new Map(),pinchGesture:null,multiPointerGesture:fa
  width:400,height:300,state:{reachCanvasCamera:{x:0,y:0,targetX:0,targetY:0,zoom:1,targetZoom:1,baseZoom:1}},
  canvas:{addEventListener:(name,handler)=>{handlers[name]=handler;},setPointerCapture:()=>{}},viewport:{classList:{add:()=>{},remove:()=>{}}},tooltip:null,
  localPoint:event=>({x:event.clientX,y:event.clientY}),screenToWorld:(x,y)=>({x:context.state.reachCanvasCamera.x+(x-200)/context.state.reachCanvasCamera.zoom,y:context.state.reachCanvasCamera.y+(y-150)/context.state.reachCanvasCamera.zoom}),
- canvasClamp:(value,min,max)=>Math.min(max,Math.max(min,value)),clampToArt:(x,y)=>({x,y}),clearSectorSelection:()=>{},updateCanvasHover:()=>{},
+ canvasClamp:(value,min,max)=>Math.min(max,Math.max(min,value)),clampToArt:(x,y)=>({x,y}),clearSectorSelection:()=>{},clearCanvasHover:()=>{},updateCanvasHover:()=>{},
  geography:{systems:[]},BODY_HOVER_RATIO:10,SYSTEM_HOVER_RATIO:10,geographySectorAt:()=>({id:'alpha'}),showSectorLevel:identity=>selections.push(identity)};
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('  function pinchPoints()'),html.indexOf('  canvas.addEventListener("pointerleave"',html.indexOf('  function pinchPoints()'))),context);
@@ -2632,6 +2701,46 @@ assert.match(plate, /class="plate-rank">Watch Captain/);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the acting-captain regression")
+def test_company_watch_master_is_shown_as_acting_captain_without_changing_rank():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8'),app={innerHTML:''},plates=[];
+const master={id:'master',name:'Master',rank:'watch_master',company:4,killTeam:'4-1'};
+const lieutenant={id:'lieutenant',name:'Lieutenant',rank:'watch_lieutenant',company:4};
+const context={state:{members:[master,lieutenant],directiveStats:{}},
+ COMPANY_COMMAND_RANKS:['watch_captain','watch_lieutenant'],COMPANY_NAMES:{3:'Tertius',4:'Quartus'},
+ COMPANY_MARKINGS:{4:'IV'},COMPANY_SIGILS:{},COMPANY_LORE:{},FORMATION_COLORS:{},FORMATION_LORE:{},
+ FORMATIONS:Object.fromEntries(['armory','apothecarion','black_vault','librarius','reclusiam','hall_of_blades'].map(key=>[key,{name:key,lead:key}])),
+ RANK_LABELS:{watch_master:'Watch Master',watch_captain:'Watch Captain',watch_lieutenant:'Watch Lieutenant'},
+ document:{getElementById:()=>app},requestAnimationFrame:()=>{},drawMapConnectors:()=>{},
+ escapeHtml:value=>String(value||''),displayName:name=>name,formationEquerries:()=>[],formationSymbolHtml:()=>'',
+ killTeamsForCompany:()=>[],renownSummaryHtml:()=>'',unitHonoursHtml:()=>'',
+ commandSectionHtml:(_label,content)=>content,
+ plateHtml:options=>{plates.push(options);return `${options.rankLabel} ${options.dutyLabel||''}`;}};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function companyCommand('),html.indexOf('function killTeamLead(')),context);
+vm.runInContext(html.slice(html.indexOf('function renderCompany('),html.indexOf('function renderFormation(')),context);
+vm.runInContext(html.slice(html.indexOf('function renderStrategium('),html.indexOf('function drawMapConnectors(')),context);
+const captain=()=>context.companyCommand(4).find(entry=>entry.rank==='watch_captain');
+assert.equal(captain().member,master);assert.equal(captain().dutyLabel,'ACTING CAPTAIN');
+assert.equal(context.companyCommand(3)[0].member,null);
+context.renderCompany(4);
+assert.equal(plates[0].member,master);assert.equal(plates[0].rankLabel,'Watch Master');assert.equal(plates[0].dutyLabel,'ACTING CAPTAIN');
+assert.equal(plates[1].member,lieutenant);assert.equal(plates[1].dutyLabel,'');
+context.renderStrategium();assert.match(app.innerHTML,/Acting Captain Master/);
+assert.equal(master.rank,'watch_master');
+const regular={id:'captain',name:'Captain',rank:'watch_captain',company:4};context.state.members.push(regular);
+assert.equal(captain().member,regular);assert.equal(captain().dutyLabel,'');
+plates.length=0;context.renderCompany(4);assert.equal(plates[0].rankLabel,'Watch Captain');assert.equal(plates[0].dutyLabel,'');
+context.renderStrategium();assert.match(app.innerHTML,/Watch Captain Captain/);assert.doesNotMatch(app.innerHTML,/Acting Captain/);
+context.state.members=[{...master,killTeam:null},lieutenant];assert.equal(captain().member,null);
+context.state.members=[{...master,company:null},lieutenant];assert.equal(captain().member,null);
+context.state.members=[{...master,killTeam:null,killTeamName:'Kill-Team Test'},lieutenant];assert.equal(captain().dutyLabel,'ACTING CAPTAIN');
+"""
+    subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], check=True, capture_output=True, text=True)
 
 
 def test_unit_detail_headers_and_overview_symbols_share_scoped_layout():
