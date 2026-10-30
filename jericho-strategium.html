@@ -685,6 +685,10 @@
   .war-pools > button { flex: 1; }
   .war-command-tools, .war-review-tools { margin: 10px 0; border-bottom: 1px solid var(--border-dim); }
   .war-command-tools > summary, .war-review-tools > summary { padding: 10px 0; color: var(--green); cursor: pointer; font-size: 11px; }
+  .war-field-orders section { padding: 0 0 12px; }
+  .war-field-orders h4 { margin: 6px 0; color: var(--gold); font-size: 12px; }
+  .war-field-orders ol { margin: 0; padding-left: 20px; color: var(--green-dim); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+  .war-field-orders li + li { margin-top: 6px; }
   .war-system-directory { margin: 14px 0; }
   .war-system-directory h3 { color: var(--gold); font-size: 12px; }
   .war-system-worlds { display: grid; gap: 6px; padding: 8px 0 12px; }
@@ -6114,6 +6118,22 @@ function warConsoleHtml() {
   const select = (name, label, options, disabled = false) => `<label>${label}<select class="reach-select" data-war-field="${name}" aria-label="${label}"${warView.busy || disabled ? " disabled" : ""}>${options}</select></label>`;
   const option = (value, label, selected = false) => `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
   const button = (action, label, extra = "", disabled = false) => `<button class="btn-dossier-action" type="button" data-war-action="${action}" ${extra}${warView.busy || disabled ? " disabled" : ""}>${label}</button>`;
+  const fieldOrders = commander || roles.has("Watch Sergeant") || roles.has("Veteran Sergeant") ? `<details class="war-command-tools war-field-orders" data-war-section="field-orders"><summary>Field orders</summary>
+    ${master || roles.has("Watch Captain") ? `<section data-war-guide="company-command"><h4>${master ? "Watch command" : "Watch Captain"} / Company commitment</h4><ol>
+      <li>Open an invaded subsector on the map. In its subsector overview, expand Company orders, choose your company and select Commit company.</li>
+      <li>Review Lieutenant requests in Company orders. Select Approve or Reject; a request does not commit the company until approved.</li>
+      <li>Once committed, open a system within that subsector to issue Kill-team orders. To move the company, choose another invaded subsector and select Move company.</li>
+    </ol></section>` : roles.has("Watch Lieutenant") ? `<section data-war-guide="lieutenant"><h4>Watch Lieutenant / Commitment request</h4><ol>
+      <li>Open the invaded subsector's overview, expand Company orders and select Request commitment for your company.</li>
+      <li>Wait for your Watch Captain or Watch Master to approve the request. Awaiting approval means the company is not yet committed to that destination.</li>
+      <li>After approval, open a system in the committed subsector to issue Kill-team orders. A new company destination requires another approved request.</li>
+    </ol></section>` : ""}
+    <section data-war-guide="kill-team"><h4>${commander ? "Kill-team orders / Covering command" : "Sergeant / Kill-team assignment"}</h4><ol>
+      <li>Your company must be committed before a Kill-Team can receive a system assignment. Open a system within its committed subsector and expand Kill-team orders.</li>
+      <li>${commander ? `${master ? "Select a company and one of its eligible Kill-Teams." : "Select an eligible Kill-Team from your company."} When covering for an unavailable Sergeant, enter a Cover reason.` : "Select your own Kill-Team and its destination system."} Select Assign system, or Reassign kill team to change an existing assignment.</li>
+      <li>Check Current assignment after submitting. Then open a world in that system to review its Vanilla and Omega strikes.</li>
+    </ol></section>
+  </details>` : "";
   const testCompletionTools = offer => testing && offer.status === "available" ? `<details class="strike-secondary strike-test-tools" data-war-section="strike-testing"><summary>Invasion testing / TEST / NO REAL REWARDS</summary><p>Simulated completion only; no real AARs or rewards.</p>${button("simulate_completion", "Simulate completion", `data-strike="${escapeHtml(offer.id)}" `)}</details>` : "";
   const commitments = Object.entries(war.commitments).filter(([, target]) => target === sectorId);
   const pool = warView.pool === "omega" ? "omega" : "vanilla";
@@ -6155,7 +6175,7 @@ function warConsoleHtml() {
     const slotReason = joined ? "Already signed up" : locked ? "Roster locked" : signup?.reason || (!canParticipate ? "Active Watch Brother membership required" : "Signup unavailable");
     const specialist = offer.required_rank ? `<p class="strike-context">Required specialist: <strong>${escapeHtml(offer.required_rank)}</strong>${specialistCovered ? " / Covered" : " / Needed"}</p>` : "";
     const testingTools = testCompletionTools(offer);
-    return `<section id="war-console" aria-label="Strike deployment">${backFallback}<article class="strike-detail">
+    return `<section id="war-console" aria-label="Strike deployment">${backFallback}${fieldOrders}<article class="strike-detail">
       ${actionFallback}
       <section class="strike-section" aria-label="Strike roster"><h3>Roster</h3>${specialist}<ol class="strike-roster">${Array.from({length: offer.capacity}, (_, index) => {
         const identity = offer.participants[index];
@@ -6174,6 +6194,7 @@ function warConsoleHtml() {
       ${campaign ? `<span>${campaign.resolution_pending ? "Awaiting on-time reports" : escapeHtml(titleCase(campaign.status))} / Tyranids / ${Number(campaign.balance).toFixed(2)}%</span><progress max="100" value="${Number(campaign.balance)}" aria-label="Deathwatch balance of power"></progress><span>${escapeHtml(new Date(campaign.deadline).toLocaleString())}</span>` : `<span>Secure</span>`}
       ${canInvade && !testing && campaign?.status !== "contested" ? button("invade", "Declare Tyranid invasion") : ""}
     </div>
+    ${fieldOrders}
     ${canInvade ? `<details class="war-command-tools"><summary>Invasion testing${testing ? " / TEST / NO REAL REWARDS" : ""}</summary>
       <div class="reach-toolbar">${war.sandbox ? `${testing ? `<span>Test clock: ${escapeHtml(new Date(war.sandbox.clock).toLocaleString())}</span>${button("exit_test_view", "Return to live campaign")}${select("test_hours", "Advance test clock", [1, 24, 72, 336].map(hours => option(hours, `${hours} hours`)).join(""))}${button("advance_test_time", "Advance test time")}${button("send_test_notice", "Send Test Notice")}${button("revert_test_invasion", "Revert Test Invasion")}` : button("enter_test_view", "Resume Test Invasion")}` : button("start_test_invasion", "Start Test Invasion")}</div>
     </details>` : ""}

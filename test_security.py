@@ -1992,14 +1992,31 @@ assert.match(context.warConsoleHtml(),/&lt;img src=x/);
 assert.match(context.warConsoleHtml(),/data-war-action="reverse"/);
 assert.match(context.warConsoleHtml(),/Settled strike to reverse/);
 context.warView.data.actor.can_review=false;
-for(const [role,invade,commit] of [['Forgemaster',true,false],['Watch Master',true,true],['Watch Captain',false,true],['Watch Lieutenant',false,true],['Watch Sergeant',false,false],['Watch Brother',false,false]]){
+for(const [role,invade,commit] of [['Forgemaster',true,false],['Watch Master',true,true],['Watch Captain',false,true],['Watch Lieutenant',false,true],['Watch Sergeant',false,false],['Veteran Sergeant',false,false],['Watch Brother',false,false]]){
     context.warView.data.actor.roles=[role];
     context.state.selectedSystem=null;
     const controls=context.warConsoleHtml();
     assert.equal(controls.includes('data-war-action="invade"'),invade,role);
     assert.equal(controls.includes('data-war-action="start_test_invasion"'),invade,role);
     assert.equal(controls.includes('data-war-action="commit"'),commit,role);
+    const orders = ['Watch Master','Watch Captain','Watch Lieutenant','Watch Sergeant','Veteran Sergeant'].includes(role);
+    assert.equal(controls.includes('data-war-section="field-orders"'),orders,role);
+    assert.equal(controls.includes('data-war-guide="company-command"'),['Watch Master','Watch Captain'].includes(role),role);
+    assert.equal(controls.includes('data-war-guide="lieutenant"'),role==='Watch Lieutenant',role);
+    assert.equal(controls.includes('data-war-guide="kill-team"'),orders,role);
+    if(orders){
+        assert.match(controls,/<summary>Field orders<\/summary>/);
+        assert.doesNotMatch(controls,/<details[^>]*data-war-section="field-orders"[^>]* open/);
+        assert.ok(controls.indexOf('data-war-section="field-orders"') < controls.indexOf('data-war-section="company-orders"') || !commit);
+    }
 }
+context.state.reachMapLevel='strike';
+context.warView.strike='offer';
+context.warView.data.actor.roles=['Watch Sergeant'];
+assert.match(context.warConsoleHtml(),/data-war-section="field-orders"/);
+context.warView.data.actor.roles=['Watch Brother'];
+assert.doesNotMatch(context.warConsoleHtml(),/data-war-section="field-orders"/);
+context.state.reachMapLevel='';
 context.state.selectedSystem='system';
 context.warView.data.actor.roles=['Watch Captain'];
 context.warView.data.actor.roles=['Forgemaster'];
@@ -2134,7 +2151,7 @@ c.warView.data.assignments={};assert.doesNotMatch(c.geographySystemDirectoryHtml
 c.state.selectedSystem='one';markup=c.warConsoleHtml();
 assert.match(markup,/data-war-nav="system"/);assert.match(markup,/data-war-nav="planet"/);
 assert.match(markup,/Vhaloris/);assert.match(markup,/Kael Tertius/);
-assert.doesNotMatch(markup,/Theryn|Other Subsector|Company commitment|data-sector-system=/);
+assert.doesNotMatch(markup,/Theryn|Other Subsector|aria-label="Company commitment"|data-war-section="company-orders"|data-sector-system=/);
 assert.match(markup,/Kill-team assignment/);
 (async()=>{
  await handlers.change({target:{closest:selector=>selector==='[data-war-nav]'?{dataset:{warNav:'planet'},value:'kael'}:null}});

@@ -43,6 +43,15 @@ and a planet dropdown limited to that system, plus KT orders and the system stri
 list. Planet selection focuses the map and updates the detail without removing the
 system list; back navigation returns to the systems-only subsector view.
 
+Field orders is a collapsed guide near the top of the authenticated campaign panel,
+also available in strike detail. Captains and Watch Masters see company commitment
+and approval steps; Lieutenants see request/approval guidance; both Sergeant ranks
+see their own Kill-Team assignment steps. Commanders also see covering-assignment
+guidance. Ordinary Watch Brothers and unrelated ranks do not see the guide. It uses
+the campaign's verified role snapshot, and its open state survives polling. This is
+guidance only; the bot still authorizes each order independently. Invasion Discord
+alerts keep the call to arms, campaign context and site link rather than these steps.
+
 Company commitment and kill-team assignment are separate contextual order sections. Company
 selection filters eligible KTs; destination systems come only from that company's
 committed subsector. Dropdowns have explicit placeholders, current commitment and
