@@ -6392,7 +6392,7 @@ document.addEventListener("click", async event => {
     }
     return;
   }
-  if (["send_test_notice", "revert_test_invasion"].includes(button.dataset.warAction) && !globalThis.confirm?.(button.dataset.warAction === "send_test_notice" ? "Send an unpinged TEST invasion notice to the campaign Discord channel?" : "Discard this test invasion? Live campaigns and rewards will not change.")) return;
+  if (["send_test_notice", "revert_test_invasion"].includes(button.dataset.warAction) && !globalThis.confirm?.(button.dataset.warAction === "send_test_notice" ? "Send the invasion preview to the test Discord channel (1511147649003425973)? This will ping Watch Brother only, just like a live invasion. Live campaigns and rewards will not change." : "Discard this test invasion? Live campaigns and rewards will not change.")) return;
   if (button.dataset.warAction === "report") {
     if (warView.sandboxId) return;
     const offer = Object.values(warView.data.boards).flat().find(item => item.id === button.dataset.strike);

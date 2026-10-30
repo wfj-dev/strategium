@@ -2010,6 +2010,8 @@ assert.match(context.warConsoleHtml(),/TEST \/ NO REAL REWARDS/);
 assert.match(context.warConsoleHtml(),/data-war-action="simulate_completion"/);
 assert.match(context.warConsoleHtml(),/data-war-action="revert_test_invasion"/);
 assert.match(context.warConsoleHtml(),/data-war-action="send_test_notice"/);
+assert.match(html,/test Discord channel \(1511147649003425973\)\? This will ping Watch Brother only, just like a live invasion/);
+assert.doesNotMatch(html,/Send an unpinged TEST invasion notice/);
 assert.doesNotMatch(context.warConsoleHtml(),/The Watch Brother role and active membership are required/);
 assert.doesNotMatch(context.warConsoleHtml(),/data-war-action="join"|data-war-action="report"|data-war-action="invade"/);
 context.warView.data.sandbox=null;

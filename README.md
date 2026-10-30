@@ -87,7 +87,10 @@ commit a company, assign a KT to a system, and simulate completions or advance t
 time. Test view hides real signup/AAR actions and is labelled TEST / NO REAL REWARDS.
 Return to live campaign leaves the sandbox resumable; Revert Test Invasion discards
 test progress without changing live campaigns, orders or awards. Test notices are
-opt-in, confirmed and unpinged; a sent test notice gets a matching reverted notice.
+opt-in and confirmed: they preview the full live embed and banner in test channel
+`1511147649003425973`, pinging only Watch Brother, just like live. Live notices use
+`1430055064969674777`. Test footers identify their sandbox; a sent test notice gets
+a matching unpinged reverted notice.
 Permissions and session ownership are rechecked by the bot, not trusted from the UI.
 
 Authored system labels use bare proper names, such as Solenne Crown, without a
