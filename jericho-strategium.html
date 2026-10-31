@@ -1118,7 +1118,9 @@
   .reach-map-shell { position: relative; min-width: 0; overflow: hidden; }
   .priority-strikes { position: absolute; top: 12px; right: 60px; z-index: 4; width: min(330px, 38%); max-height: calc(100% - 24px); overflow: auto; border: 1px solid var(--border); background: rgba(3,9,6,.96); }
   .priority-strikes[hidden] { display: none; }
-  .priority-strikes h2 { margin: 0; padding: 12px; border-bottom: 1px solid var(--border-dim); color: var(--gold); font-size: 12px; }
+  .priority-strikes > summary { min-height: 44px; padding: 12px; color: var(--gold); font-size: 12px; cursor: pointer; }
+  .priority-strikes[open] > summary { border-bottom: 1px solid var(--border-dim); }
+  .priority-strikes > summary:focus-visible { outline: 1px solid var(--green); outline-offset: -2px; }
   .priority-strike-row { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 10px; width: 100%; min-height: 96px; padding: 12px; text-align: left; border: 0; border-bottom: 1px solid var(--border-dim); background: transparent; color: var(--green); font: inherit; cursor: pointer; }
   .priority-strike-row:last-child { border-bottom: 0; }
   .priority-strike-row img { width: 44px; height: 44px; object-fit: contain; align-self: center; }
@@ -6087,21 +6089,26 @@ function openPlanetView(bodyId) {
 function priorityStrikesHtml() {
   const war = warView.data;
   const hidden = !state.auth.authenticated || state.geographyStatus !== "live" || state.reachMapLevel !== "reach" || war?.sandbox?.viewing;
-  if (hidden) return `<aside id="priority-strikes" class="priority-strikes" hidden></aside>`;
+  if (hidden) return `<details id="priority-strikes" class="priority-strikes" hidden></details>`;
   const entries = war?.recommendations?.strikes || [];
   const status = warView.error || (!war ? "Receiving strike priorities..." : war.recommendations?.reason || "No strike priorities available.");
-  return `<aside id="priority-strikes" class="priority-strikes" aria-label="Priority strikes"><h2>Priority strikes</h2>${entries.length ? entries.slice(0, 3).map(offer => {
+  return `<details id="priority-strikes" class="priority-strikes" aria-label="Priority strikes"><summary>Priority strikes${entries.length ? ` (${Math.min(3, entries.length)})` : ""}</summary>${entries.length ? entries.slice(0, 3).map(offer => {
     const body = state.geography?.bodies.find(body => body.id === offer.planet_id);
     const artwork = body ? geographyBodyArtwork(body) : "";
     return `<button type="button" class="priority-strike-row" data-recommended-strike="${escapeHtml(offer.id)}" aria-label="Open ${escapeHtml(offer.name)} on ${escapeHtml(offer.planet_name)}"${warView.busy || warView.recommendationPending ? " disabled" : ""}><img src="${escapeHtml(artwork || "/assets/map-icons/planet.webp")}" alt=""><span><strong>${escapeHtml(offer.name)}</strong><small>${escapeHtml(offer.planet_name)} / ${escapeHtml(offer.system_name)}</small><small>${escapeHtml(offer.aar_mission)} / ${offer.pool === "omega" ? "Omega" : "Vanilla"} / ${offer.filled} of ${offer.capacity}</small><small class="priority-strike-reason">${escapeHtml(offer.reason)}${offer.current ? ` / ${escapeHtml(titleCase(offer.status))}` : ""}</small></span></button>`;
-  }).join("") : `<p class="priority-strikes-status" role="status">${escapeHtml(status)}</p>`}</aside>`;
+  }).join("") : `<p class="priority-strikes-status" role="status">${escapeHtml(status)}</p>`}</details>`;
 }
 
 function refreshPriorityStrikes() {
   const host = document.getElementById("priority-strikes");
   if (!host) return;
+  const open = host.open;
+  const summaryFocused = document.activeElement === host.querySelector("summary");
   const focused = document.activeElement?.closest?.("[data-recommended-strike]")?.dataset.recommendedStrike;
   host.outerHTML = priorityStrikesHtml();
+  const replacement = document.getElementById("priority-strikes");
+  replacement.open = open;
+  if (summaryFocused) replacement.querySelector("summary")?.focus({preventScroll: true});
   if (focused) [...document.querySelectorAll("[data-recommended-strike]")].find(button => button.dataset.recommendedStrike === focused)?.focus({preventScroll: true});
 }
 

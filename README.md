@@ -25,8 +25,9 @@ canvas mounted and preserves the strike-list scroll position.
 Planetary orbit rings use small, deterministic per-world tilts so occasional
 alignments remain possible without every orbit sharing the same visible axis.
 
-Signed-in members see up to three Priority strikes on the full Galactic Map:
-their current deployment first, then eligible opportunities. Both Sergeant ranks
+Signed-in members can expand the collapsed Priority strikes dropdown on the full Galactic Map:
+it contains up to three entries, with their current deployment first, then eligible
+opportunities, and retains its open/closed state through polling. Both Sergeant ranks
 and battle-line brothers prioritize their KT's assigned system; Captains and
 Lieutenants prioritize their company's committed subsector. Specialists prioritize
 unfilled requirements they can satisfy, including qualified higher ranks; Watch

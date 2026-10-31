@@ -1953,6 +1953,9 @@ c.showSystemLevel=id=>{c.state.selectedSystem=id;c.state.reachMapLevel='system';
 vm.createContext(c);
 vm.runInContext(html.slice(html.indexOf('function priorityStrikesHtml()'),html.indexOf('async function loadWar()')),c);
 let markup=c.priorityStrikesHtml();
+assert.match(markup,/<details[^>]*id="priority-strikes"/);
+assert.doesNotMatch(markup,/<details[^>]*\bopen\b/);
+assert.match(markup,/<summary>Priority strikes \(3\)<\/summary>/);
 assert.equal((markup.match(/data-recommended-strike=/g)||[]).length,3);
 assert.match(markup,/&lt;img src=x&gt;/);assert.doesNotMatch(markup,/<img src=x>/);
 assert.match(markup,/Current deployment/);assert.match(markup,/Specialist needed/);
@@ -1960,6 +1963,14 @@ for(const level of ['sector','system','planet','strike']){c.state.reachMapLevel=
 c.state.reachMapLevel='reach';c.state.auth.authenticated=false;assert.match(c.priorityStrikesHtml(),/ hidden/);
 c.state.auth.authenticated=true;c.warView.data.sandbox={viewing:true};assert.match(c.priorityStrikesHtml(),/ hidden/);delete c.warView.data.sandbox;
 c.warView.data.recommendations.strikes=[];assert.match(c.priorityStrikesHtml(),/No strike priorities available/);c.warView.data.recommendations.strikes=entries;
+let summaryFocus=0;
+const summary={focus:()=>summaryFocus++};
+let host={open:true,querySelector:()=>summary};
+const install=()=>Object.defineProperty(host,'outerHTML',{set:()=>{host={open:false,querySelector:()=>summary};install();}});
+install();c.document={activeElement:summary,getElementById:()=>host,querySelectorAll:()=>[]};
+c.refreshPriorityStrikes();assert.equal(host.open,true);assert.equal(summaryFocus,1);
+host.open=false;c.refreshPriorityStrikes();assert.equal(host.open,false);
+c.document={getElementById:()=>null};
 (async()=>{
  await c.openRecommendedStrike('strike-0');assert.deepEqual(opened,['strike-0']);assert.equal(calls,1);assert.equal(c.warView.pool,'omega');
  await c.openRecommendedStrike('strike-2');assert.deepEqual(opened,['strike-0']);assert.match(c.warView.error,/no longer available/);
