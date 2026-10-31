@@ -210,7 +210,8 @@ assert(markup.indexOf('aria-label="Strike roster"')<markup.indexOf('aria-label="
 assert.doesNotMatch(markup,/data-strike-back/);
 assert.equal((markup.match(/class="strike-slot-join"/g)||[]).length,3);
 assert.match(markup,/data-war-action="join" data-strike="one"/);
-assert.match(markup,/Click \/ tap to join/);
+assert.match(markup,/Click \/ tap to comply/);
+assert.match(markup,/aria-label="Comply with strike, open slot 1"/);
 assert.equal((markup.match(/strike-slot-number/g)||[]).length,3);
 assert.match(markup,/Positive \/ 1/);assert.match(markup,/Negative \/ 3/);assert.match(markup,/Mandatory faction conversion \/ additional/);
 assert.match(markup,/Carry twice as much Equipment/);assert.doesNotMatch(markup,/Complete the assigned operation/);
@@ -225,13 +226,13 @@ assert.equal(sceneHost.action.className,'strike-scene-command');assert.match(sce
 assert.equal((sceneHost.action.innerHTML.match(/data-war-action=/g)||[]).length,1);
 assert.match(sceneHost.action.innerHTML,/0 \/ 3 joined/);assert.doesNotMatch(sceneHost.action.innerHTML,/Carry twice as much Equipment/);
 offer.viewer_signup={can_join:true,reason:'',specialist_fulfilled:false,replaces_strike:{id:'old',name:'Previous strike'}};
-const replacementAction=c.strikeActionBarHtml(offer);assert.match(replacementAction,/Sign Up/);assert.match(replacementAction,/Signing up will remove you from Previous strike/);
+const replacementAction=c.strikeActionBarHtml(offer);assert.match(replacementAction,/>Comply<\/button>/);assert.match(replacementAction,/Complying with this strike will withdraw you from Previous strike/);
 c.state.reachMapLevel='planet';c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(sceneHost.innerHTML,'');assert.equal(stage.dataset.view,'planet');
 c.state.reachMapLevel='strike';c.warView.strike='removed';c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(sceneHost.innerHTML,'');
 c.warView.strike='one';const savedWar=c.warView.data;c.warView.data=null;c.refreshStrikeSceneBriefing();assert.equal(sceneHost.hidden,true);assert.equal(stage.dataset.view,'planet');c.warView.data=savedWar;
 offer.viewer_signup={can_join:false,reason:'The remaining slot must fulfill the required rank',specialist_fulfilled:false};offer.required_rank='Bladeguard';
 let action=c.strikeActionBarHtml(offer);assert.match(action,/data-war-action="join"[^>]*disabled/);assert.match(action,/remaining slot/);
-markup=c.warConsoleHtml();assert.match(markup,/class="strike-slot-join"[^>]*disabled/);assert.match(markup,/remaining slot/);assert.doesNotMatch(markup,/Click \/ tap to join/);
+markup=c.warConsoleHtml();assert.match(markup,/class="strike-slot-join"[^>]*disabled/);assert.match(markup,/remaining slot/);assert.doesNotMatch(markup,/Click \/ tap to comply/);
 offer.viewer_signup={can_join:true,reason:'',specialist_fulfilled:true};markup=c.warConsoleHtml();assert.match(markup,/Covered/);assert.doesNotMatch(markup,/Open \/ Bladeguard requirement/);
 offer.capacity=5;assert.equal((c.warConsoleHtml().match(/strike-slot-number/g)||[]).length,5);
 offer.status='locked';offer.participants=['42','43','44','45','46'];markup=c.warConsoleHtml();action=c.strikeActionBarHtml(offer);assert.match(action,/data-war-action="report"/);assert.doesNotMatch(markup,/data-war-action="report"|data-war-action="join"/);assert.match(markup,/Brother Tester \(You\)/);
@@ -1940,6 +1941,41 @@ def test_me_uses_guild_display_name_not_account_name(local_site, monkeypatch):
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the war signup regression")
+def test_priority_strikes_are_full_map_only_and_hydrate_before_opening():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const entries=Array.from({length:4},(_,index)=>({id:'strike-'+index,planet_id:'world',system_id:'system',name:index===0?'<img src=x>':'Strike '+index,planet_name:'World',system_name:'System',aar_mission:'Inferno',pool:'omega',filled:2,capacity:5,reason:index===0?'Current deployment':'Specialist needed',current:index===0,status:'recruiting'}));
+let calls=0,opened=[],release;
+const c={state:{auth:{authenticated:true},page:'reach',geographyStatus:'live',reachMapLevel:'reach',geography:{bodies:[]},selectedSystem:null},warView:{data:{recommendations:{strikes:entries},boards:{}},recommendationSequence:0},escapeHtml:value=>String(value??'').replace(/</g,'&lt;').replace(/>/g,'&gt;'),titleCase:value=>value,geographyBodyArtwork:()=>'',document:{getElementById:()=>null},refreshWarConsole:()=>{},selectPlanetStrike:async id=>opened.push(id)};
+c.loadWar=async()=>{calls++;c.warView.data.boards={world:[{id:'strike-0'},{id:'strike-1'}]};};
+c.showSystemLevel=id=>{c.state.selectedSystem=id;c.state.reachMapLevel='system';return c.loadWar();};
+vm.createContext(c);
+vm.runInContext(html.slice(html.indexOf('function priorityStrikesHtml()'),html.indexOf('async function loadWar()')),c);
+let markup=c.priorityStrikesHtml();
+assert.equal((markup.match(/data-recommended-strike=/g)||[]).length,3);
+assert.match(markup,/&lt;img src=x&gt;/);assert.doesNotMatch(markup,/<img src=x>/);
+assert.match(markup,/Current deployment/);assert.match(markup,/Specialist needed/);
+for(const level of ['sector','system','planet','strike']){c.state.reachMapLevel=level;assert.match(c.priorityStrikesHtml(),/ hidden/);}
+c.state.reachMapLevel='reach';c.state.auth.authenticated=false;assert.match(c.priorityStrikesHtml(),/ hidden/);
+c.state.auth.authenticated=true;c.warView.data.sandbox={viewing:true};assert.match(c.priorityStrikesHtml(),/ hidden/);delete c.warView.data.sandbox;
+c.warView.data.recommendations.strikes=[];assert.match(c.priorityStrikesHtml(),/No strike priorities available/);c.warView.data.recommendations.strikes=entries;
+(async()=>{
+ await c.openRecommendedStrike('strike-0');assert.deepEqual(opened,['strike-0']);assert.equal(calls,1);assert.equal(c.warView.pool,'omega');
+ await c.openRecommendedStrike('strike-2');assert.deepEqual(opened,['strike-0']);assert.match(c.warView.error,/no longer available/);
+ const releases=[];c.state.selectedSystem=null;c.showSystemLevel=id=>{c.state.selectedSystem=id;c.state.reachMapLevel='system';return new Promise(resolve=>releases.push(resolve));};
+ const first=c.openRecommendedStrike('strike-0'),second=c.openRecommendedStrike('strike-1');releases[1]();await second;releases[0]();await first;
+ assert.deepEqual(opened,['strike-0','strike-1']);
+ c.state.selectedSystem=null;c.showSystemLevel=id=>{c.state.selectedSystem=id;c.state.reachMapLevel='system';return new Promise(resolve=>{release=resolve;});};
+ const pending=c.openRecommendedStrike('strike-1');c.state.reachMapLevel='reach';c.state.selectedSystem=null;release();await pending;
+ assert.deepEqual(opened,['strike-0','strike-1']);assert.equal(c.warView.recommendationPending,false);
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the war signup regression")
 def test_locked_strike_ui_has_no_launch_step_and_prefills_normal_aar():
         source = r"""
 const assert = require('node:assert/strict');
@@ -2180,8 +2216,8 @@ context.state.auth={authenticated:true};
 context.geographyObjectivesHtml=()=>'';
 host.innerHTML=context.geographySystemOverviewHtml(context.state.geography.systems[0],true);
 assert.match(host.innerHTML,/Hive spires and transit vaults/);
-assert.match(host.innerHTML,/<dt>Strike theatres<\/dt><dd>1 of 2 worlds<\/dd>/);
-assert.match(host.innerHTML,/<dt>Warp lanes<\/dt>/);
+assert.doesNotMatch(host.innerHTML,/<dt>Strike theatres<\/dt>|<dt>Warp lanes<\/dt>/);
+assert.match(host.innerHTML,/<dt>Primary star<\/dt>/);
 assert.match(host.innerHTML,/<dt>Kill-team deployments<\/dt><dd>None deployed<\/dd>/);
 assert.match(host.innerHTML,/Strike theatre/);
 assert.doesNotMatch(host.innerHTML,/battle eligible/i);

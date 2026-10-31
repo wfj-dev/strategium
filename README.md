@@ -25,6 +25,25 @@ canvas mounted and preserves the strike-list scroll position.
 Planetary orbit rings use small, deterministic per-world tilts so occasional
 alignments remain possible without every orbit sharing the same visible axis.
 
+Signed-in members see up to three Priority strikes on the full Galactic Map:
+their current deployment first, then eligible opportunities. Both Sergeant ranks
+and battle-line brothers prioritize their KT's assigned system; Captains and
+Lieutenants prioritize their company's committed subsector. Specialists prioritize
+unfilled requirements they can satisfy, including qualified higher ranks; Watch
+Masters see campaign-wide opportunities. Recruiting squads closest to full come
+first, followed by campaign deadline and a stable tie-breaker. Remaining places
+use eligible support strikes, explicitly labelled as support rather than orders.
+The bot applies the normal participation/platform rules; a locked current roster
+does not advertise new compliance opportunities. Sandbox testing hides priorities.
+The panel sits clear of desktop zoom controls and below the chart on phones,
+disappears in deeper map views, and returns with the full map. Selecting a row
+loads only its system board before opening the exact strike. Polling preserves
+the map canvas and keyboard focus. Participation buttons say Comply; open roster
+slots say Click / tap to comply. Withdraw and Report completion remain separate.
+System overviews omit the Strike theatres and Warp lanes counts while retaining
+primary-star information, planets and KT deployments; route and eligibility data
+are unchanged.
+
 The right panel replaces its contents by map level instead of stacking directories.
 In System overview, the right-side panel summarizes every planet:
 existing art, type/biome, description when authored, deployment eligibility, both
@@ -366,7 +385,7 @@ The bot's shared-content integration reads this same geography catalogue for cam
 
 Planet portraits from `assets/galactic map planets/` are matched by world type and biome, not by planet name or sector. Source names are used only to look up each image's authoritative pairing during asset preparation. The 19 supplied portraits now cover 15 pairings; repeated pairings retain multiple variants selected consistently by a world's stable ID. Research Station artwork remains distinct from Research World artwork. Transparent, aspect-preserving WebPs under `assets/web/planets/` replace procedural orbiting bodies and generic planet symbols in dossiers, system/world lists, hover details, and the selected-world overview. Stars, fortresses, unsupported pairings, and not-yet-loaded Canvas images retain existing visuals. Source PNGs are untouched.
 
-Selecting Sector Operations opens the full galactic map, even after a previous planet or strike visit. Open strike-roster slots are keyboard-accessible join buttons with hover/focus highlighting and a Click / tap to join label; existing membership, specialist, capacity and testing restrictions remain authoritative. Assigned Kill Teams appear beside their system with one supplied green emblem per team and a team-name tooltip. Build the optimized emblem from `assets/Luminous_green_cyber_skull_emblem.png` with `.venv/bin/python scripts/build_web_assets.py --commitment-emblem-only`.
+Selecting Sector Operations opens the full galactic map, even after a previous planet or strike visit. Open strike-roster slots are keyboard-accessible compliance buttons with hover/focus highlighting and a Click / tap to comply label; existing membership, specialist, capacity and testing restrictions remain authoritative. Assigned Kill Teams appear beside their system with one supplied green emblem per team and a team-name tooltip. Build the optimized emblem from `assets/Luminous_green_cyber_skull_emblem.png` with `.venv/bin/python scripts/build_web_assets.py --commitment-emblem-only`.
 
 Campaign relay failures log through `strategium.war` with bounded-response, HTTP-status and exception-class diagnostics, without logging signatures, credentials or response bodies. Connection warnings are not evidence of memory exhaustion; check service restarts, current/peak memory, kernel OOM history and signed relay timing before changing limits. Map browsing remains available when the live campaign relay cannot be reached.
 
