@@ -47,6 +47,11 @@ not appear in the feed. Entries identify the Kill-Team, Company, operation, form
 world, system, and subsector from campaign records. It does not invent failed
 deployments or a Ready/Deploy step. Search and feed refresh independently without
 covering the map or resetting its camera.
+Eligible strike rows separate the title, location, mission, roster and actions.
+Chronicle and search locations link to their map views; completed-operation companies,
+Kill-teams and Astartes link to their existing dossiers. Links support direct URLs and
+new tabs. Unit IDs come from the locked roster snapshot, and entities without an
+available destination remain plain text.
 System overviews omit the Strike theatres and Warp lanes counts while retaining
 primary-star information, planets and KT deployments; route and eligibility data
 are unchanged.

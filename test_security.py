@@ -2000,10 +2000,13 @@ c.warView.operationData.strike_search.facets={
 c.warView.operationData.participant_names={'42':'Watch Veteran MK','43':'Watch Veteran Aether','44':'Watch Veteran RXGUE','45':'Watch Apothecary Ro´shan','46':'<Watch Master Van>'};
 c.warView.operationData.activity.completed.push({id:'GW-mixed',name:'Cleansing Flame',mission:'Termination',pool:'omega',planet_name:'Kethrys',system_name:'Penumbral Choir',subsector_name:'The Canticle Reach',kill_teams:['Kill-Team Timotheos','Kill-Team Ghost','Kill-Team Van'],companies:['Primus','Tertius','Quartus'],participants:['42','43','44','45','46'],locked_at:'2026-11-01T16:00:00Z',completed_at:'2026-11-01T17:19:35.484Z'});
 vm.createContext(c);
+c.URLSearchParams=URLSearchParams;
 vm.runInContext(html.slice(html.indexOf('function priorityStrikesHtml()'),html.indexOf('function refreshStrikeOperations()')),c);
 const markup=c.strikeOperationsHtml();
 const priorityMenu=c.priorityStrikesHtml();
 assert.match(markup,/Eligible strike orders/);
+assert.match(html,/\.strike-operation-row small \{ display: block; margin-top: 5px/);
+assert.match(html,/\.strike-operation-row \{ grid-template-columns: minmax\(0,1fr\); gap: 10px/);
 assert.match(markup,/data-strike-filter="pool"/);
 assert.match(markup,/data-strike-filter="specialist"/);
 assert.match(markup,/<option value="alpha"/);
@@ -2043,6 +2046,25 @@ assert.doesNotMatch(markup,/AAR COMPLETION RECORDS|AAR RECORDED/);
 assert.doesNotMatch(markup,/AAR RECORDED ::/);
 assert.doesNotMatch(markup,/Full force assembled/);
 assert.doesNotMatch(markup,/data-war-action="queue_join" disabled/);
+c.state.members=[{id:'42'}];
+c.COMPANY_NAMES={'1':'Primus'};
+c.killTeamsForCompany=identity=>identity===1?[{killTeam:'1-1'}]:[];
+c.state.geography.sectors.push({id:'alpha',name:'Jericho Reach'});
+c.state.geography.systems.push({id:'system',name:'Ctesiphus',sectorId:'alpha'});
+for(const [kind,identity,company] of [['world','world',''],['system','system',''],['sector','alpha',''],['company','1',''],['killteam','1-1','1'],['member','42','']]){
+ const link=c.chronicleEntityLink(kind,identity,'<Linked entity>',company);
+ assert.match(link,/<a class="chronicle-link"/);
+ assert.ok(link.includes(`entity=${kind}&amp;id=${identity}`));
+ assert.match(link,/&lt;Linked entity&gt;/);
+}
+assert.equal(c.chronicleEntityLink('member','missing','Unknown Brother'),'Unknown Brother');
+assert.equal(c.chronicleEntityLink('killteam','missing','Retired team','1'),'Retired team');
+assert.match(c.strikeOperationsHtml(),/entity=member&amp;id=42/);
+assert.match(c.strikeOperationsHtml(),/entity=world&amp;id=world/);
+c.warView.operationData.activity.completed[0].company_refs=[{id:'1',name:'Primus'}];
+c.warView.operationData.activity.completed[0].kill_team_refs=[{id:'1-1',name:'Kill-Team Timotheos',company_id:'1'}];
+assert.match(c.strikeOperationsHtml(),/entity=company&amp;id=1/);
+assert.match(c.strikeOperationsHtml(),/entity=killteam&amp;id=1-1&amp;company=1/);
 c.warView.searchFilters.subsector_id='alpha';
 c.warView.searchFilters.system_id='system';
 const narrowed=c.strikeOperationsHtml();
@@ -2111,6 +2133,21 @@ vm.runInContext(html.slice(html.indexOf('function openRecommendedStrike('),html.
  assert.equal(openedSystem,'system');
  assert.equal(openedStrike,'current-strike');
  assert.equal(c.warView.recommendationPending,false);
+ c.setPage=async page=>{c.state.page=page;};
+ let openedEntity='';
+ c.showSectorLevel=identity=>{openedEntity=`sector:${identity}`;};
+ c.openPlanetView=identity=>{openedEntity=`world:${identity}`;};
+ c.findMember=identity=>c.state.members.find(item=>item.id===identity);
+ c.openMemberModal=identity=>{openedEntity=`member:${identity}`;};
+ c.navigate=(kind,params)=>{openedEntity=`${kind}:${params.companyId}:${params.killTeamId||''}`;};
+ for(const [query,expected] of [['entity=sector&id=alpha','sector:alpha'],['entity=world&id=world','world:world'],['entity=member&id=42','member:42'],['entity=company&id=1','company:1:'],['entity=killteam&id=1-1&company=1','killteam:1:1-1']]){
+  c.window={location:{search:`?${query}`}};
+  await c.loadChronicleLocation();
+  assert.equal(openedEntity,expected);
+ }
+ c.window={location:{search:'?entity=system&id=system'}};
+ await c.loadChronicleLocation();
+ assert.equal(c.state.selectedSystem,'system');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
@@ -2492,7 +2529,7 @@ def test_first_reach_render_loads_roles_after_authentication():
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(process.argv[1],'utf8');
 const calls=[];
-const context={state:{auth:{authenticated:false}},wireEvents:()=>{},pageFromLocation:()=> 'reach',
+const context={state:{auth:{authenticated:false}},URLSearchParams,window:{location:{search:''}},wireEvents:()=>{},pageFromLocation:()=> 'reach',
  loadSavedSettings:async()=>{},loadData:async()=>{},loadSiteConfig:async()=>{},
  loadReach:async()=>{calls.push('geography');},loadAuth:async()=>{calls.push('auth');context.state.auth.authenticated=true;},
  loadWar:async()=>{assert(context.state.auth.authenticated);calls.push('war');},loadStrikeOperations:async()=>{assert(context.state.auth.authenticated);calls.push('operations');},
