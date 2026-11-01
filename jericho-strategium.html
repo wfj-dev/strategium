@@ -1129,15 +1129,27 @@
   .strike-search-actions { display: flex; gap: 8px; align-items: end; }
   .strike-queue-status { border-left: 2px solid var(--green); padding: 10px 12px; margin-bottom: 14px; background: rgba(79,214,122,.045); color: var(--green-dim); font-size: 12px; line-height: 1.6; }
   .strike-queue-status strong { color: var(--white); }
-  .strike-operation-terminal { max-height: 360px; overflow: auto; padding: 12px; border: 1px solid var(--border-dim); background: #020503; color: var(--green-dim); font: 11px/1.7 ui-monospace, "SFMono-Regular", Consolas, monospace; scrollbar-color: var(--green-faint) #050806; }
+  .strike-operation-terminal { --chronicle-muted: #92a89a; max-height: 520px; overflow: auto; padding: 16px; border: 1px solid var(--border-dim); background: #020503; color: var(--chronicle-muted); font-size: 13px; line-height: 1.6; scrollbar-color: var(--green-faint) #050806; }
   .strike-operation-terminal:focus-visible { outline: 1px solid var(--green); outline-offset: 2px; }
-  .strike-terminal-header { color: var(--gold); border-bottom: 1px solid var(--border-dim); padding-bottom: 7px; margin-bottom: 7px; }
-  .strike-terminal-section { color: var(--green); margin-top: 8px; border-top: 1px solid rgba(79,214,122,.14); padding-top: 6px; }
-  .strike-terminal-line { display: grid; grid-template-columns: 132px minmax(0,1fr); gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(79,214,122,.07); overflow-wrap: anywhere; }
-  .strike-terminal-line time { color: var(--green-faint); white-space: nowrap; }
-  .strike-terminal-line .terminal-event { display: block; color: var(--white); line-height: 1.5; }
-  .strike-terminal-line .terminal-details { display: block; color: var(--green-dim); line-height: 1.55; }
-  .strike-terminal-line .terminal-state { color: var(--gold); font-weight: 700; }
+  .strike-terminal-header { color: var(--gold); border-bottom: 1px solid var(--border-dim); padding-bottom: 12px; margin-bottom: 12px; font-size: 12px; }
+  .strike-terminal-section { color: var(--green); margin-top: 18px; font-size: 11px; text-transform: uppercase; }
+  .strike-terminal-line { min-width: 0; padding: 14px 0; border-bottom: 1px solid var(--border-dim); overflow-wrap: anywhere; }
+  .terminal-entry-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; }
+  .strike-terminal-line time { color: var(--chronicle-muted); font-size: 11px; }
+  .strike-terminal-line .terminal-event { display: block; margin: 9px 0 2px; color: var(--white); font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .terminal-mission { margin: 0 0 9px; color: var(--gold); }
+  .terminal-location { margin: 0 0 10px; }
+  .terminal-location strong { display: block; color: var(--white); font-size: 14px; font-weight: 500; }
+  .terminal-location small { display: block; margin-top: 2px; font-size: 12px; }
+  .terminal-assignment { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 4px 10px; margin: 0; font-size: 12px; }
+  .terminal-assignment dt { color: var(--chronicle-muted); }
+  .terminal-assignment dd { margin: 0; color: var(--white); }
+  .terminal-roster { margin-top: 10px; font-size: 12px; }
+  .terminal-roster summary { width: fit-content; max-width: 100%; cursor: pointer; color: var(--green); }
+  .terminal-roster summary:focus-visible { outline: 1px solid var(--green); outline-offset: 3px; }
+  .terminal-roster ul { display: grid; gap: 4px; margin: 9px 0 0; padding-left: 18px; color: var(--white); }
+  .strike-terminal-line .terminal-state { color: var(--gold); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .strike-operation-terminal .strike-operations-empty { color: var(--chronicle-muted); font-size: 12px; }
   .strike-terminal-line.completed .terminal-state { color: var(--green); }
   .strike-terminal-line.reversed .terminal-state { color: #cf7565; }
   .strike-operations-empty { color: var(--green-dim); font-size: 11px; }
@@ -1146,7 +1158,7 @@
     .strike-operations-grid { grid-template-columns: minmax(0,1fr); gap: 18px; }
     .strike-search-form { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .strike-search-form .strike-filter-query { grid-column: span 2; }
-    .strike-terminal-line { grid-template-columns: 1fr; gap: 2px; }
+    .strike-operation-terminal { padding: 12px; }
   }
   .reach-sector-panel {
     position: absolute; z-index: 5; inset: 0 0 0 auto; width: min(460px, 48%); min-width: 300px;
@@ -6117,8 +6129,10 @@ function strikeOperationsHtml() {
   const data = warView.operationData || warView.data;
   const search = data?.strike_search;
   const entries = search?.items || [];
+  const priorities = data?.recommendations?.strikes || [];
   const filters = warView.searchFilters;
-  const queue = data?.matchmaking?.status || {status: "not_queued"};
+  const matchmaking = data?.matchmaking;
+  const queue = typeof matchmaking?.status === "string" ? {status: matchmaking.status} : matchmaking?.status || {status: "loading"};
   const activity = data?.activity || {musters: [], deployments: [], completed: []};
   const sectors = state.geography?.sectors || [];
   const systems = state.geography?.systems || [];
@@ -6131,40 +6145,38 @@ function strikeOperationsHtml() {
   const queueMessage = queue.status === "waiting"
     ? `Muster pending. Overall queue entry ${queue.position || "unavailable"}; compatible preferences determine matching, with no ETA. Awaiting a complete ${queue.preferences?.pool === "omega" ? "five-Brother Omega" : queue.preferences?.pool === "vanilla" ? "three-Brother Vanilla" : "compatible Kill-team"} for the Watch.`
     : matched ? `Muster complete. ${queue.match.name} / ${queue.match.mission} / ${queue.match.pool === "omega" ? "Omega" : "Vanilla"}. Your Kill-team is assigned; roster sealed.`
-    : queue.status === "not_queued" ? queue.can_join ? "No active muster entry. Search eligible strike orders or enter the muster." : queue.reason || "Matchmaking is unavailable for this roster." : `Muster status: ${escapeHtml(titleCase(queue.status))}.`;
+    : queue.status === "not_queued" ? matchmaking.can_join ? "No active muster entry. Search eligible strike orders or enter the muster." : matchmaking.reason || "Matchmaking is unavailable for this roster."
+    : queue.status === "disabled" ? "Matchmaking is disabled in invasion test sessions."
+    : queue.status === "loading" ? "Receiving your muster status..." : `Muster status: ${escapeHtml(titleCase(queue.status))}.`;
   const statusLabel = (status, item) => status === "completed" && item?.reversed ? "Vigil complete / credit reversed" : ({available: "Muster open", recruiting: "Muster in progress", locked: "Roster sealed", deployed: "Roster sealed", completed: "Vigil complete"}[status] || titleCase(status));
   const activityLine = (item, kind) => {
     const format = item.pool === "omega" ? "Omega" : "Vanilla";
-    const members = item.participants?.map(identity => data.participant_names?.[identity] || identity).join(", ");
+    const members = item.participants?.map(identity => data.participant_names?.[identity] || identity) || [];
     const count = item.capacity ? `${item.filled ?? item.participants?.length ?? 0}/${item.capacity}` : "";
-    const timestamp = item.locked_at || item.completed_at;
-    const timeLabel = timestamp ? new Date(timestamp).toISOString().replace("T", " ").replace(".000Z", "Z") : "LIVE";
-    const state = kind === "muster" ? item.status === "recruiting" ? "MUSTER FORMING" : "MUSTER OPEN"
-      : kind === "deployment" ? "STRIKE ROSTER SEALED"
-      : item.reversed ? "VIGIL COMPLETE / CREDIT REVERSED" : "VIGIL COMPLETE";
-    const teamName = item.kill_teams?.join(", ") || (kind === "muster" ? "Awaiting full Kill-team" : "Kill-team unrecorded");
-    const companyName = item.companies?.join(", ") || (kind === "muster" ? "Awaiting company assignment" : "Company unrecorded");
+    const timestamp = kind === "completed" ? item.completed_at : item.locked_at;
+    const timeLabel = timestamp ? `${new Date(timestamp).toISOString().slice(0, 16).replace("T", " · ")} UTC` : "Live";
+    const status = kind === "muster" ? item.status === "recruiting" ? "Muster forming" : "Muster open"
+      : kind === "deployment" ? "Strike roster sealed"
+      : item.reversed ? "Vigil complete · Credit reversed" : "Vigil complete";
+    const teams = item.kill_teams || [];
+    const teamName = teams.map(name => name.replace(/^kill[ -]team\s+/i, "")).join(" · ") || (kind === "muster" ? "Awaiting full team" : "Unrecorded");
+    const companyName = item.companies?.join(" · ") || (kind === "muster" ? "Awaiting assignment" : "Unrecorded");
     const operationName = item.name || item.mission || "Strike order";
-    const headline = kind === "completed"
-      ? `${teamName} of ${companyName} completed ${operationName}.`
-      : kind === "deployment"
-      ? `${teamName} of ${companyName} sealed for ${operationName}.`
-      : `${operationName} / ${count || "Strike muster"}.`;
-    const details = [
-      `KILL-TEAM: ${teamName}`, `COMPANY: ${companyName}`,
-      `MISSION: ${item.mission || "Unrecorded"}`, `MISSION TYPE: ${format}`,
-      `PLANET: ${item.planet_name || "Uncharted"}`, `SYSTEM: ${item.system_name || "Uncharted"}`,
-      `SECTOR: ${item.subsector_name || "Uncharted"}`,
-    ];
-    if (members) details.push(`BROTHERS: ${members}`);
-    if (count) details.push(`MUSTER: ${count}`);
-    return `<div class="strike-terminal-line ${kind === "completed" ? item.reversed ? "reversed" : "completed" : ""}"><time>${escapeHtml(timeLabel)}</time><span><strong class="terminal-event"><span class="terminal-state">[${state}]</span> ${escapeHtml(headline)}</strong><small class="terminal-details">${details.map(escapeHtml).join(" // ")}</small></span></div>`;
+    return `<article class="strike-terminal-line ${kind === "completed" ? item.reversed ? "reversed" : "completed" : ""}">
+      <header class="terminal-entry-header"><span class="terminal-state">${escapeHtml(status)}</span><time${timestamp ? ` datetime="${escapeHtml(timestamp)}"` : ""}>${escapeHtml(timeLabel)}</time></header>
+      <h4 class="terminal-event">${escapeHtml(operationName)}</h4>
+      <p class="terminal-mission">${escapeHtml(item.mission || "Unrecorded mission")} · ${format}${count ? ` · ${count} brothers` : ""}</p>
+      <p class="terminal-location"><strong>${escapeHtml(item.planet_name || "Uncharted world")}</strong><small>${escapeHtml(item.system_name || "Uncharted system")} / ${escapeHtml(item.subsector_name || "Uncharted sector")}</small></p>
+      <dl class="terminal-assignment"><dt>${teams.length > 1 ? "Kill-teams" : "Kill-team"}</dt><dd>${escapeHtml(teamName)}</dd><dt>${item.companies?.length > 1 ? "Companies" : "Company"}</dt><dd>${escapeHtml(companyName)}</dd></dl>
+      ${members.length ? `<details class="terminal-roster" data-activity-roster="${escapeHtml(item.id)}"><summary data-activity-roster-toggle="${escapeHtml(item.id)}">${members.length} ${members.length === 1 ? "brother" : "brothers"} ${kind === "muster" ? "mustered" : "deployed"}</summary><ul>${members.map(name => `<li>${escapeHtml(name)}</li>`).join("")}</ul></details>` : ""}
+    </article>`;
   };
   const isSearching = !search && !warView.error;
   const searchStatus = warView.operationsError || warView.error || (isSearching ? "Receiving eligible strike offers..." : "No eligible strikes match these filters.");
   return `<section id="strike-operations" class="strike-operations" aria-label="Strike search and operations feed">
     <header class="strike-operations-header"><div><span class="field-label">WATCH FORTRESS JERICHO // ASTROPATHIC RELAY</span><h2>Jericho Strike Chronicle</h2></div><p>${search ? `${search.total} eligible strike orders` : "Awaiting campaign return"}</p></header>
     <div class="strike-queue-status" role="status"><strong>Your muster status:</strong> ${escapeHtml(queueMessage)}${queue.status === "waiting" ? ` <button type="button" class="btn-dossier-action" data-war-action="queue_leave"${warView.busy ? " disabled" : ""}>Withdraw from muster</button>` : ""}</div>
+    <details class="strike-priority-orders"><summary>Priority strike orders${priorities.length ? ` (${priorities.length})` : ""}</summary>${priorities.map(item => `<button type="button" class="priority-strike-row" data-recommended-strike="${escapeHtml(item.id)}"><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.planet_name)} / ${escapeHtml(item.system_name)} / ${escapeHtml(item.subsector_name)}</small><small>${escapeHtml(item.aar_mission)} / ${item.pool === "omega" ? "Omega" : "Vanilla"} / ${item.filled} of ${item.capacity}</small><small class="priority-strike-reason">${escapeHtml(item.reason)}${item.current ? " / Current deployment" : ""}</small></span><span class="status-tag">${item.current ? "Open deployment" : "Inspect order"}</span></button>`).join("") || `<p class="strike-operations-empty">No priority orders for this Watch member.</p>`}</details>
     <div class="strike-operations-grid">
       <section class="strike-operations-section" aria-label="Eligible strike search"><h3>Eligible strike orders</h3>
         <form class="strike-search-form" data-strike-search-form>
@@ -6175,16 +6187,16 @@ function strikeOperationsHtml() {
           ${select("pool", "Format", option("any", "Vanilla or Omega", filters.pool === "any") + option("vanilla", "Vanilla / 3 players", filters.pool === "vanilla") + option("omega", "Omega / 5 players", filters.pool === "omega"))}
           ${select("specialist", "Specialist requirement", option("any", "Any requirement", filters.specialist === "any") + option("none", "No specialist", filters.specialist === "none") + option("required", "Specialist required", filters.specialist === "required") + specialistRanks.map(rank => option(rank, rank, filters.specialist === rank)).join(""))}
           ${select("availability", "Muster state", option("any", "Open or recruiting", filters.availability === "any") + option("available", "Muster open", filters.availability === "available") + option("recruiting", "Recruiting", filters.availability === "recruiting"))}
-          <div class="strike-search-actions"><button class="btn-primary" type="button" data-strike-search>Query orders</button><button class="btn-dossier-action" type="button" data-war-action="queue_join"${warView.busy || !queue.can_join ? " disabled" : ""}>${queue.status === "waiting" ? "Amend muster preferences" : "Enter muster"}</button></div>
+          <div class="strike-search-actions"><button class="btn-primary" type="button" data-strike-search>Query orders</button><button class="btn-dossier-action" type="button" data-war-action="queue_join"${warView.busy || !matchmaking?.can_join ? " disabled" : ""}>${queue.status === "waiting" ? "Amend muster preferences" : "Enter muster"}</button></div>
         </form>
         <div class="strike-operation-list" aria-live="polite">${entries.map(item => `<article class="strike-operation-row"><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.planet_name)} / ${escapeHtml(item.system_name)} / ${escapeHtml(item.subsector_name)}</small><small>${escapeHtml(item.aar_mission)} / ${item.pool === "omega" ? "Omega" : "Vanilla"} / ${item.filled} of ${item.capacity}${item.required_rank ? ` / ${escapeHtml(item.required_rank)}` : ""}</small><small>${escapeHtml(item.viewer_signup?.reason || statusLabel(item.status))}</small></span><span class="strike-search-actions"><button class="btn-dossier-action" type="button" data-strike-search-open="${escapeHtml(item.id)}">View on map</button><button class="btn-dossier-action" type="button" data-war-action="join" data-strike="${escapeHtml(item.id)}"${warView.busy ? " disabled" : ""}>Comply</button></span></article>`).join("") || `<p class="strike-operations-empty" role="status">${escapeHtml(searchStatus)}</p>`}</div>
         <div class="strike-operations-actions"><span>${search ? `Page ${search.page + 1} / ${Math.max(1, Math.ceil(search.total / search.page_size))}` : ""}</span><span>${search?.page > 0 ? `<button type="button" class="btn-dossier-action" data-strike-search-page="${search.page - 1}">Previous</button>` : ""}${search?.has_more ? `<button type="button" class="btn-dossier-action" data-strike-search-page="${search.page + 1}">Next</button>` : ""}</span></div>
       </section>
       <section class="strike-operations-section" aria-label="Watch operations feed"><h3>Watch operations feed</h3>
-        <div class="strike-operation-terminal" role="log" aria-label="Astropathic operations chronicle" tabindex="0"><div class="strike-terminal-header">+++ WATCH FORTRESS JERICHO / ASTROPATHIC TRAFFIC +++</div>
-          <div class="strike-terminal-section">// OPEN MUSTERS ${activity.musters_truncated ? "(FIRST 100)" : ""}</div>${activity.musters?.map(item => activityLine(item, "muster")).join("") || `<p class="strike-operations-empty">No strike musters currently open.</p>`}
-          <div class="strike-terminal-section">// SEALED STRIKE ROSTERS ${activity.deployments_truncated ? "(LATEST 50)" : ""}</div>${activity.deployments?.map(item => activityLine(item, "deployment")).join("") || `<p class="strike-operations-empty">No sealed strike rosters.</p>`}
-          <div class="strike-terminal-section">// RECENT VIGILS</div>${activity.completed?.slice().reverse().map(item => activityLine(item, "completed")).join("") || `<p class="strike-operations-empty">No completed strike operations recorded.</p>`}
+        <div class="strike-operation-terminal" role="log" aria-label="Astropathic operations chronicle" tabindex="0"><div class="strike-terminal-header">Watch Fortress Jericho · Astropathic traffic</div>
+          <div class="strike-terminal-section">Open musters ${activity.musters_truncated ? "(first 100)" : ""}</div>${activity.musters?.map(item => activityLine(item, "muster")).join("") || `<p class="strike-operations-empty">No strike musters currently open.</p>`}
+          <div class="strike-terminal-section">Sealed strike rosters ${activity.deployments_truncated ? "(latest 50)" : ""}</div>${activity.deployments?.map(item => activityLine(item, "deployment")).join("") || `<p class="strike-operations-empty">No sealed strike rosters.</p>`}
+          <div class="strike-terminal-section">Recent vigils</div>${activity.completed?.slice().reverse().map(item => activityLine(item, "completed")).join("") || `<p class="strike-operations-empty">No completed strike operations recorded.</p>`}
         </div>
         ${activity.next_cursor ? `<div class="strike-operations-actions"><span>Older records available</span><button type="button" class="btn-dossier-action" data-activity-more="${escapeHtml(activity.next_cursor)}">Load older records</button></div>` : ""}
       </section>
@@ -6198,7 +6210,8 @@ function refreshStrikeOperations() {
   const terminal = host.querySelector(".strike-operation-terminal");
   const previousScrollTop = terminal?.scrollTop || 0;
   const followTail = !terminal || terminal.scrollHeight - terminal.scrollTop - terminal.clientHeight <= 24;
-  const focusAttributes = ["data-strike-filter", "data-strike-search-open", "data-strike-search-page", "data-war-action", "data-activity-more", "data-strike-search"];
+  const openRosters = new Set([...(terminal?.querySelectorAll("[data-activity-roster][open]") || [])].map(roster => roster.getAttribute("data-activity-roster")));
+  const focusAttributes = ["data-strike-filter", "data-strike-search-open", "data-strike-search-page", "data-war-action", "data-activity-more", "data-strike-search", "data-activity-roster-toggle"];
   const focused = document.activeElement;
   const focusAttribute = focusAttributes.find(attribute => focused?.hasAttribute?.(attribute));
   const focusValue = focusAttribute ? focused.getAttribute(focusAttribute) : null;
@@ -6206,7 +6219,10 @@ function refreshStrikeOperations() {
   const selectionEnd = document.activeElement?.selectionEnd;
   host.outerHTML = strikeOperationsHtml();
   const updatedTerminal = document.getElementById("strike-operations")?.querySelector(".strike-operation-terminal");
-  if (updatedTerminal) updatedTerminal.scrollTop = followTail ? updatedTerminal.scrollHeight : previousScrollTop;
+  if (updatedTerminal) {
+    updatedTerminal.querySelectorAll("[data-activity-roster]").forEach(roster => { roster.open = openRosters.has(roster.getAttribute("data-activity-roster")); });
+    updatedTerminal.scrollTop = followTail ? updatedTerminal.scrollHeight : previousScrollTop;
+  }
   if (focusAttribute) {
     const replacement = [...document.querySelectorAll(`[${focusAttribute}]`)].find(control => control.getAttribute(focusAttribute) === focusValue);
     replacement?.focus({preventScroll: true});
@@ -6242,6 +6258,35 @@ function openStrikeSearchResult(identity) {
       document.getElementById("reach-viewport")?.scrollIntoView({behavior: "smooth", block: "start"});
     } finally {
       if (sequence === warView.recommendationSequence) { warView.recommendationPending = false; refreshStrikeOperations(); }
+    }
+  })();
+}
+
+function openRecommendedStrike(identity) {
+  const offer = warView.operationData?.recommendations?.strikes?.find(item => item.id === identity);
+  if (!offer || !state.auth.authenticated || warView.sandboxId) return;
+  const sequence = ++warView.recommendationSequence;
+  warView.recommendationPending = true;
+  warView.pool = offer.pool;
+  const changed = state.selectedSystem !== offer.system_id;
+  return (async () => {
+    try {
+      await showSystemLevel(offer.system_id);
+      if (!changed) { await loadWar(); refreshWarConsole(); }
+      if (sequence !== warView.recommendationSequence || !state.auth.authenticated || state.page !== "reach" || state.selectedSystem !== offer.system_id || state.reachMapLevel !== "system") return;
+      const current = Object.values(warView.data?.boards || {}).flat().find(item => item.id === identity);
+      if (!current || (!offer.current && !["available", "recruiting"].includes(current.status))) {
+        warView.error = "This priority order changed before the chart returned. Refresh operations for current orders.";
+        refreshWarConsole();
+        return;
+      }
+      await selectPlanetStrike(identity);
+      document.getElementById("reach-viewport")?.scrollIntoView({behavior: "smooth", block: "start"});
+    } finally {
+      if (sequence === warView.recommendationSequence) {
+        warView.recommendationPending = false;
+        refreshStrikeOperations();
+      }
     }
   })();
 }
@@ -6605,6 +6650,11 @@ document.addEventListener("submit", event => {
 });
 
 document.addEventListener("click", async event => {
+  const priority = event.target.closest("[data-recommended-strike]");
+  if (priority?.dataset.recommendedStrike !== undefined) {
+    await openRecommendedStrike(priority.dataset.recommendedStrike);
+    return;
+  }
   if (event.target.closest("[data-strike-search]")?.dataset.strikeSearch !== undefined) {
     await submitStrikeSearch();
     return;

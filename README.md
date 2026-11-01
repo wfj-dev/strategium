@@ -36,6 +36,7 @@ Vanilla/Omega format, and specialist requirements. The bot waits for three compa
 Vanilla or five compatible Omega members, then assigns and locks the whole roster in
 one transaction. Direct Comply/Withdraw signup remains available. Queue state is
 personal to the signed-in member; the site never displays other waiting members.
+The collapsed Priority strike orders list is preserved in this same below-map section.
 The adjacent Watch Operations chronicle is a scrolling terminal feed: open musters,
 sealed rosters, and recent vigils appear as concise event lines, with the newest
 completion at the bottom. Entries identify the Kill-Team, Company, operation, format,

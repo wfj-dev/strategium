@@ -1985,6 +1985,11 @@ const c={
  escapeHtml:value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),titleCase:value=>String(value||'').replace(/(^|\s)\S/g,c=>c.toUpperCase()),
  document:{querySelector:()=>null},
 };
+c.warView.operationData.recommendations={strikes:[{id:'current-strike',name:'Ashen Vigil',planet_name:'Vhaloris',system_name:'Ctesiphus',subsector_name:'Jericho Reach',aar_mission:'Inferno',pool:'omega',filled:5,capacity:5,reason:'Current deployment',current:true,status:'locked'}]};
+c.warView.operationData.matchmaking.can_join=true;
+c.warView.operationData.matchmaking.reason='';
+c.warView.operationData.participant_names={'42':'Watch Veteran MK','43':'Watch Veteran Aether','44':'Watch Veteran RXGUE','45':'Watch Apothecary Ro´shan','46':'<Watch Master Van>'};
+c.warView.operationData.activity.completed.push({id:'GW-mixed',name:'Cleansing Flame',mission:'Termination',pool:'omega',planet_name:'Kethrys',system_name:'Penumbral Choir',subsector_name:'The Canticle Reach',kill_teams:['Kill-Team Timotheos','Kill-Team Ghost','Kill-Team Van'],companies:['Primus','Tertius','Quartus'],participants:['42','43','44','45','46'],locked_at:'2026-11-01T16:00:00Z',completed_at:'2026-11-01T17:19:35.484Z'});
 vm.createContext(c);
 vm.runInContext(html.slice(html.indexOf('function strikeOperationsHtml()'),html.indexOf('function refreshStrikeOperations()')),c);
 const markup=c.strikeOperationsHtml();
@@ -1992,20 +1997,62 @@ assert.match(markup,/Eligible strike orders/);
 assert.match(markup,/data-strike-filter="pool"/);
 assert.match(markup,/data-strike-filter="specialist"/);
 assert.match(markup,/data-war-action="queue_join"/);
+assert.match(markup,/<summary>Priority strike orders \(1\)<\/summary>/);
+assert.match(markup,/data-recommended-strike="current-strike"/);
 assert.match(markup,/Muster pending\. Overall queue entry 1; compatible preferences determine matching, with no ETA/);
 assert.match(markup,/Purge the Shrine/);
-assert.match(markup,/ASTROPATHIC TRAFFIC/);
-assert.match(markup,/OPEN MUSTERS/);
-assert.match(markup,/SEALED STRIKE ROSTERS/);
-assert.match(markup,/RECENT VIGILS/);
-assert.match(markup,/MUSTER FORMING/);
-assert.match(markup,/STRIKE ROSTER SEALED/);
-assert.match(markup,/VIGIL COMPLETE/);
-for(const label of ['KILL-TEAM: Alpha Strike Team','COMPANY: Primus','MISSION: Inferno','MISSION TYPE: Omega','PLANET: Avarax','SYSTEM: Ctesiphus','SECTOR: Jericho Reach'])assert.match(markup,new RegExp(label));
-assert.match(markup,/Alpha Strike Team of Primus completed Ashen Vigil/);
+assert.match(markup,/Astropathic traffic/);
+assert.match(markup,/Open musters/);
+assert.match(markup,/Sealed strike rosters/);
+assert.match(markup,/Recent vigils/);
+assert.match(markup,/Muster forming/);
+assert.match(markup,/Strike roster sealed/);
+assert.match(markup,/Vigil complete/);
+assert.match(markup,/<h4 class="terminal-event">Ashen Vigil<\/h4>/);
+assert.match(markup,/<dt>Kill-team<\/dt><dd>Alpha Strike Team<\/dd>/);
+assert.match(markup,/<dt>Company<\/dt><dd>Primus<\/dd>/);
+assert.match(markup,/Inferno · Omega/);
+assert.match(markup,/<strong>Avarax<\/strong>/);
+assert.match(markup,/Ctesiphus \/ Jericho Reach/);
+assert.match(markup,/<details class="terminal-roster" data-activity-roster="GW-done"><summary[^>]*>3 brothers deployed<\/summary>/);
+assert.match(markup,/2026-10-29 · 12:00 UTC/);
+assert.match(markup,/<h4 class="terminal-event">Cleansing Flame<\/h4>/);
+assert.match(markup,/<dt>Kill-teams<\/dt><dd>Timotheos · Ghost · Van<\/dd>/);
+assert.match(markup,/<dt>Companies<\/dt><dd>Primus · Tertius · Quartus<\/dd>/);
+assert.match(markup,/2026-11-01 · 17:19 UTC/);
+assert.doesNotMatch(markup,/>[^<]*17:19:35\.484|Kill-Team Timotheos, Kill-Team Ghost/);
+assert.match(markup,/<li>&lt;Watch Master Van&gt;<\/li>/);
+assert.doesNotMatch(markup,/KILL-TEAM:|MISSION TYPE:|BROTHERS:|Alpha Strike Team of Primus/);
 assert.doesNotMatch(markup,/AAR COMPLETION RECORDS|AAR RECORDED/);
 assert.doesNotMatch(markup,/AAR RECORDED ::/);
 assert.doesNotMatch(markup,/Full force assembled/);
+assert.doesNotMatch(markup,/data-war-action="queue_join" disabled/);
+const waitingMatchmaking=c.warView.operationData.matchmaking;
+c.warView.operationData.matchmaking={status:{status:'not_queued'},can_join:true,reason:''};
+const eligibleMarkup=c.strikeOperationsHtml();
+assert.match(eligibleMarkup,/No active muster entry/);
+assert.doesNotMatch(eligibleMarkup,/Matchmaking is unavailable|data-war-action="queue_join" disabled/);
+for(const reason of ['Active Watch Brother membership is required for matchmaking.','Withdraw from your current direct signup before entering matchmaking.']){
+ c.warView.operationData.matchmaking={status:{status:'not_queued'},can_join:false,reason};
+ const restrictedMarkup=c.strikeOperationsHtml();
+ assert.ok(restrictedMarkup.includes(reason));
+ assert.match(restrictedMarkup,/data-war-action="queue_join" disabled/);
+}
+c.warView.operationData.matchmaking={status:'disabled',can_join:false,reason:''};
+assert.match(c.strikeOperationsHtml(),/Matchmaking is disabled in invasion test sessions/);
+delete c.warView.operationData.matchmaking;
+assert.match(c.strikeOperationsHtml(),/Receiving your muster status/);
+c.warView.operationData.matchmaking=waitingMatchmaking;
+const restoredRoster={open:false,getAttribute:()=> 'GW-mixed'};
+const originalTerminal={scrollTop:20,scrollHeight:900,clientHeight:520,querySelectorAll:()=>[{getAttribute:()=> 'GW-mixed'}]};
+const updatedTerminal={scrollHeight:900,querySelectorAll:()=>[restoredRoster]};
+let refreshed=false;
+const host={querySelector:()=>refreshed?updatedTerminal:originalTerminal,set outerHTML(value){refreshed=true;}};
+c.document.getElementById=()=>host;
+vm.runInContext(html.slice(html.indexOf('function refreshStrikeOperations()'),html.indexOf('function openStrikeSearchResult(')),c);
+c.refreshStrikeOperations();
+assert.equal(restoredRoster.open,true);
+assert.equal(updatedTerminal.scrollTop,20);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
