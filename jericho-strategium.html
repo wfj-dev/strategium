@@ -1116,23 +1116,37 @@
     box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
   }
   .reach-map-shell { position: relative; min-width: 0; overflow: hidden; }
-  .priority-strikes { position: absolute; top: 12px; right: 60px; z-index: 4; width: min(330px, 38%); max-height: calc(100% - 24px); overflow: auto; border: 1px solid var(--border); background: rgba(3,9,6,.96); }
-  .priority-strikes[hidden] { display: none; }
-  .priority-strikes > summary { min-height: 44px; padding: 12px; color: var(--gold); font-size: 12px; cursor: pointer; }
-  .priority-strikes[open] > summary { border-bottom: 1px solid var(--border-dim); }
-  .priority-strikes > summary:focus-visible { outline: 1px solid var(--green); outline-offset: -2px; }
-  .priority-strike-row { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 10px; width: 100%; min-height: 96px; padding: 12px; text-align: left; border: 0; border-bottom: 1px solid var(--border-dim); background: transparent; color: var(--green); font: inherit; cursor: pointer; }
-  .priority-strike-row:last-child { border-bottom: 0; }
-  .priority-strike-row img { width: 44px; height: 44px; object-fit: contain; align-self: center; }
-  .priority-strike-row strong, .priority-strike-row small { display: block; overflow-wrap: anywhere; }
-  .priority-strike-row strong { font-size: 12px; line-height: 1.5; color: var(--white); }
-  .priority-strike-row small { font-size: 10px; line-height: 1.6; color: var(--green-dim); }
-  .priority-strike-row .priority-strike-reason { color: var(--gold); }
-  .priority-strike-row:hover, .priority-strike-row:focus-visible { background: rgba(79,214,122,.07); outline: 1px solid var(--green); outline-offset: -2px; }
-  .priority-strike-row:disabled { cursor: progress; opacity: .65; }
-  .priority-strikes-status { margin: 0; padding: 12px; color: var(--green-dim); font-size: 11px; line-height: 1.6; }
+  .strike-operations { margin: 24px 0 0; padding: 20px 0 28px; border-top: 1px solid var(--border); }
+  .strike-operations-header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .strike-operations-header h2 { margin: 0; color: var(--white); font-size: 18px; }
+  .strike-operations-header p { margin: 0; color: var(--green-dim); font-size: 11px; }
+  .strike-operations-grid { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(300px,.85fr); gap: 28px; align-items: start; }
+  .strike-operations-section { min-width: 0; border-top: 1px solid var(--border-dim); padding-top: 12px; }
+  .strike-operations-section h3 { margin: 0 0 10px; color: var(--gold); font-size: 12px; text-transform: uppercase; }
+  .strike-search-form { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+  .strike-search-form .aar-field { min-width: 0; }
+  .strike-search-form .strike-filter-query { grid-column: span 2; }
+  .strike-search-actions { display: flex; gap: 8px; align-items: end; }
+  .strike-queue-status { border-left: 2px solid var(--green); padding: 10px 12px; margin-bottom: 14px; background: rgba(79,214,122,.045); color: var(--green-dim); font-size: 12px; line-height: 1.6; }
+  .strike-queue-status strong { color: var(--white); }
+  .strike-operation-terminal { max-height: 360px; overflow: auto; padding: 12px; border: 1px solid var(--border-dim); background: #020503; color: var(--green-dim); font: 11px/1.7 ui-monospace, "SFMono-Regular", Consolas, monospace; scrollbar-color: var(--green-faint) #050806; }
+  .strike-operation-terminal:focus-visible { outline: 1px solid var(--green); outline-offset: 2px; }
+  .strike-terminal-header { color: var(--gold); border-bottom: 1px solid var(--border-dim); padding-bottom: 7px; margin-bottom: 7px; }
+  .strike-terminal-section { color: var(--green); margin-top: 8px; border-top: 1px solid rgba(79,214,122,.14); padding-top: 6px; }
+  .strike-terminal-line { display: grid; grid-template-columns: 132px minmax(0,1fr); gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(79,214,122,.07); overflow-wrap: anywhere; }
+  .strike-terminal-line time { color: var(--green-faint); white-space: nowrap; }
+  .strike-terminal-line .terminal-event { display: block; color: var(--white); line-height: 1.5; }
+  .strike-terminal-line .terminal-details { display: block; color: var(--green-dim); line-height: 1.55; }
+  .strike-terminal-line .terminal-state { color: var(--gold); font-weight: 700; }
+  .strike-terminal-line.completed .terminal-state { color: var(--green); }
+  .strike-terminal-line.reversed .terminal-state { color: #cf7565; }
+  .strike-operations-empty { color: var(--green-dim); font-size: 11px; }
+  .strike-operations-actions { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 12px; }
   @media (max-width: 760px) {
-    .priority-strikes { position: static; width: 100%; max-height: none; margin-top: 10px; }
+    .strike-operations-grid { grid-template-columns: minmax(0,1fr); gap: 18px; }
+    .strike-search-form { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .strike-search-form .strike-filter-query { grid-column: span 2; }
+    .strike-terminal-line { grid-template-columns: 1fr; gap: 2px; }
   }
   .reach-sector-panel {
     position: absolute; z-index: 5; inset: 0 0 0 auto; width: min(460px, 48%); min-width: 300px;
@@ -5856,9 +5870,10 @@ async function loadReach() {
     state.geographyStatus = "error";
   }
   await loadWar();
+  if (state.auth.authenticated && state.page === "reach") void loadStrikeOperations({refreshing: true});
 }
 
-const warView = { data: null, error: "", busy: false, planet: "", strike: "", subsector: "", pool: "vanilla", sandboxId: "", requestSequence: 0, recommendationSequence: 0, recommendationPending: false, orderCompany: null, orderTeam: null, orderSystem: null };
+const warView = { data: null, operationData: null, error: "", busy: false, planet: "", strike: "", subsector: "", pool: "vanilla", sandboxId: "", requestSequence: 0, recommendationSequence: 0, recommendationPending: false, operationsSequence: 0, searchFilters: {query:"",subsector_id:"",system_id:"",planet_id:"",pool:"any",specialist:"any",availability:"any"}, searchPage: 0, activityCursor: "", orderCompany: null, orderTeam: null, orderSystem: null };
 
 const planetView = {id: "", controller: null, generation: 0, module: null, selectionVersion: 0, regionManifest: null, loading: null, finishLoad: null};
 
@@ -6084,66 +6099,184 @@ function openPlanetView(bodyId) {
   void syncPlanetView();
 }
 
-function priorityStrikesHtml() {
-  const war = warView.data;
-  const hidden = !state.auth.authenticated || state.geographyStatus !== "live" || state.reachMapLevel !== "reach" || war?.sandbox?.viewing;
-  if (hidden) return `<details id="priority-strikes" class="priority-strikes" hidden></details>`;
-  const entries = war?.recommendations?.strikes || [];
-  const status = warView.error || (!war ? "Receiving strike priorities..." : war.recommendations?.reason || "No strike priorities available.");
-  return `<details id="priority-strikes" class="priority-strikes" aria-label="Priority strikes"><summary>Priority strikes${entries.length ? ` (${Math.min(3, entries.length)})` : ""}</summary>${entries.length ? entries.slice(0, 3).map(offer => {
-    const body = state.geography?.bodies.find(body => body.id === offer.planet_id);
-    const artwork = body ? geographyBodyArtwork(body) : "";
-    return `<button type="button" class="priority-strike-row" data-recommended-strike="${escapeHtml(offer.id)}" aria-label="Open ${escapeHtml(offer.name)} on ${escapeHtml(offer.planet_name)}"${warView.busy || warView.recommendationPending ? " disabled" : ""}><img src="${escapeHtml(artwork || "/assets/map-icons/planet.webp")}" alt=""><span><strong>${escapeHtml(offer.name)}</strong><small>${escapeHtml(offer.planet_name)} / ${escapeHtml(offer.system_name)}</small><small>${escapeHtml(offer.aar_mission)} / ${offer.pool === "omega" ? "Omega" : "Vanilla"} / ${offer.filled} of ${offer.capacity}</small><small class="priority-strike-reason">${escapeHtml(offer.reason)}${offer.current ? ` / ${escapeHtml(titleCase(offer.status))}` : ""}</small></span></button>`;
-  }).join("") : `<p class="priority-strikes-status" role="status">${escapeHtml(status)}</p>`}</details>`;
+function strikeFilterValues() {
+  return {
+    query: String(document.querySelector('[data-strike-filter="query"]')?.value ?? warView.searchFilters.query ?? "").trim(),
+    subsector_id: String(document.querySelector('[data-strike-filter="subsector_id"]')?.value ?? warView.searchFilters.subsector_id ?? ""),
+    system_id: String(document.querySelector('[data-strike-filter="system_id"]')?.value ?? warView.searchFilters.system_id ?? ""),
+    planet_id: String(document.querySelector('[data-strike-filter="planet_id"]')?.value ?? warView.searchFilters.planet_id ?? ""),
+    pool: String(document.querySelector('[data-strike-filter="pool"]')?.value ?? warView.searchFilters.pool ?? "any"),
+    specialist: String(document.querySelector('[data-strike-filter="specialist"]')?.value ?? warView.searchFilters.specialist ?? "any"),
+    availability: String(document.querySelector('[data-strike-filter="availability"]')?.value ?? warView.searchFilters.availability ?? "any"),
+  };
 }
 
-function refreshPriorityStrikes() {
-  const host = document.getElementById("priority-strikes");
+function strikeOperationsHtml() {
+  const hidden = !state.auth.authenticated || state.geographyStatus !== "live" || warView.sandboxId;
+  if (hidden) return `<section id="strike-operations" class="strike-operations" hidden></section>`;
+  const data = warView.operationData || warView.data;
+  const search = data?.strike_search;
+  const entries = search?.items || [];
+  const filters = warView.searchFilters;
+  const queue = data?.matchmaking?.status || {status: "not_queued"};
+  const activity = data?.activity || {musters: [], deployments: [], completed: []};
+  const sectors = state.geography?.sectors || [];
+  const systems = state.geography?.systems || [];
+  const worlds = state.geography?.bodies?.filter(body => body.kind !== "star") || [];
+  const specialistRanks = data?.strike_search?.specialists || [];
+  const option = (value, label, selected) => `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
+  const select = (name, label, options) => `<label class="aar-field"><span class="field-label">${label}</span><select class="field-input" data-strike-filter="${name}">${options}</select></label>`;
+  const filterOptions = (items, current, label) => option("", `All ${label}`, !current) + items.map(item => option(item.id, item.name, item.id === current)).join("");
+  const matched = queue.status === "matched" && queue.match;
+  const queueMessage = queue.status === "waiting"
+    ? `Muster pending. Overall queue entry ${queue.position || "unavailable"}; compatible preferences determine matching, with no ETA. Awaiting a complete ${queue.preferences?.pool === "omega" ? "five-Brother Omega" : queue.preferences?.pool === "vanilla" ? "three-Brother Vanilla" : "compatible Kill-team"} for the Watch.`
+    : matched ? `Muster complete. ${queue.match.name} / ${queue.match.mission} / ${queue.match.pool === "omega" ? "Omega" : "Vanilla"}. Your Kill-team is assigned; roster sealed.`
+    : queue.status === "not_queued" ? queue.can_join ? "No active muster entry. Search eligible strike orders or enter the muster." : queue.reason || "Matchmaking is unavailable for this roster." : `Muster status: ${escapeHtml(titleCase(queue.status))}.`;
+  const statusLabel = (status, item) => status === "completed" && item?.reversed ? "Vigil complete / credit reversed" : ({available: "Muster open", recruiting: "Muster in progress", locked: "Roster sealed", deployed: "Roster sealed", completed: "Vigil complete"}[status] || titleCase(status));
+  const activityLine = (item, kind) => {
+    const format = item.pool === "omega" ? "Omega" : "Vanilla";
+    const members = item.participants?.map(identity => data.participant_names?.[identity] || identity).join(", ");
+    const count = item.capacity ? `${item.filled ?? item.participants?.length ?? 0}/${item.capacity}` : "";
+    const timestamp = item.locked_at || item.completed_at;
+    const timeLabel = timestamp ? new Date(timestamp).toISOString().replace("T", " ").replace(".000Z", "Z") : "LIVE";
+    const state = kind === "muster" ? item.status === "recruiting" ? "MUSTER FORMING" : "MUSTER OPEN"
+      : kind === "deployment" ? "STRIKE ROSTER SEALED"
+      : item.reversed ? "VIGIL COMPLETE / CREDIT REVERSED" : "VIGIL COMPLETE";
+    const teamName = item.kill_teams?.join(", ") || (kind === "muster" ? "Awaiting full Kill-team" : "Kill-team unrecorded");
+    const companyName = item.companies?.join(", ") || (kind === "muster" ? "Awaiting company assignment" : "Company unrecorded");
+    const operationName = item.name || item.mission || "Strike order";
+    const headline = kind === "completed"
+      ? `${teamName} of ${companyName} completed ${operationName}.`
+      : kind === "deployment"
+      ? `${teamName} of ${companyName} sealed for ${operationName}.`
+      : `${operationName} / ${count || "Strike muster"}.`;
+    const details = [
+      `KILL-TEAM: ${teamName}`, `COMPANY: ${companyName}`,
+      `MISSION: ${item.mission || "Unrecorded"}`, `MISSION TYPE: ${format}`,
+      `PLANET: ${item.planet_name || "Uncharted"}`, `SYSTEM: ${item.system_name || "Uncharted"}`,
+      `SECTOR: ${item.subsector_name || "Uncharted"}`,
+    ];
+    if (members) details.push(`BROTHERS: ${members}`);
+    if (count) details.push(`MUSTER: ${count}`);
+    return `<div class="strike-terminal-line ${kind === "completed" ? item.reversed ? "reversed" : "completed" : ""}"><time>${escapeHtml(timeLabel)}</time><span><strong class="terminal-event"><span class="terminal-state">[${state}]</span> ${escapeHtml(headline)}</strong><small class="terminal-details">${details.map(escapeHtml).join(" // ")}</small></span></div>`;
+  };
+  const isSearching = !search && !warView.error;
+  const searchStatus = warView.operationsError || warView.error || (isSearching ? "Receiving eligible strike offers..." : "No eligible strikes match these filters.");
+  return `<section id="strike-operations" class="strike-operations" aria-label="Strike search and operations feed">
+    <header class="strike-operations-header"><div><span class="field-label">WATCH FORTRESS JERICHO // ASTROPATHIC RELAY</span><h2>Jericho Strike Chronicle</h2></div><p>${search ? `${search.total} eligible strike orders` : "Awaiting campaign return"}</p></header>
+    <div class="strike-queue-status" role="status"><strong>Your muster status:</strong> ${escapeHtml(queueMessage)}${queue.status === "waiting" ? ` <button type="button" class="btn-dossier-action" data-war-action="queue_leave"${warView.busy ? " disabled" : ""}>Withdraw from muster</button>` : ""}</div>
+    <div class="strike-operations-grid">
+      <section class="strike-operations-section" aria-label="Eligible strike search"><h3>Eligible strike orders</h3>
+        <form class="strike-search-form" data-strike-search-form>
+          <label class="aar-field strike-filter-query"><span class="field-label">Objective, world, system or subsector</span><input class="field-input" data-strike-filter="query" maxlength="80" value="${escapeHtml(filters.query)}"></label>
+          ${select("subsector_id", "Subsector", filterOptions(sectors, filters.subsector_id, "subsectors"))}
+          ${select("system_id", "System", filterOptions(systems.filter(system => !filters.subsector_id || system.sectorId === filters.subsector_id), filters.system_id, "systems"))}
+          ${select("planet_id", "World", filterOptions(worlds.filter(world => (!filters.subsector_id || world.sectorId === filters.subsector_id) && (!filters.system_id || world.systemId === filters.system_id)), filters.planet_id, "worlds"))}
+          ${select("pool", "Format", option("any", "Vanilla or Omega", filters.pool === "any") + option("vanilla", "Vanilla / 3 players", filters.pool === "vanilla") + option("omega", "Omega / 5 players", filters.pool === "omega"))}
+          ${select("specialist", "Specialist requirement", option("any", "Any requirement", filters.specialist === "any") + option("none", "No specialist", filters.specialist === "none") + option("required", "Specialist required", filters.specialist === "required") + specialistRanks.map(rank => option(rank, rank, filters.specialist === rank)).join(""))}
+          ${select("availability", "Muster state", option("any", "Open or recruiting", filters.availability === "any") + option("available", "Muster open", filters.availability === "available") + option("recruiting", "Recruiting", filters.availability === "recruiting"))}
+          <div class="strike-search-actions"><button class="btn-primary" type="button" data-strike-search>Query orders</button><button class="btn-dossier-action" type="button" data-war-action="queue_join"${warView.busy || !queue.can_join ? " disabled" : ""}>${queue.status === "waiting" ? "Amend muster preferences" : "Enter muster"}</button></div>
+        </form>
+        <div class="strike-operation-list" aria-live="polite">${entries.map(item => `<article class="strike-operation-row"><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.planet_name)} / ${escapeHtml(item.system_name)} / ${escapeHtml(item.subsector_name)}</small><small>${escapeHtml(item.aar_mission)} / ${item.pool === "omega" ? "Omega" : "Vanilla"} / ${item.filled} of ${item.capacity}${item.required_rank ? ` / ${escapeHtml(item.required_rank)}` : ""}</small><small>${escapeHtml(item.viewer_signup?.reason || statusLabel(item.status))}</small></span><span class="strike-search-actions"><button class="btn-dossier-action" type="button" data-strike-search-open="${escapeHtml(item.id)}">View on map</button><button class="btn-dossier-action" type="button" data-war-action="join" data-strike="${escapeHtml(item.id)}"${warView.busy ? " disabled" : ""}>Comply</button></span></article>`).join("") || `<p class="strike-operations-empty" role="status">${escapeHtml(searchStatus)}</p>`}</div>
+        <div class="strike-operations-actions"><span>${search ? `Page ${search.page + 1} / ${Math.max(1, Math.ceil(search.total / search.page_size))}` : ""}</span><span>${search?.page > 0 ? `<button type="button" class="btn-dossier-action" data-strike-search-page="${search.page - 1}">Previous</button>` : ""}${search?.has_more ? `<button type="button" class="btn-dossier-action" data-strike-search-page="${search.page + 1}">Next</button>` : ""}</span></div>
+      </section>
+      <section class="strike-operations-section" aria-label="Watch operations feed"><h3>Watch operations feed</h3>
+        <div class="strike-operation-terminal" role="log" aria-label="Astropathic operations chronicle" tabindex="0"><div class="strike-terminal-header">+++ WATCH FORTRESS JERICHO / ASTROPATHIC TRAFFIC +++</div>
+          <div class="strike-terminal-section">// OPEN MUSTERS ${activity.musters_truncated ? "(FIRST 100)" : ""}</div>${activity.musters?.map(item => activityLine(item, "muster")).join("") || `<p class="strike-operations-empty">No strike musters currently open.</p>`}
+          <div class="strike-terminal-section">// SEALED STRIKE ROSTERS ${activity.deployments_truncated ? "(LATEST 50)" : ""}</div>${activity.deployments?.map(item => activityLine(item, "deployment")).join("") || `<p class="strike-operations-empty">No sealed strike rosters.</p>`}
+          <div class="strike-terminal-section">// RECENT VIGILS</div>${activity.completed?.slice().reverse().map(item => activityLine(item, "completed")).join("") || `<p class="strike-operations-empty">No completed strike operations recorded.</p>`}
+        </div>
+        ${activity.next_cursor ? `<div class="strike-operations-actions"><span>Older records available</span><button type="button" class="btn-dossier-action" data-activity-more="${escapeHtml(activity.next_cursor)}">Load older records</button></div>` : ""}
+      </section>
+    </div>
+  </section>`;
+}
+
+function refreshStrikeOperations() {
+  const host = document.getElementById("strike-operations");
   if (!host) return;
-  const open = host.open;
-  const summaryFocused = document.activeElement === host.querySelector("summary");
-  const focused = document.activeElement?.closest?.("[data-recommended-strike]")?.dataset.recommendedStrike;
-  host.outerHTML = priorityStrikesHtml();
-  const replacement = document.getElementById("priority-strikes");
-  replacement.open = open;
-  if (summaryFocused) replacement.querySelector("summary")?.focus({preventScroll: true});
-  if (focused) [...document.querySelectorAll("[data-recommended-strike]")].find(button => button.dataset.recommendedStrike === focused)?.focus({preventScroll: true});
+  const terminal = host.querySelector(".strike-operation-terminal");
+  const previousScrollTop = terminal?.scrollTop || 0;
+  const followTail = !terminal || terminal.scrollHeight - terminal.scrollTop - terminal.clientHeight <= 24;
+  const focusAttributes = ["data-strike-filter", "data-strike-search-open", "data-strike-search-page", "data-war-action", "data-activity-more", "data-strike-search"];
+  const focused = document.activeElement;
+  const focusAttribute = focusAttributes.find(attribute => focused?.hasAttribute?.(attribute));
+  const focusValue = focusAttribute ? focused.getAttribute(focusAttribute) : null;
+  const selectionStart = document.activeElement?.selectionStart;
+  const selectionEnd = document.activeElement?.selectionEnd;
+  host.outerHTML = strikeOperationsHtml();
+  const updatedTerminal = document.getElementById("strike-operations")?.querySelector(".strike-operation-terminal");
+  if (updatedTerminal) updatedTerminal.scrollTop = followTail ? updatedTerminal.scrollHeight : previousScrollTop;
+  if (focusAttribute) {
+    const replacement = [...document.querySelectorAll(`[${focusAttribute}]`)].find(control => control.getAttribute(focusAttribute) === focusValue);
+    replacement?.focus({preventScroll: true});
+    if (typeof selectionStart === "number") replacement?.setSelectionRange(selectionStart, selectionEnd);
+  }
 }
 
-async function openRecommendedStrike(identity) {
-  const offer = warView.data?.recommendations?.strikes.find(offer => offer.id === identity);
-  if (!offer || !state.auth.authenticated || warView.sandboxId) return;
+function openStrikeSearchResult(identity) {
+  if (!warView.operationData?.strike_search?.items?.some(item => item.id === identity) || !state.auth.authenticated || warView.sandboxId) return;
   const sequence = ++warView.recommendationSequence;
   warView.recommendationPending = true;
-  warView.pool = offer.pool;
-  const changed = state.selectedSystem !== offer.system_id;
-  try {
-    await showSystemLevel(offer.system_id);
-    if (!changed) { await loadWar(); refreshWarConsole(); }
-    if (sequence !== warView.recommendationSequence || !state.auth.authenticated || state.page !== "reach" || state.selectedSystem !== offer.system_id || state.reachMapLevel !== "system") return;
-    const loaded = (warView.data?.boards[offer.planet_id] || []).find(candidate => candidate.id === identity);
-    if (!loaded) {
-      warView.error ||= "This strike has changed or is no longer available. Return to the map for updated priorities.";
-      refreshWarConsole();
-      return;
+  return (async () => {
+    try {
+      await loadStrikeOperations();
+      const offer = warView.operationData?.strike_search?.items?.find(item => item.id === identity);
+      if (warView.operationsError || !offer) {
+        warView.error = "This strike is no longer available to you. Refresh the orders for current openings.";
+        refreshStrikeOperations();
+        return;
+      }
+      warView.pool = offer.pool;
+      const changed = state.selectedSystem !== offer.system_id;
+      await showSystemLevel(offer.system_id);
+      if (!changed) { await loadWar(); refreshWarConsole(); }
+      if (sequence !== warView.recommendationSequence || !state.auth.authenticated || state.page !== "reach" || state.selectedSystem !== offer.system_id || state.reachMapLevel !== "system") return;
+      const current = Object.values(warView.data?.boards || {}).flat().find(item => item.id === identity);
+      if (!current || !["available", "recruiting"].includes(current.status)) {
+        warView.error = "This strike changed while the chart refreshed. Refresh search for current openings.";
+        refreshWarConsole();
+        return;
+      }
+      await selectPlanetStrike(identity);
+      document.getElementById("reach-viewport")?.scrollIntoView({behavior: "smooth", block: "start"});
+    } finally {
+      if (sequence === warView.recommendationSequence) { warView.recommendationPending = false; refreshStrikeOperations(); }
     }
-    await selectPlanetStrike(identity);
-  } finally {
-    if (sequence === warView.recommendationSequence) { warView.recommendationPending = false; refreshPriorityStrikes(); }
-  }
+  })();
 }
 
 async function loadWar() {
   const sequence = ++warView.requestSequence;
-  if (!state.auth.authenticated) { warView.data = null; return; }
+  if (!state.auth.authenticated) {
+    warView.data = null; warView.operationData = null; warView.activityCursor = "";
+    return;
+  }
   try {
-    const response = await fetch(apiUrl(`/api/war?planet=${encodeURIComponent(warView.planet)}${state.selectedSystem ? `&system=${encodeURIComponent(state.selectedSystem)}` : ""}${warView.sandboxId ? `&sandbox=${encodeURIComponent(warView.sandboxId)}` : ""}`), { credentials: "include", cache: "no-store" });
+    const params = new URLSearchParams({
+      planet: warView.planet,
+      search: warView.searchFilters.query,
+      filter_sector: warView.searchFilters.subsector_id,
+      filter_system: warView.searchFilters.system_id,
+      filter_world: warView.searchFilters.planet_id,
+      filter_pool: warView.searchFilters.pool,
+      filter_specialist: warView.searchFilters.specialist,
+      filter_availability: warView.searchFilters.availability,
+      search_page: String(warView.searchPage),
+      activity_cursor: warView.activityCursor,
+      include_operations: "0",
+    });
+    if (state.selectedSystem) params.set("system", state.selectedSystem);
+    if (warView.sandboxId) params.set("sandbox", warView.sandboxId);
+    const response = await fetch(apiUrl(`/api/war?${params}`), { credentials: "include", cache: "no-store" });
     const result = await response.json();
     if (sequence !== warView.requestSequence) return;
     if (!response.ok) throw new Error(result.error === "war_unavailable"
       ? "Campaign connection unavailable. Map browsing is still available."
       : result.message || result.error || "Campaign relay unavailable");
     warView.data = result;
+    if (!warView.operationData) warView.operationData = result;
+    warView.stateVersion = result.version;
     warView.error = "";
     for (const sector of state.geography?.sectors || []) {
       const campaign = result.campaigns[sector.id];
@@ -6153,6 +6286,56 @@ async function loadWar() {
     if (sequence !== warView.requestSequence) return;
     warView.data = null; warView.error = error.message;
   }
+}
+
+async function loadStrikeOperations({refreshing = false} = {}) {
+  if (!state.auth.authenticated || state.page !== "reach" || warView.sandboxId) return;
+  const sequence = ++warView.operationsSequence;
+  const requestedCursor = refreshing ? "" : warView.activityCursor;
+  const previousCompleted = warView.operationData?.activity?.completed || [];
+  const previousCursor = warView.activityCursor;
+  const params = new URLSearchParams({
+    search: warView.searchFilters.query,
+    filter_sector: warView.searchFilters.subsector_id,
+    filter_system: warView.searchFilters.system_id,
+    filter_world: warView.searchFilters.planet_id,
+    filter_pool: warView.searchFilters.pool,
+    filter_specialist: warView.searchFilters.specialist,
+    filter_availability: warView.searchFilters.availability,
+    search_page: String(warView.searchPage),
+    activity_cursor: requestedCursor,
+    include_operations: "1",
+  });
+  try {
+    const response = await fetch(apiUrl(`/api/war?${params}`), {credentials: "include", cache: "no-store"});
+    const result = await response.json();
+    if (sequence !== warView.operationsSequence || !state.auth.authenticated || state.page !== "reach") return;
+    if (!response.ok) throw new Error(result.message || result.error || "Operations relay unavailable");
+    if (refreshing && previousCompleted.length > 25) {
+      const older = previousCompleted.slice(25);
+      const seen = new Set(result.activity.completed.map(item => item.id));
+      result.activity.completed = [...result.activity.completed, ...older.filter(item => !seen.has(item.id))];
+      result.activity.next_cursor = previousCursor;
+    } else if (requestedCursor) {
+      const seen = new Set(previousCompleted.map(item => item.id));
+      result.activity.completed = [...previousCompleted, ...result.activity.completed.filter(item => !seen.has(item.id))];
+    }
+    warView.operationData = result;
+    warView.stateVersion = result.version;
+    warView.activityCursor = result.activity.next_cursor || "";
+    warView.operationsError = "";
+  } catch (error) {
+    if (sequence !== warView.operationsSequence) return;
+    warView.operationsError = error.message || "Operations relay unavailable";
+  }
+  refreshStrikeOperations();
+}
+
+async function submitStrikeSearch() {
+  warView.searchFilters = strikeFilterValues();
+  warView.searchPage = 0;
+  warView.activityCursor = "";
+  await loadStrikeOperations();
 }
 
 function warConsoleHtml() {
@@ -6353,10 +6536,18 @@ function refreshWarConsole() {
   });
   if (typeof syncPlanetView === "function") void syncPlanetView();
   if (typeof refreshStrikeSceneBriefing === "function") refreshStrikeSceneBriefing();
-  if (typeof refreshPriorityStrikes === "function") refreshPriorityStrikes();
+  if (typeof refreshStrikeOperations === "function") refreshStrikeOperations();
 }
 
 document.addEventListener("change", async event => {
+  const searchFilter = event.target.closest("[data-strike-filter]");
+  if (searchFilter?.dataset.strikeFilter !== undefined && !warView.busy) {
+    warView.searchFilters = strikeFilterValues();
+    warView.searchPage = 0;
+    warView.activityCursor = "";
+    await loadStrikeOperations();
+    return;
+  }
   const navigation = event.target.closest("[data-war-nav]");
   if (navigation?.dataset.warNav && !warView.busy) {
     if (navigation.dataset.warNav === "system") {
@@ -6407,9 +6598,31 @@ document.addEventListener("change", async event => {
   }
 });
 
+document.addEventListener("submit", event => {
+  if (!event.target.closest("[data-strike-search-form]")) return;
+  event.preventDefault();
+  void submitStrikeSearch();
+});
+
 document.addEventListener("click", async event => {
-  const recommendation = event.target.closest("[data-recommended-strike]");
-  if (recommendation?.dataset.recommendedStrike) { await openRecommendedStrike(recommendation.dataset.recommendedStrike); return; }
+  if (event.target.closest("[data-strike-search]")?.dataset.strikeSearch !== undefined) {
+    await submitStrikeSearch();
+    return;
+  }
+  const searchPage = event.target.closest("[data-strike-search-page]");
+  if (searchPage?.dataset.strikeSearchPage !== undefined) {
+    warView.searchPage = Number(searchPage.dataset.strikeSearchPage) || 0;
+    await loadStrikeOperations();
+    return;
+  }
+  const activityMore = event.target.closest("[data-activity-more]");
+  if (activityMore?.dataset.activityMore !== undefined) {
+    warView.activityCursor = activityMore.dataset.activityMore;
+    await loadStrikeOperations();
+    return;
+  }
+  const searchResult = event.target.closest("[data-strike-search-open]");
+  if (searchResult?.dataset.strikeSearchOpen !== undefined) { openStrikeSearchResult(searchResult.dataset.strikeSearchOpen); return; }
   if (event.target.closest("[data-mobile-map-focus]")?.dataset.mobileMapFocus !== undefined) {
     document.getElementById("reach-viewport")?.scrollIntoView({behavior: "smooth", block: "start"});
     return;
@@ -6496,7 +6709,11 @@ document.addEventListener("click", async event => {
     await setPage("submit-aar", true);
     return;
   }
-  const payload = { action: button.dataset.warAction, version: warView.data.version, planet_id: warView.planet };
+  const payload = { action: button.dataset.warAction, version: warView.stateVersion ?? warView.data.version, planet_id: warView.planet };
+  if (payload.action === "queue_join") {
+    warView.searchFilters = strikeFilterValues();
+    payload.preferences = warView.searchFilters;
+  }
   if (state.selectedSystem) payload.board_system_id = state.selectedSystem;
   if (warView.sandboxId) payload.sandbox_id = warView.sandboxId;
   document.querySelectorAll("[data-war-field]").forEach(field => { payload[field.dataset.warField] = field.value; });
@@ -6543,6 +6760,7 @@ document.addEventListener("click", async event => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || result.error || "Campaign action failed");
     warView.data = result;
+    warView.stateVersion = result.version;
     warView.sandboxId = result.sandbox?.viewing ? result.sandbox.id : "";
     warView.error = "";
     for (const sector of state.geography?.sectors || []) {
@@ -6551,7 +6769,7 @@ document.addEventListener("click", async event => {
     }
   } catch (error) { warView.error = error.message; }
   finally {
-    warView.busy = false; refreshWarConsole(); updateStatusBadge();
+    warView.busy = false; refreshWarConsole(); void loadStrikeOperations(); updateStatusBadge();
     if (restoreSignupFocus) [...document.querySelectorAll("[data-war-action]")].find(control => control.dataset.strike === payload.strike_id && ["join", "leave", "report"].includes(control.dataset.warAction))?.focus({preventScroll: true});
   }
 });
@@ -6573,8 +6791,10 @@ async function refreshReach() {
   if (warView.busy || document.querySelector(".reach-viewport.dragging")) return;
   await loadReach();
   if (state.page !== "reach") return;
+  if (state.auth.authenticated) void loadStrikeOperations({refreshing: true});
   if (document.getElementById("reach-canvas")) refreshWarConsole();
   else renderReach();
+  refreshStrikeOperations();
   updateStatusBadge();
 }
 
@@ -8578,7 +8798,7 @@ function updateGeographySectorPanel() {
   if (!shell || !panel) return;
   const sectorId = state.selectedSector;
   const open = Boolean(sectorId && state.geography?.sectors.some(sector => sector.id === sectorId));
-  refreshPriorityStrikes();
+  refreshStrikeOperations();
   shell.classList.toggle("has-sector-panel", open);
   panel.setAttribute("aria-hidden", String(!open));
   const mobileSector = document.querySelector("[data-mobile-sector-select]");
@@ -8649,12 +8869,12 @@ function renderReach() {
         <div class="reach-hint">${reach.generatedAt ? `Relay ${escapeHtml(relativeTime(reach.generatedAt))}` : ""}</div>
         <div class="reach-tooltip" id="reach-tooltip" hidden></div>
       </div>
-      ${priorityStrikesHtml()}
       <section id="strike-scene-briefing" class="strike-scene-briefing" aria-label="Strike mission briefing" hidden></section>
       <aside id="reach-sector-panel" class="reach-sector-panel" aria-hidden="${String(!selectedSector)}">
         ${geographyLive && selectedSector ? geographySectorPanelHtml(selectedSector.id, state.selectedSystem) : ""}
       </aside>
     </div>
+    ${strikeOperationsHtml()}
     ${!geographyLive ? warConsoleHtml() : ""}
     ${geographyLive ? `<details class="reach-desktop-index"><summary>Sector navigator</summary>${mobileGeographyHtml()}</details>` : ""}
     ${terminalTransmissionHtml("JERICHO_REACH_OPERATIONS", "ACCESSING ASTROPATHIC OPERATIONS LEDGER...", [
@@ -9619,7 +9839,9 @@ async function init() {
     state.page === "blood" ? loadChapterLore() : null
   ]);
   await loadAuth();
-  if (state.page === "reach" && state.auth.authenticated) await loadWar();
+  if (state.page === "reach" && state.auth.authenticated) {
+    await Promise.all([loadWar(), loadStrikeOperations({refreshing: true})]);
+  }
   if (state.page === "fortress" && state.view === "landing" && !bootSeen()) {
     document.body.classList.add("atlas-booting");
   }
@@ -9631,6 +9853,11 @@ async function init() {
   runCogitatorBoot();
   if (state.page === "blood") checkBloodAudio();
   setInterval(refreshReach, REACH_REFRESH_MS);
+  setInterval(() => {
+    if (state.page === "reach" && state.auth.authenticated && document.visibilityState === "visible" && !warView.busy) {
+      void loadStrikeOperations({refreshing: true});
+    }
+  }, 60 * 1000);
 }
 
 init();

@@ -7,9 +7,14 @@ A single-page org chart web app for the Watch Fortress Jericho roster. The curre
 The Galactic Map now uses the bot's replacement Galactic War service: shared company
 commitments, KT system assignments, approval/cover controls and separate four-strike
 Vanilla and Omega boards per playable planet (eight total). The format switch preserves
-each pool independently; both currently use vanilla maps. Map signup and automatic roster locking use authenticated `/api/war`
-requests. The existing signed AAR bridge also carries these requests, so no campaign
-database or bot credentials are exposed to the browser.
+each pool independently; both currently use vanilla maps. Authenticated members can
+search strikes below the map, enter a central queue for a complete compatible three-
+member Vanilla or five-member Omega force, or use direct per-strike signup. The map
+section also shows each member's own queue status, current musters and locked rosters,
+plus the latest 25 completion records with pagination. The canvas remains unobstructed.
+All actions use authenticated `/api/war` requests. The existing signed AAR bridge also
+carries these requests, so no campaign database or bot credentials are exposed to the
+browser.
 
 Select a subsector to open its campaign panel alongside the desktop map, or use
 the collapsible subsector navigator on phones. Authenticated campaign permissions
@@ -25,22 +30,18 @@ canvas mounted and preserves the strike-list scroll position.
 Planetary orbit rings use small, deterministic per-world tilts so occasional
 alignments remain possible without every orbit sharing the same visible axis.
 
-Signed-in members can expand the collapsed Priority strikes dropdown on the full Galactic Map:
-it contains up to three entries, with their current deployment first, then eligible
-opportunities, and retains its open/closed state through polling. Both Sergeant ranks
-and battle-line brothers prioritize their KT's assigned system; Captains and
-Lieutenants prioritize their company's committed subsector. Specialists prioritize
-unfilled requirements they can satisfy, including qualified higher ranks; Watch
-Masters see campaign-wide opportunities. Recruiting squads closest to full come
-first, followed by campaign deadline and a stable tie-breaker. Remaining places
-use eligible support strikes, explicitly labelled as support rather than orders.
-The bot applies the normal participation/platform rules; a locked current roster
-does not advertise new compliance opportunities. Sandbox testing hides priorities.
-The panel sits clear of desktop zoom controls and below the chart on phones,
-disappears in deeper map views, and returns with the full map. Selecting a row
-loads only its system board before opening the exact strike. Polling preserves
-the map canvas and keyboard focus. Participation buttons say Comply; open roster
-slots say Click / tap to comply. Withdraw and Report completion remain separate.
+The full-map operations section below the chart includes an eligibility-filtered
+strike search and a central full-team matcher. Queue preferences cover location,
+Vanilla/Omega format, and specialist requirements. The bot waits for three compatible
+Vanilla or five compatible Omega members, then assigns and locks the whole roster in
+one transaction. Direct Comply/Withdraw signup remains available. Queue state is
+personal to the signed-in member; the site never displays other waiting members.
+The adjacent Watch Operations chronicle is a scrolling terminal feed: open musters,
+sealed rosters, and recent vigils appear as concise event lines, with the newest
+completion at the bottom. Entries identify the Kill-Team, Company, operation, format,
+world, system, and subsector from campaign records. It does not invent failed
+deployments or a Ready/Deploy step. Search and feed refresh independently without
+covering the map or resetting its camera.
 System overviews omit the Strike theatres and Warp lanes counts while retaining
 primary-star information, planets and KT deployments; route and eligibility data
 are unchanged.
@@ -50,8 +51,9 @@ In System overview, the right-side panel summarizes every planet:
 existing art, type/biome, description when authored, deployment eligibility, both
 format counts, recruiting/locked counts and objective mix. Expand a planet's strike
 assignments to open a particular deployment; those expansions survive polling.
-There is no separate below-map briefing. Clicking a planet in the panel, its dropdown
-or the map itself opens that planet's 3D model directly, without waiting for campaign
+There is no duplicate below-map system/planet briefing; the operations queue is a
+separate campaign view. Clicking a planet in the panel, its dropdown or the map itself
+opens that planet's 3D model directly, without waiting for campaign
 board data. Returning to System overview restores the planet summaries in the panel.
 Static system and planet details also remain visible while signed out, during loading
 or when the campaign bridge is unavailable. In those states, live strike counts and

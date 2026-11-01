@@ -1171,6 +1171,30 @@ class StrategiumHandler(BaseHTTPRequestHandler):
                     self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_test_session"})
                     return
                 payload["sandbox_id"] = sandbox_id
+            search_filters = {
+                "query": (query.get("search") or [""])[0][:80],
+                "subsector_id": (query.get("filter_sector") or [""])[0][:80],
+                "system_id": (query.get("filter_system") or [""])[0][:80],
+                "planet_id": (query.get("filter_world") or [""])[0][:80],
+                "pool": (query.get("filter_pool") or ["any"])[0][:16],
+                "specialist": (query.get("filter_specialist") or ["any"])[0][:80],
+                "availability": (query.get("filter_availability") or ["any"])[0][:16],
+            }
+            payload["search_filters"] = search_filters
+            try:
+                payload["search_page"] = int((query.get("search_page") or ["0"])[0])
+            except ValueError:
+                self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_search_page"})
+                return
+            if not 0 <= payload["search_page"] <= 10000:
+                self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_search_page"})
+                return
+            payload["activity_cursor"] = (query.get("activity_cursor") or [""])[0][:80]
+            include_operations = (query.get("include_operations") or ["1"])[0]
+            if include_operations not in {"0", "1"}:
+                self._send(HTTPStatus.BAD_REQUEST, {"error": "invalid_operations_flag"})
+                return
+            payload["include_operations"] = include_operations == "1"
         response = _war_request(str(user["id"]), payload)
         if response is None:
             self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "war_unavailable"})

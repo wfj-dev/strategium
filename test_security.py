@@ -447,6 +447,36 @@ def test_war_read_and_mutations_require_login(local_site):
         assert error.value.code == 401
 
 
+def test_war_search_get_maps_filters_and_bounds_page(local_site, monkeypatch):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    cookie = _session_value({"id": "42", "name": "Brother", "csrf": "csrf-token"})
+    captured = []
+    monkeypatch.setattr(server, "_war_request", lambda user, payload: captured.append((user, payload)) or (200, {"ok": True}))
+    query = urllib.parse.urlencode({
+        "planet": "world", "system": "system", "search": "Inferno", "filter_sector": "alpha",
+        "filter_system": "alpha-0", "filter_world": "world", "filter_pool": "omega",
+        "filter_specialist": "Watch Librarian", "filter_availability": "recruiting",
+        "search_page": "2", "activity_cursor": "GW-" + "a" * 32,
+    })
+    request = urllib.request.Request(local_site + "/api/war?" + query, headers={"Cookie": f"strategium_session={cookie}"})
+    with urllib.request.urlopen(request) as response:
+        assert response.status == 200
+    assert captured == [("42", {
+        "action": "snapshot", "planet_id": "world", "board_system_id": "system",
+        "search_filters": {
+            "query": "Inferno", "subsector_id": "alpha", "system_id": "alpha-0",
+            "planet_id": "world", "pool": "omega", "specialist": "Watch Librarian",
+            "availability": "recruiting",
+        },
+        "search_page": 2, "activity_cursor": "GW-" + "a" * 32, "include_operations": True,
+    })]
+    invalid = urllib.request.Request(local_site + "/api/war?search_page=not-a-number", headers={"Cookie": f"strategium_session={cookie}"})
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(invalid)
+    assert error.value.code == 400
+    assert len(captured) == 1
+
+
 def test_war_mutation_requires_csrf_and_uses_authenticated_identity(local_site, monkeypatch):
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
     monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
@@ -1941,45 +1971,105 @@ def test_me_uses_guild_display_name_not_account_name(local_site, monkeypatch):
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for the war signup regression")
-def test_priority_strikes_are_full_map_only_and_hydrate_before_opening():
+def test_strike_operations_are_below_map_and_render_queue_search_and_feed():
     source = r"""
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(process.argv[1],'utf8');
-const entries=Array.from({length:4},(_,index)=>({id:'strike-'+index,planet_id:'world',system_id:'system',name:index===0?'<img src=x>':'Strike '+index,planet_name:'World',system_name:'System',aar_mission:'Inferno',pool:'omega',filled:2,capacity:5,reason:index===0?'Current deployment':'Specialist needed',current:index===0,status:'recruiting'}));
-let calls=0,opened=[],release;
-const c={state:{auth:{authenticated:true},page:'reach',geographyStatus:'live',reachMapLevel:'reach',geography:{bodies:[]},selectedSystem:null},warView:{data:{recommendations:{strikes:entries},boards:{}},recommendationSequence:0},escapeHtml:value=>String(value??'').replace(/</g,'&lt;').replace(/>/g,'&gt;'),titleCase:value=>value,geographyBodyArtwork:()=>'',document:{getElementById:()=>null},refreshWarConsole:()=>{},selectPlanetStrike:async id=>opened.push(id)};
-c.loadWar=async()=>{calls++;c.warView.data.boards={world:[{id:'strike-0'},{id:'strike-1'}]};};
-c.showSystemLevel=id=>{c.state.selectedSystem=id;c.state.reachMapLevel='system';return c.loadWar();};
+new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+const renderStart=html.indexOf('function renderReach()'),renderEnd=html.indexOf('function reachFitWidth(',renderStart),render=html.slice(renderStart,renderEnd);
+assert.match(render,/<div class="reach-map-shell[\s\S]*?<\/div>\s*\$\{strikeOperationsHtml\(\)\}/);
+assert.doesNotMatch(html,/\.priority-strikes\s*\{\s*position:\s*absolute/);
+const c={
+ state:{auth:{authenticated:true},page:'reach',geographyStatus:'live',reachMapLevel:'reach',geography:{sectors:[],systems:[],bodies:[{id:'world',kind:'planet',name:'Vhaloris',systemId:'system'}]},selectedSystem:null},
+ warView:{busy:false,error:'',operationData:{version:4,strike_search:{items:[{id:'strike-1',name:'Purge the Shrine',planet_id:'world',planet_name:'Vhaloris',system_id:'system',system_name:'Ctesiphus',subsector_id:'alpha',subsector_name:'Jericho Reach',aar_mission:'Inferno',pool:'vanilla',status:'recruiting',filled:2,capacity:3,required_rank:'',viewer_signup:{can_join:true,reason:''}}],page:0,page_size:20,total:1,has_more:false,specialists:['Watch Librarian']},matchmaking:{status:{status:'waiting',position:1,preferences:{pool:'vanilla'}}},activity:{musters:[{id:'muster-1',name:'Purge the Shrine',status:'recruiting',mission:'Inferno',pool:'vanilla',planet_name:'Vhaloris',system_name:'Ctesiphus',subsector_name:'Jericho Reach',filled:2,capacity:3}],deployments:[{id:'GW-live',name:'The Sundered Reliquary',status:'locked',mission:'Inferno',pool:'omega',planet_name:'Avarax',system_name:'Ctesiphus',subsector_name:'Jericho Reach',participants:['42'],kill_teams:['Alpha Strike Team'],companies:['Primus'],capacity:5,locked_at:'2026-10-30T12:00:00+00:00'}],completed:[{id:'GW-done',name:'Ashen Vigil',status:'completed',mission:'Inferno',pool:'vanilla',planet_name:'Vhaloris',system_name:'Ctesiphus',subsector_name:'Jericho Reach',participants:['42','43','44'],kill_teams:['Alpha Strike Team'],companies:['Primus'],completed_at:'2026-10-29T12:00:00+00:00'}],next_cursor:''}},searchFilters:{query:'',subsector_id:'',system_id:'',planet_id:'',pool:'any',specialist:'any',availability:'any'},searchPage:0,activityCursor:'',sandboxId:''},
+ escapeHtml:value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),titleCase:value=>String(value||'').replace(/(^|\s)\S/g,c=>c.toUpperCase()),
+ document:{querySelector:()=>null},
+};
 vm.createContext(c);
-vm.runInContext(html.slice(html.indexOf('function priorityStrikesHtml()'),html.indexOf('async function loadWar()')),c);
-let markup=c.priorityStrikesHtml();
-assert.match(markup,/<details[^>]*id="priority-strikes"/);
-assert.doesNotMatch(markup,/<details[^>]*\bopen\b/);
-assert.match(markup,/<summary>Priority strikes \(3\)<\/summary>/);
-assert.equal((markup.match(/data-recommended-strike=/g)||[]).length,3);
-assert.match(markup,/&lt;img src=x&gt;/);assert.doesNotMatch(markup,/<img src=x>/);
-assert.match(markup,/Current deployment/);assert.match(markup,/Specialist needed/);
-for(const level of ['sector','system','planet','strike']){c.state.reachMapLevel=level;assert.match(c.priorityStrikesHtml(),/ hidden/);}
-c.state.reachMapLevel='reach';c.state.auth.authenticated=false;assert.match(c.priorityStrikesHtml(),/ hidden/);
-c.state.auth.authenticated=true;c.warView.data.sandbox={viewing:true};assert.match(c.priorityStrikesHtml(),/ hidden/);delete c.warView.data.sandbox;
-c.warView.data.recommendations.strikes=[];assert.match(c.priorityStrikesHtml(),/No strike priorities available/);c.warView.data.recommendations.strikes=entries;
-let summaryFocus=0;
-const summary={focus:()=>summaryFocus++};
-let host={open:true,querySelector:()=>summary};
-const install=()=>Object.defineProperty(host,'outerHTML',{set:()=>{host={open:false,querySelector:()=>summary};install();}});
-install();c.document={activeElement:summary,getElementById:()=>host,querySelectorAll:()=>[]};
-c.refreshPriorityStrikes();assert.equal(host.open,true);assert.equal(summaryFocus,1);
-host.open=false;c.refreshPriorityStrikes();assert.equal(host.open,false);
-c.document={getElementById:()=>null};
+vm.runInContext(html.slice(html.indexOf('function strikeOperationsHtml()'),html.indexOf('function refreshStrikeOperations()')),c);
+const markup=c.strikeOperationsHtml();
+assert.match(markup,/Eligible strike orders/);
+assert.match(markup,/data-strike-filter="pool"/);
+assert.match(markup,/data-strike-filter="specialist"/);
+assert.match(markup,/data-war-action="queue_join"/);
+assert.match(markup,/Muster pending\. Overall queue entry 1; compatible preferences determine matching, with no ETA/);
+assert.match(markup,/Purge the Shrine/);
+assert.match(markup,/ASTROPATHIC TRAFFIC/);
+assert.match(markup,/OPEN MUSTERS/);
+assert.match(markup,/SEALED STRIKE ROSTERS/);
+assert.match(markup,/RECENT VIGILS/);
+assert.match(markup,/MUSTER FORMING/);
+assert.match(markup,/STRIKE ROSTER SEALED/);
+assert.match(markup,/VIGIL COMPLETE/);
+for(const label of ['KILL-TEAM: Alpha Strike Team','COMPANY: Primus','MISSION: Inferno','MISSION TYPE: Omega','PLANET: Avarax','SYSTEM: Ctesiphus','SECTOR: Jericho Reach'])assert.match(markup,new RegExp(label));
+assert.match(markup,/Alpha Strike Team of Primus completed Ashen Vigil/);
+assert.doesNotMatch(markup,/AAR COMPLETION RECORDS|AAR RECORDED/);
+assert.doesNotMatch(markup,/AAR RECORDED ::/);
+assert.doesNotMatch(markup,/Full force assembled/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for strike search navigation")
+def test_stale_strike_search_result_does_not_move_map():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const context={
+ state:{auth:{authenticated:true},page:'reach',selectedSystem:null,reachMapLevel:'reach'},
+ warView:{operationData:{strike_search:{items:[{id:'stale',system_id:'system',pool:'vanilla'}]}},recommendationSequence:0,sandboxId:'',operationsError:'',error:'',recommendationPending:false},
+ loadStrikeOperations:async()=>{context.warView.operationData={strike_search:{items:[]}};},
+ showSystemLevel:()=>{throw new Error('stale result must not move the map');},
+ refreshStrikeOperations:()=>{},refreshWarConsole:()=>{},selectPlanetStrike:async()=>{},
+ document:{getElementById:()=>null}
+};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function openStrikeSearchResult('),html.indexOf('async function loadWar()')),context);
 (async()=>{
- await c.openRecommendedStrike('strike-0');assert.deepEqual(opened,['strike-0']);assert.equal(calls,1);assert.equal(c.warView.pool,'omega');
- await c.openRecommendedStrike('strike-2');assert.deepEqual(opened,['strike-0']);assert.match(c.warView.error,/no longer available/);
- const releases=[];c.state.selectedSystem=null;c.showSystemLevel=id=>{c.state.selectedSystem=id;c.state.reachMapLevel='system';return new Promise(resolve=>releases.push(resolve));};
- const first=c.openRecommendedStrike('strike-0'),second=c.openRecommendedStrike('strike-1');releases[1]();await second;releases[0]();await first;
- assert.deepEqual(opened,['strike-0','strike-1']);
- c.state.selectedSystem=null;c.showSystemLevel=id=>{c.state.selectedSystem=id;c.state.reachMapLevel='system';return new Promise(resolve=>{release=resolve;});};
- const pending=c.openRecommendedStrike('strike-1');c.state.reachMapLevel='reach';c.state.selectedSystem=null;release();await pending;
- assert.deepEqual(opened,['strike-0','strike-1']);assert.equal(c.warView.recommendationPending,false);
+ await context.openStrikeSearchResult('stale');
+ assert.equal(context.state.selectedSystem,null);
+ assert.equal(context.state.reachMapLevel,'reach');
+ assert.match(context.warView.error,/no longer available/);
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for operations feed polling")
+def test_operations_poll_preserves_map_snapshot_and_loaded_history():
+    source = r"""
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(process.argv[1],'utf8'),requests=[];
+const oldPage=Array.from({length:25},(_,index)=>({id:'old-'+index}));
+const extraPage=Array.from({length:5},(_,index)=>({id:'older-'+index}));
+let response={strike_search:{items:[],page:1,page_size:20,total:0,has_more:false},matchmaking:{status:{status:'not_queued'}},activity:{musters:[],deployments:[],completed:extraPage,next_cursor:'older-cursor'}};
+const context={
+ state:{page:'reach',auth:{authenticated:true}},
+ warView:{operationsSequence:0,sandboxId:'',searchFilters:{query:'Inferno',subsector_id:'alpha',system_id:'alpha-0',planet_id:'world',pool:'omega',specialist:'Watch Librarian',availability:'recruiting'},searchPage:1,activityCursor:'older-cursor',operationData:{activity:{completed:oldPage,next_cursor:'older-cursor'}},data:{boards:{world:[{id:'map-board'}]}}},
+ URLSearchParams,apiUrl:path=>path,document:{},
+ fetch:async(url)=>{requests.push(String(url));return {ok:true,json:async()=>response};},
+ refreshStrikeOperations:()=>{}
+};
+vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('async function loadStrikeOperations('),html.indexOf('function warConsoleHtml()')),context);
+(async()=>{
+ const mapSnapshot=context.warView.data;
+ await context.loadStrikeOperations();
+ assert.match(requests[0],/filter_pool=omega/);
+ assert.match(requests[0],/filter_specialist=Watch\+Librarian/);
+ assert.match(requests[0],/search_page=1/);
+ assert.equal(context.warView.data,mapSnapshot);
+ assert.equal(context.warView.operationData.activity.completed.length,30);
+ assert.equal(context.warView.operationData.activity.completed[0].id,'old-0');
+ assert.equal(context.warView.operationData.activity.completed[29].id,'older-4');
+ assert.equal(context.warView.activityCursor,'older-cursor');
+ response={...response,activity:{musters:[],deployments:[],completed:oldPage,next_cursor:'cursor-25'}};
+ await context.loadStrikeOperations({refreshing:true});
+ assert.equal(context.warView.data,mapSnapshot);
+ assert.equal(context.warView.operationData.activity.completed.length,30);
+ assert.equal(context.warView.operationData.activity.next_cursor,'older-cursor');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
@@ -2299,11 +2389,11 @@ const calls=[];
 const context={state:{auth:{authenticated:false}},wireEvents:()=>{},pageFromLocation:()=> 'reach',
  loadSavedSettings:async()=>{},loadData:async()=>{},loadSiteConfig:async()=>{},
  loadReach:async()=>{calls.push('geography');},loadAuth:async()=>{calls.push('auth');context.state.auth.authenticated=true;},
- loadWar:async()=>{assert(context.state.auth.authenticated);calls.push('war');},
+ loadWar:async()=>{assert(context.state.auth.authenticated);calls.push('war');},loadStrikeOperations:async()=>{assert(context.state.auth.authenticated);calls.push('operations');},
  render:()=>{assert(calls.includes('war'));calls.push('render');},runCogitatorBoot:()=>{},refreshReach:()=>{},setInterval:()=>{},REACH_REFRESH_MS:30000};
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('async function init()'),html.lastIndexOf('init();')),context);
-context.init().then(()=>assert.deepEqual(calls,['geography','auth','war','render'])).catch(error=>{console.error(error);process.exitCode=1;});
+context.init().then(()=>assert.deepEqual(calls,['geography','auth','war','operations','render'])).catch(error=>{console.error(error);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
@@ -2359,7 +2449,8 @@ const html = fs.readFileSync(process.argv[1], 'utf8');
 const pending = [];
 const context = {
     state:{auth:{authenticated:true},geography:{sectors:[]}},
-    warView:{requestSequence:0,planet:'first'},apiUrl:path=>path,
+    warView:{requestSequence:0,planet:'first',searchFilters:{query:'',subsector_id:'',system_id:'',planet_id:'',pool:'any',specialist:'any',availability:'any'},searchPage:0,activityCursor:''},apiUrl:path=>path,
+    URLSearchParams,
     fetch:()=>new Promise(resolve=>pending.push(resolve))
 };
 vm.createContext(context);
@@ -2406,9 +2497,9 @@ const makeInput=()=>({value:'',selectionStart:0,selectionEnd:0,tagName:'INPUT',d
 let input=makeInput();input.value='Verified duplicate credit';input.selectionStart=4;input.selectionEnd=8;focused=input;
 let section={open:true,getAttribute:()=> 'orders'};
 const panel={querySelectorAll:selector=>selector==='details[open]'?(section.open?[section]:[]):selector==='details'?[section]:[input],set outerHTML(value){input=makeInput();section={open:false,getAttribute:()=> 'orders'};}};
-const context={state:{page:'reach',geography:{sectors:[]}},warView:{busy:false,data:{}},
+const context={state:{page:'reach',auth:{authenticated:true},geography:{sectors:[]}},warView:{busy:false,data:{}},
  document:{visibilityState:'visible',get activeElement(){return focused;},querySelector:()=>null,querySelectorAll:()=>[],getElementById:identity=>identity==='war-console'?panel:{}},
- loadReach:async()=>{loads++;},warConsoleHtml:()=>'<section></section>',renderReach:()=>{throw Error('Canvas remounted');},updateStatusBadge:()=>{},titleCase:value=>value};
+    loadReach:async()=>{loads++;},loadStrikeOperations:async()=>{},warConsoleHtml:()=>'<section></section>',renderReach:()=>{throw Error('Canvas remounted');},refreshStrikeOperations:()=>{},updateStatusBadge:()=>{},titleCase:value=>value};
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function refreshWarConsole()'),html.indexOf('document.addEventListener("change", async event =>')),context);
 vm.runInContext(html.slice(html.indexOf('async function refreshReach()'),html.indexOf('function visibleReachDirectives()')),context);
