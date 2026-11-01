@@ -496,6 +496,30 @@ def test_war_mutation_requires_csrf_and_uses_authenticated_identity(local_site, 
     assert captured[0][0] == "42"
 
 
+@pytest.mark.parametrize("status", [400, 401, 403, 409, 422, 429, 500, 503, None])
+@pytest.mark.parametrize("method", ["GET", "POST"])
+def test_war_proxy_masks_internal_errors_from_older_bot(local_site, monkeypatch, status, method):
+    monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
+    monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)
+    raw = "Contribution.__init__() got an unexpected keyword argument 'company_id'"
+    upstream = {"error": raw, "message": raw, "traceback": "private traceback", "path": "/private/bot/store.py"}
+    monkeypatch.setattr(server, "_war_request", lambda *_args: None if status is None else (status, upstream))
+    cookie = _session_value({"id": "42", "name": "Brother", "csrf": "csrf-token"})
+    headers = {"Cookie": f"strategium_session={cookie}", "Origin": local_site, "X-CSRF-Token": "csrf-token", "Content-Type": "application/json"}
+    request = urllib.request.Request(local_site + "/api/war", data=b'{"action":"snapshot"}' if method == "POST" else None, headers=headers, method=method)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request)
+    assert error.value.code == (503 if status is None else status)
+    assert error.value.headers["Cache-Control"] == "no-store"
+    body = error.value.read().decode()
+    assert raw not in body
+    assert "private traceback" not in body
+    assert "/private/bot/store.py" not in body
+    payload = json.loads(body)
+    assert set(payload) == {"error", "message"}
+    assert payload["message"]
+
+
 def test_member_correction_requests_require_csrf_but_not_editor_permission(local_site, monkeypatch):
     monkeypatch.setattr(server, "SESSION_SECRET", "test-session-secret")
     monkeypatch.setattr(server, "ALLOWED_ORIGIN", local_site)

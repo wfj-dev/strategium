@@ -1197,9 +1197,22 @@ class StrategiumHandler(BaseHTTPRequestHandler):
             payload["include_operations"] = include_operations == "1"
         response = _war_request(str(user["id"]), payload)
         if response is None:
-            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "war_unavailable"})
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "war_unavailable", "message": "The campaign service is temporarily unavailable. Please try again shortly."}, {"Cache-Control": "no-store"})
             return
         status, result = response
+        if status >= 400:
+            messages = {
+                400: "Check the campaign request and try again.",
+                401: "Your session could not be verified. Sign in again.",
+                403: "This campaign action is not permitted for your account.",
+                409: "The campaign changed or this request is invalid. Refresh operations and try again.",
+                422: "Check the campaign request and try again.",
+                429: "Too many campaign requests. Please try again shortly.",
+            }
+            result = {
+                "error": "war_unavailable" if status >= 500 else "war_request_failed",
+                "message": messages.get(status, "The campaign service is temporarily unavailable. Please try again shortly."),
+            }
         self._send(status, result, {"Cache-Control": "no-store"})
 
     def _create_evidence_session(self) -> None:
