@@ -2025,6 +2025,8 @@ c.warView.operationData.participant_names={'42':'Watch Veteran MK','43':'Watch V
 c.warView.operationData.activity.completed.push({id:'GW-mixed',name:'Cleansing Flame',mission:'Termination',pool:'omega',planet_name:'Kethrys',system_name:'Penumbral Choir',subsector_name:'The Canticle Reach',kill_teams:['Kill-Team Timotheos','Kill-Team Ghost','Kill-Team Van'],companies:['Primus','Tertius','Quartus'],participants:['42','43','44','45','46'],locked_at:'2026-11-01T16:00:00Z',completed_at:'2026-11-01T17:19:35.484Z'});
 vm.createContext(c);
 c.URLSearchParams=URLSearchParams;
+c.COMPANY_NAMES={'1':'Primus','3':'Tertius','4':'Quartus'};
+c.killTeamsForCompany=()=>[];
 vm.runInContext(html.slice(html.indexOf('function priorityStrikesHtml()'),html.indexOf('function refreshStrikeOperations()')),c);
 const markup=c.strikeOperationsHtml();
 const priorityMenu=c.priorityStrikesHtml();
@@ -2047,13 +2049,14 @@ assert.match(markup,/data-war-action="queue_leave"[^>]*>Leave queue/);
 assert.doesNotMatch(markup.match(/<form class="strike-search-form"[\s\S]*?<\/form>/)[0],/data-war-action="queue_join"/);
 assert.match(markup,/Purge the Shrine/);
 assert.match(markup,/Astropathic traffic/);
-assert.match(markup,/Completed operations/);
+assert.match(markup,/Chronicle of the Long Vigil/);
+assert.doesNotMatch(markup,/>Completed operations</);
 const feed=markup.split('class="strike-operation-terminal"')[1];
 assert.doesNotMatch(feed,/Open musters|Sealed strike rosters|Muster forming|Strike roster sealed|The Sundered Reliquary|Purge the Shrine|GW-live/);
 assert.match(markup,/Vigil complete/);
 assert.match(markup,/<h4 class="terminal-event">Ashen Vigil<\/h4>/);
 assert.match(markup,/<dt>Kill-team<\/dt><dd>Alpha Strike Team<\/dd>/);
-assert.match(markup,/<dt>Company<\/dt><dd>Primus<\/dd>/);
+assert.match(markup,/<dt>Company<\/dt><dd>[\s\S]*?Primus<\/a><\/dd>/);
 assert.match(markup,/Termination · Omega/);
 assert.match(markup,/<strong>Kethrys<\/strong>/);
 assert.match(markup,/Ctesiphus \/ Jericho Reach/);
@@ -2061,7 +2064,7 @@ assert.match(markup,/<details class="terminal-roster" data-activity-roster="GW-d
 assert.match(markup,/2026-10-29 · 12:00 UTC/);
 assert.match(markup,/<h4 class="terminal-event">Cleansing Flame<\/h4>/);
 assert.match(markup,/<dt>Kill-teams<\/dt><dd>Timotheos · Ghost · Van<\/dd>/);
-assert.match(markup,/<dt>Companies<\/dt><dd>Primus · Tertius · Quartus<\/dd>/);
+assert.match(markup,/<dt>Companies<\/dt><dd>[\s\S]*?Primus<\/a> · [\s\S]*?Tertius<\/a> · [\s\S]*?Quartus<\/a><\/dd>/);
 assert.match(markup,/2026-11-01 · 17:19 UTC/);
 assert.doesNotMatch(markup,/>[^<]*17:19:35\.484|Kill-Team Timotheos, Kill-Team Ghost/);
 assert.match(markup,/<li>&lt;Watch Master Van&gt;<\/li>/);
@@ -2083,6 +2086,22 @@ for(const [kind,identity,company] of [['world','world',''],['system','system',''
 }
 assert.equal(c.chronicleEntityLink('member','missing','Unknown Brother'),'Unknown Brother');
 assert.equal(c.chronicleEntityLink('killteam','missing','Retired team','1'),'Retired team');
+c.state.killTeams={'1':[{id:'1-3',name:'Kill Team Timotheos'}],'2':[{id:'2-3',name:'Kill-Team Timotheos'}]};
+c.COMPANY_NAMES['2']='Secundus';
+const legacy={companies:['Primus'],kill_teams:['Kill-Team Timotheos']};
+const resolved=c.chronicleTeamReferences(legacy)[0];
+assert.equal(resolved.id,'1-3');
+assert.equal(resolved.company_id,'1');
+assert.match(c.chronicleEntityLink('killteam',resolved.id,resolved.name,resolved.company_id),/entity=killteam&amp;id=1-3&amp;company=1/);
+assert.equal(c.chronicleTeamReferences({companies:['Primus','Secundus'],kill_teams:['Kill-Team Timotheos']})[0].id,'');
+const retired=c.chronicleTeamReferences({...legacy,kill_team_refs:[{id:'retired',name:'Kill-Team Timotheos',company_id:'1'}]})[0];
+assert.equal(retired.id,'retired');
+assert.equal(c.chronicleEntityLink('killteam',retired.id,retired.name,retired.company_id),'Kill-Team Timotheos');
+const history=c.warView.operationData.activity.completed[0];
+const savedTeams=history.kill_teams,savedCompanies=history.companies;
+history.kill_teams=legacy.kill_teams;history.companies=legacy.companies;
+assert.match(c.strikeOperationsHtml(),/entity=killteam&amp;id=1-3&amp;company=1/);
+history.kill_teams=savedTeams;history.companies=savedCompanies;
 assert.match(c.strikeOperationsHtml(),/entity=member&amp;id=42/);
 assert.match(c.strikeOperationsHtml(),/entity=world&amp;id=world/);
 c.warView.operationData.activity.completed[0].company_refs=[{id:'1',name:'Primus'}];
@@ -2164,7 +2183,7 @@ vm.runInContext(html.slice(html.indexOf('function openRecommendedStrike('),html.
  c.findMember=identity=>c.state.members.find(item=>item.id===identity);
  c.openMemberModal=identity=>{openedEntity=`member:${identity}`;};
  c.navigate=(kind,params)=>{openedEntity=`${kind}:${params.companyId}:${params.killTeamId||''}`;};
- for(const [query,expected] of [['entity=sector&id=alpha','sector:alpha'],['entity=world&id=world','world:world'],['entity=member&id=42','member:42'],['entity=company&id=1','company:1:'],['entity=killteam&id=1-1&company=1','killteam:1:1-1']]){
+ for(const [query,expected] of [['entity=sector&id=alpha','sector:alpha'],['entity=world&id=world','world:world'],['entity=member&id=42','member:42'],['entity=company&id=1','company:1:'],['entity=killteam&id=1-1&company=1','killteam:1:1-1'],['entity=killteam&id=1-3&company=1','killteam:1:1-3']]){
   c.window={location:{search:`?${query}`}};
   await c.loadChronicleLocation();
   assert.equal(openedEntity,expected);

@@ -41,7 +41,7 @@ one transaction. Direct Comply/Withdraw signup remains available. Queue state is
 personal to the signed-in member; the site never displays other waiting members.
 Location dropdowns contain only locations with currently joinable active strikes,
 independently of the current search filters and result page.
-The adjacent Watch Operations chronicle is a scrolling feed of completed operations
+The adjacent Chronicle of the Long Vigil is a scrolling feed of completed operations
 only, with the newest completion at the bottom. Open musters and sealed rosters do
 not appear in the feed. Entries identify the Kill-Team, Company, operation, format,
 world, system, and subsector from campaign records. It does not invent failed
@@ -50,8 +50,10 @@ covering the map or resetting its camera.
 Eligible strike rows separate the title, location, mission, roster and actions.
 Chronicle and search locations link to their map views; completed-operation companies,
 Kill-teams and Astartes link to their existing dossiers. Links support direct URLs and
-new tabs. Unit IDs come from the locked roster snapshot, and entities without an
-available destination remain plain text.
+new tabs. Unit IDs come from the locked roster snapshot. Older name-only records link
+only when the team resolves uniquely within the recorded companies; known catalogue
+teams remain linkable even with an empty current roster. Ambiguous or retired targets
+remain plain text.
 System overviews omit the Strike theatres and Warp lanes counts while retaining
 primary-star information, planets and KT deployments; route and eligibility data
 are unchanged.

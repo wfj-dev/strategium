@@ -6177,12 +6177,44 @@ function refreshPriorityStrikes() {
   }
 }
 
+function chronicleKillTeam(companyId, identity) {
+  const catalog = state.killTeams?.[String(companyId)] || [];
+  return catalog.find(team => String(team.id) === String(identity))
+    || killTeamsForCompany(Number(companyId)).find(team => String(team.killTeam) === String(identity));
+}
+
+function chronicleCompanyReferences(item) {
+  if (item.company_refs?.length) return item.company_refs;
+  const normalize = name => String(name).replace(/^(?:watch\s+)?company\s+/i, "").trim().toLowerCase();
+  return (item.companies || []).map(name => {
+    const matches = Object.entries(COMPANY_NAMES).filter(([, current]) => normalize(current) === normalize(name));
+    return {name, id: matches.length === 1 ? matches[0][0] : ""};
+  });
+}
+
+function chronicleTeamReferences(item) {
+  if (item.kill_team_refs?.length) return item.kill_team_refs;
+  const normalize = name => String(name).replace(/^kill[ -]team\s+/i, "").trim().toLowerCase();
+  const companies = chronicleCompanyReferences(item).filter(company => company.id);
+  return (item.kill_teams || []).map(name => {
+    const matches = new Map();
+    for (const company of companies) {
+      const catalog = state.killTeams?.[String(company.id)] || [];
+      const candidates = [...catalog, ...killTeamsForCompany(Number(company.id)).map(team => ({id: team.killTeam, name: team.name}))];
+      for (const team of candidates) {
+        if (normalize(team.name) === normalize(name)) matches.set(`${company.id}:${team.id}`, {id: String(team.id), name, company_id: String(company.id)});
+      }
+    }
+    return matches.size === 1 ? [...matches.values()][0] : {name, id: "", company_id: ""};
+  });
+}
+
 function chronicleEntityLink(kind, identity, label, companyId = "") {
   const exists = kind === "world" ? state.geography?.bodies?.some(item => item.id === identity)
     : kind === "system" ? state.geography?.systems?.some(item => item.id === identity)
     : kind === "sector" ? state.geography?.sectors?.some(item => item.id === identity)
     : kind === "company" ? Boolean(COMPANY_NAMES[identity])
-    : kind === "killteam" ? Boolean(companyId && killTeamsForCompany(Number(companyId)).some(item => item.killTeam === identity))
+    : kind === "killteam" ? Boolean(companyId && chronicleKillTeam(companyId, identity))
     : kind === "member" ? state.members?.some(item => item.id === identity) : false;
   if (!identity || !exists) return escapeHtml(label);
   const params = new URLSearchParams({entity: kind, id: identity});
@@ -6213,7 +6245,7 @@ async function loadChronicleLocation() {
   } else {
     const companyId = Number(kind === "company" ? identity : params.get("company"));
     if (!COMPANY_NAMES[companyId]) return;
-    if (kind === "killteam" && !killTeamsForCompany(companyId).some(item => item.killTeam === identity)) return;
+    if (kind === "killteam" && !chronicleKillTeam(companyId, identity)) return;
     navigate(kind, {companyId, killTeamId: kind === "killteam" ? identity : null}, null, "in", false);
   }
   if (geography) document.getElementById("reach-viewport")?.scrollIntoView({block: "start"});
@@ -6254,8 +6286,8 @@ function strikeOperationsHtml() {
     const teams = item.kill_teams || [];
     const teamName = teams.map(name => name.replace(/^kill[ -]team\s+/i, "")).join(" · ") || "Unrecorded";
     const companyName = item.companies?.join(" · ") || "Unrecorded";
-    const teamLinks = item.kill_team_refs?.map(team => chronicleEntityLink("killteam", team.id, team.name.replace(/^kill[ -]team\s+/i, ""), team.company_id)).join(" · ") || escapeHtml(teamName);
-    const companyLinks = item.company_refs?.map(company => chronicleEntityLink("company", company.id, company.name)).join(" · ") || escapeHtml(companyName);
+    const teamLinks = chronicleTeamReferences(item).map(team => chronicleEntityLink("killteam", team.id, team.name.replace(/^kill[ -]team\s+/i, ""), team.company_id)).join(" · ") || escapeHtml(teamName);
+    const companyLinks = chronicleCompanyReferences(item).map(company => chronicleEntityLink("company", company.id, company.name)).join(" · ") || escapeHtml(companyName);
     const operationName = item.name || item.mission || "Strike order";
     return `<article class="strike-terminal-line ${item.reversed ? "reversed" : "completed"}">
       <header class="terminal-entry-header"><span class="terminal-state">${escapeHtml(status)}</span><time${timestamp ? ` datetime="${escapeHtml(timestamp)}"` : ""}>${escapeHtml(timeLabel)}</time></header>
@@ -6286,7 +6318,7 @@ function strikeOperationsHtml() {
         <div class="strike-operation-list" aria-live="polite">${entries.map(item => `<article class="strike-operation-row"><span><strong>${escapeHtml(item.name)}</strong><small>${chronicleEntityLink("world", item.planet_id, item.planet_name)} / ${chronicleEntityLink("system", item.system_id, item.system_name)} / ${chronicleEntityLink("sector", item.subsector_id, item.subsector_name)}</small><small>${escapeHtml(item.aar_mission)} / ${item.pool === "omega" ? "Omega" : "Vanilla"} / ${item.filled} of ${item.capacity}${item.required_rank ? ` / ${escapeHtml(item.required_rank)}` : ""}</small><small>${escapeHtml(item.viewer_signup?.reason || statusLabel(item.status))}</small></span><span class="strike-search-actions"><button class="btn-dossier-action" type="button" data-strike-search-open="${escapeHtml(item.id)}">View on map</button><button class="btn-dossier-action" type="button" data-war-action="join" data-strike="${escapeHtml(item.id)}"${warView.busy ? " disabled" : ""}>Comply</button></span></article>`).join("") || `<p class="strike-operations-empty" role="status">${escapeHtml(searchStatus)}</p>`}</div>
         <div class="strike-operations-actions"><span>${search ? `Page ${search.page + 1} / ${Math.max(1, Math.ceil(search.total / search.page_size))}` : ""}</span><span>${search?.page > 0 ? `<button type="button" class="btn-dossier-action" data-strike-search-page="${search.page - 1}">Previous</button>` : ""}${search?.has_more ? `<button type="button" class="btn-dossier-action" data-strike-search-page="${search.page + 1}">Next</button>` : ""}</span></div>
       </section>
-      <section class="strike-operations-section" aria-label="Watch operations feed"><h3>Completed operations</h3>
+      <section class="strike-operations-section" aria-label="Watch operations feed"><h3>Chronicle of the Long Vigil</h3>
         <div class="strike-operation-terminal" role="log" aria-label="Astropathic operations chronicle" tabindex="0"><div class="strike-terminal-header">Watch Fortress Jericho · Astropathic traffic</div>
           ${activity.completed?.slice().reverse().map(activityLine).join("") || `<p class="strike-operations-empty">No completed strike operations recorded.</p>`}
         </div>
