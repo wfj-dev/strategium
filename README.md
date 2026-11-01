@@ -30,16 +30,20 @@ canvas mounted and preserves the strike-list scroll position.
 Planetary orbit rings use small, deterministic per-world tilts so occasional
 alignments remain possible without every orbit sharing the same visible axis.
 
-The full-map operations section below the chart includes an eligibility-filtered
-strike search and a central full-team matcher. Queue preferences cover location,
+The Priority strikes dropdown sits on the full map itself and opens the selected
+strike's system and deployment view. The operations section below the chart includes
+an eligibility-filtered strike search and a central full-team matcher. Members join
+the queue individually without selecting a strike or assembling a team first.
+Queue preferences cover location,
 Vanilla/Omega format, and specialist requirements. The bot waits for three compatible
 Vanilla or five compatible Omega members, then assigns and locks the whole roster in
 one transaction. Direct Comply/Withdraw signup remains available. Queue state is
 personal to the signed-in member; the site never displays other waiting members.
-The collapsed Priority strike orders list is preserved in this same below-map section.
-The adjacent Watch Operations chronicle is a scrolling terminal feed: open musters,
-sealed rosters, and recent vigils appear as concise event lines, with the newest
-completion at the bottom. Entries identify the Kill-Team, Company, operation, format,
+Location dropdowns contain only locations with currently joinable active strikes,
+independently of the current search filters and result page.
+The adjacent Watch Operations chronicle is a scrolling feed of completed operations
+only, with the newest completion at the bottom. Open musters and sealed rosters do
+not appear in the feed. Entries identify the Kill-Team, Company, operation, format,
 world, system, and subsector from campaign records. It does not invent failed
 deployments or a Ready/Deploy step. Search and feed refresh independently without
 covering the map or resetting its camera.

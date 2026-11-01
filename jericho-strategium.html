@@ -1127,8 +1127,21 @@
   .strike-search-form .aar-field { min-width: 0; }
   .strike-search-form .strike-filter-query { grid-column: span 2; }
   .strike-search-actions { display: flex; gap: 8px; align-items: end; }
-  .strike-queue-status { border-left: 2px solid var(--green); padding: 10px 12px; margin-bottom: 14px; background: rgba(79,214,122,.045); color: var(--green-dim); font-size: 12px; line-height: 1.6; }
+  .strike-queue-status { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-left: 2px solid var(--green); padding: 10px 12px; margin-bottom: 14px; background: rgba(79,214,122,.045); color: #92a89a; font-size: 12px; line-height: 1.6; }
+  .strike-queue-status > div:first-child { flex: 1 1 280px; }
+  .strike-queue-actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .strike-queue-status strong { color: var(--white); }
+  .strike-priority-orders { position: absolute; z-index: 4; top: 12px; right: 64px; width: min(340px, calc(100% - 180px)); max-height: calc(100% - 80px); overflow: auto; border: 1px solid var(--border); background: rgba(3,9,6,.97); }
+  .reach-map-shell.has-sector-panel .strike-priority-orders, .reach-map-shell.planet-mode .strike-priority-orders { display: none; }
+  .strike-priority-orders > summary { min-height: 46px; padding: 13px 12px; color: var(--gold); background: rgba(207,174,104,.05); cursor: pointer; font-size: 13px; }
+  .strike-priority-orders > summary:focus-visible, .priority-strike-row:focus-visible { outline: 1px solid var(--green); outline-offset: 2px; }
+  .priority-strike-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 13px 12px; border: 0; border-top: 1px solid var(--border-dim); border-radius: 0; background: transparent; text-align: left; cursor: pointer; color: var(--white); }
+  .priority-strike-row:hover { background: rgba(79,214,122,.05); }
+  .priority-strike-row > span { min-width: 0; overflow-wrap: anywhere; }
+  .priority-strike-row strong { display: block; font-size: 14px; }
+  .priority-strike-row small { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; color: #92a89a; }
+  .priority-strike-row .priority-strike-reason { color: var(--gold); }
+  .strike-priority-orders > .strike-operations-empty { padding: 0 12px; }
   .strike-operation-terminal { --chronicle-muted: #92a89a; max-height: 520px; overflow: auto; padding: 16px; border: 1px solid var(--border-dim); background: #020503; color: var(--chronicle-muted); font-size: 13px; line-height: 1.6; scrollbar-color: var(--green-faint) #050806; }
   .strike-operation-terminal:focus-visible { outline: 1px solid var(--green); outline-offset: 2px; }
   .strike-terminal-header { color: var(--gold); border-bottom: 1px solid var(--border-dim); padding-bottom: 12px; margin-bottom: 12px; font-size: 12px; }
@@ -1159,6 +1172,9 @@
     .strike-search-form { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .strike-search-form .strike-filter-query { grid-column: span 2; }
     .strike-operation-terminal { padding: 12px; }
+    .priority-strike-row { grid-template-columns: minmax(0,1fr); gap: 8px; }
+    .priority-strike-row .status-tag { justify-self: start; }
+    .strike-priority-orders { top: 72px; right: 12px; width: calc(100% - 24px); max-height: calc(100% - 140px); }
   }
   .reach-sector-panel {
     position: absolute; z-index: 5; inset: 0 0 0 auto; width: min(460px, 48%); min-width: 300px;
@@ -6123,80 +6139,100 @@ function strikeFilterValues() {
   };
 }
 
+function priorityStrikesHtml() {
+  const hidden = !state.auth.authenticated || state.geographyStatus !== "live" || warView.sandboxId || state.reachMapLevel !== "reach";
+  const recommendations = warView.operationData?.recommendations || warView.data?.recommendations;
+  const priorities = recommendations?.strikes || [];
+  return `<details id="priority-strikes" class="strike-priority-orders"${hidden ? " hidden" : ""}><summary data-priority-strikes-toggle>Priority strikes${priorities.length ? ` (${priorities.length})` : ""}</summary>${priorities.map(item => `<button type="button" class="priority-strike-row" data-recommended-strike="${escapeHtml(item.id)}"><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.planet_name)} / ${escapeHtml(item.system_name)} / ${escapeHtml(item.subsector_name)}</small><small>${escapeHtml(item.aar_mission)} · ${item.pool === "omega" ? "Omega" : "Vanilla"} · ${item.filled}/${item.capacity} brothers</small><small class="priority-strike-reason">${escapeHtml(item.reason)}</small></span><span class="status-tag">${item.current ? "Open deployment" : "Inspect strike"}</span></button>`).join("") || `<p class="strike-operations-empty">${escapeHtml(recommendations?.reason || "No priority strikes available.")}</p>`}</details>`;
+}
+
+function refreshPriorityStrikes() {
+  const menu = document.getElementById("priority-strikes");
+  if (!menu) return;
+  const wasOpen = menu.open;
+  const scrollTop = menu.scrollTop;
+  const focused = document.activeElement;
+  const focusAttribute = ["data-priority-strikes-toggle", "data-recommended-strike"].find(attribute => menu.contains(focused) && focused?.hasAttribute(attribute));
+  const focusValue = focusAttribute ? focused.getAttribute(focusAttribute) : null;
+  menu.outerHTML = priorityStrikesHtml();
+  const updated = document.getElementById("priority-strikes");
+  if (!updated) return;
+  updated.open = wasOpen;
+  updated.scrollTop = scrollTop;
+  if (focusAttribute) {
+    const replacement = [...updated.querySelectorAll(`[${focusAttribute}]`)].find(control => control.getAttribute(focusAttribute) === focusValue);
+    replacement?.focus({preventScroll: true});
+  }
+}
+
 function strikeOperationsHtml() {
   const hidden = !state.auth.authenticated || state.geographyStatus !== "live" || warView.sandboxId;
   if (hidden) return `<section id="strike-operations" class="strike-operations" hidden></section>`;
   const data = warView.operationData || warView.data;
   const search = data?.strike_search;
   const entries = search?.items || [];
-  const priorities = data?.recommendations?.strikes || [];
   const filters = warView.searchFilters;
   const matchmaking = data?.matchmaking;
   const queue = typeof matchmaking?.status === "string" ? {status: matchmaking.status} : matchmaking?.status || {status: "loading"};
-  const activity = data?.activity || {musters: [], deployments: [], completed: []};
-  const sectors = state.geography?.sectors || [];
-  const systems = state.geography?.systems || [];
-  const worlds = state.geography?.bodies?.filter(body => body.kind !== "star") || [];
+  const activity = data?.activity || {completed: []};
+  const sectors = search?.facets?.subsectors || [];
+  const systems = search?.facets?.systems || [];
+  const worlds = search?.facets?.worlds || [];
   const specialistRanks = data?.strike_search?.specialists || [];
   const option = (value, label, selected) => `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
   const select = (name, label, options) => `<label class="aar-field"><span class="field-label">${label}</span><select class="field-input" data-strike-filter="${name}">${options}</select></label>`;
   const filterOptions = (items, current, label) => option("", `All ${label}`, !current) + items.map(item => option(item.id, item.name, item.id === current)).join("");
   const matched = queue.status === "matched" && queue.match;
   const queueMessage = queue.status === "waiting"
-    ? `Muster pending. Overall queue entry ${queue.position || "unavailable"}; compatible preferences determine matching, with no ETA. Awaiting a complete ${queue.preferences?.pool === "omega" ? "five-Brother Omega" : queue.preferences?.pool === "vanilla" ? "three-Brother Vanilla" : "compatible Kill-team"} for the Watch.`
-    : matched ? `Muster complete. ${queue.match.name} / ${queue.match.mission} / ${queue.match.pool === "omega" ? "Omega" : "Vanilla"}. Your Kill-team is assigned; roster sealed.`
-    : queue.status === "not_queued" ? matchmaking.can_join ? "No active muster entry. Search eligible strike orders or enter the muster." : matchmaking.reason || "Matchmaking is unavailable for this roster."
-    : queue.status === "disabled" ? "Matchmaking is disabled in invasion test sessions."
-    : queue.status === "loading" ? "Receiving your muster status..." : `Muster status: ${escapeHtml(titleCase(queue.status))}.`;
+    ? `Queued. Waiting for a complete ${queue.preferences?.pool === "omega" ? "five-player Omega team" : queue.preferences?.pool === "vanilla" ? "three-player Vanilla team" : "compatible team"}. Overall queue entry ${queue.position || "unavailable"}.`
+    : matched ? `Matched: ${queue.match.name} / ${queue.match.mission} / ${queue.match.pool === "omega" ? "Omega" : "Vanilla"}. Your strike roster is locked.`
+    : queue.status === "not_queued" ? matchmaking.can_join ? "Not queued." : matchmaking.reason || "Matchmaking is unavailable for this roster."
+    : queue.status === "disabled" ? "Queue unavailable in invasion test sessions."
+    : queue.status === "loading" ? "Loading queue status..." : `Queue status: ${titleCase(queue.status)}.`;
   const statusLabel = (status, item) => status === "completed" && item?.reversed ? "Vigil complete / credit reversed" : ({available: "Muster open", recruiting: "Muster in progress", locked: "Roster sealed", deployed: "Roster sealed", completed: "Vigil complete"}[status] || titleCase(status));
-  const activityLine = (item, kind) => {
+  const activityLine = item => {
     const format = item.pool === "omega" ? "Omega" : "Vanilla";
     const members = item.participants?.map(identity => data.participant_names?.[identity] || identity) || [];
     const count = item.capacity ? `${item.filled ?? item.participants?.length ?? 0}/${item.capacity}` : "";
-    const timestamp = kind === "completed" ? item.completed_at : item.locked_at;
-    const timeLabel = timestamp ? `${new Date(timestamp).toISOString().slice(0, 16).replace("T", " · ")} UTC` : "Live";
-    const status = kind === "muster" ? item.status === "recruiting" ? "Muster forming" : "Muster open"
-      : kind === "deployment" ? "Strike roster sealed"
-      : item.reversed ? "Vigil complete · Credit reversed" : "Vigil complete";
+    const timestamp = item.completed_at;
+    const timeLabel = timestamp ? `${new Date(timestamp).toISOString().slice(0, 16).replace("T", " · ")} UTC` : "Time unrecorded";
+    const status = item.reversed ? "Vigil complete · Credit reversed" : "Vigil complete";
     const teams = item.kill_teams || [];
-    const teamName = teams.map(name => name.replace(/^kill[ -]team\s+/i, "")).join(" · ") || (kind === "muster" ? "Awaiting full team" : "Unrecorded");
-    const companyName = item.companies?.join(" · ") || (kind === "muster" ? "Awaiting assignment" : "Unrecorded");
+    const teamName = teams.map(name => name.replace(/^kill[ -]team\s+/i, "")).join(" · ") || "Unrecorded";
+    const companyName = item.companies?.join(" · ") || "Unrecorded";
     const operationName = item.name || item.mission || "Strike order";
-    return `<article class="strike-terminal-line ${kind === "completed" ? item.reversed ? "reversed" : "completed" : ""}">
+    return `<article class="strike-terminal-line ${item.reversed ? "reversed" : "completed"}">
       <header class="terminal-entry-header"><span class="terminal-state">${escapeHtml(status)}</span><time${timestamp ? ` datetime="${escapeHtml(timestamp)}"` : ""}>${escapeHtml(timeLabel)}</time></header>
       <h4 class="terminal-event">${escapeHtml(operationName)}</h4>
       <p class="terminal-mission">${escapeHtml(item.mission || "Unrecorded mission")} · ${format}${count ? ` · ${count} brothers` : ""}</p>
       <p class="terminal-location"><strong>${escapeHtml(item.planet_name || "Uncharted world")}</strong><small>${escapeHtml(item.system_name || "Uncharted system")} / ${escapeHtml(item.subsector_name || "Uncharted sector")}</small></p>
       <dl class="terminal-assignment"><dt>${teams.length > 1 ? "Kill-teams" : "Kill-team"}</dt><dd>${escapeHtml(teamName)}</dd><dt>${item.companies?.length > 1 ? "Companies" : "Company"}</dt><dd>${escapeHtml(companyName)}</dd></dl>
-      ${members.length ? `<details class="terminal-roster" data-activity-roster="${escapeHtml(item.id)}"><summary data-activity-roster-toggle="${escapeHtml(item.id)}">${members.length} ${members.length === 1 ? "brother" : "brothers"} ${kind === "muster" ? "mustered" : "deployed"}</summary><ul>${members.map(name => `<li>${escapeHtml(name)}</li>`).join("")}</ul></details>` : ""}
+      ${members.length ? `<details class="terminal-roster" data-activity-roster="${escapeHtml(item.id)}"><summary data-activity-roster-toggle="${escapeHtml(item.id)}">${members.length} ${members.length === 1 ? "brother" : "brothers"} deployed</summary><ul>${members.map(name => `<li>${escapeHtml(name)}</li>`).join("")}</ul></details>` : ""}
     </article>`;
   };
   const isSearching = !search && !warView.error;
   const searchStatus = warView.operationsError || warView.error || (isSearching ? "Receiving eligible strike offers..." : "No eligible strikes match these filters.");
   return `<section id="strike-operations" class="strike-operations" aria-label="Strike search and operations feed">
     <header class="strike-operations-header"><div><span class="field-label">WATCH FORTRESS JERICHO // ASTROPATHIC RELAY</span><h2>Jericho Strike Chronicle</h2></div><p>${search ? `${search.total} eligible strike orders` : "Awaiting campaign return"}</p></header>
-    <div class="strike-queue-status" role="status"><strong>Your muster status:</strong> ${escapeHtml(queueMessage)}${queue.status === "waiting" ? ` <button type="button" class="btn-dossier-action" data-war-action="queue_leave"${warView.busy ? " disabled" : ""}>Withdraw from muster</button>` : ""}</div>
-    <details class="strike-priority-orders"><summary>Priority strike orders${priorities.length ? ` (${priorities.length})` : ""}</summary>${priorities.map(item => `<button type="button" class="priority-strike-row" data-recommended-strike="${escapeHtml(item.id)}"><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.planet_name)} / ${escapeHtml(item.system_name)} / ${escapeHtml(item.subsector_name)}</small><small>${escapeHtml(item.aar_mission)} / ${item.pool === "omega" ? "Omega" : "Vanilla"} / ${item.filled} of ${item.capacity}</small><small class="priority-strike-reason">${escapeHtml(item.reason)}${item.current ? " / Current deployment" : ""}</small></span><span class="status-tag">${item.current ? "Open deployment" : "Inspect order"}</span></button>`).join("") || `<p class="strike-operations-empty">No priority orders for this Watch member.</p>`}</details>
+    <div class="strike-queue-status"><div role="status"><strong>Queue status:</strong> ${escapeHtml(queueMessage)}</div><div class="strike-queue-actions"><button class="btn-primary" type="button" data-war-action="queue_join"${warView.busy || !matchmaking?.can_join ? " disabled" : ""}>${queue.status === "waiting" ? "Update preferences" : "Join queue"}</button>${queue.status === "waiting" ? `<button type="button" class="btn-dossier-action" data-war-action="queue_leave"${warView.busy ? " disabled" : ""}>Leave queue</button>` : ""}</div></div>
     <div class="strike-operations-grid">
       <section class="strike-operations-section" aria-label="Eligible strike search"><h3>Eligible strike orders</h3>
         <form class="strike-search-form" data-strike-search-form>
           <label class="aar-field strike-filter-query"><span class="field-label">Objective, world, system or subsector</span><input class="field-input" data-strike-filter="query" maxlength="80" value="${escapeHtml(filters.query)}"></label>
           ${select("subsector_id", "Subsector", filterOptions(sectors, filters.subsector_id, "subsectors"))}
-          ${select("system_id", "System", filterOptions(systems.filter(system => !filters.subsector_id || system.sectorId === filters.subsector_id), filters.system_id, "systems"))}
-          ${select("planet_id", "World", filterOptions(worlds.filter(world => (!filters.subsector_id || world.sectorId === filters.subsector_id) && (!filters.system_id || world.systemId === filters.system_id)), filters.planet_id, "worlds"))}
+          ${select("system_id", "System", filterOptions(systems.filter(system => !filters.subsector_id || system.subsector_id === filters.subsector_id), filters.system_id, "systems"))}
+          ${select("planet_id", "World", filterOptions(worlds.filter(world => (!filters.subsector_id || world.subsector_id === filters.subsector_id) && (!filters.system_id || world.system_id === filters.system_id)), filters.planet_id, "worlds"))}
           ${select("pool", "Format", option("any", "Vanilla or Omega", filters.pool === "any") + option("vanilla", "Vanilla / 3 players", filters.pool === "vanilla") + option("omega", "Omega / 5 players", filters.pool === "omega"))}
           ${select("specialist", "Specialist requirement", option("any", "Any requirement", filters.specialist === "any") + option("none", "No specialist", filters.specialist === "none") + option("required", "Specialist required", filters.specialist === "required") + specialistRanks.map(rank => option(rank, rank, filters.specialist === rank)).join(""))}
           ${select("availability", "Muster state", option("any", "Open or recruiting", filters.availability === "any") + option("available", "Muster open", filters.availability === "available") + option("recruiting", "Recruiting", filters.availability === "recruiting"))}
-          <div class="strike-search-actions"><button class="btn-primary" type="button" data-strike-search>Query orders</button><button class="btn-dossier-action" type="button" data-war-action="queue_join"${warView.busy || !matchmaking?.can_join ? " disabled" : ""}>${queue.status === "waiting" ? "Amend muster preferences" : "Enter muster"}</button></div>
+          <div class="strike-search-actions"><button class="btn-primary" type="button" data-strike-search>Query orders</button></div>
         </form>
         <div class="strike-operation-list" aria-live="polite">${entries.map(item => `<article class="strike-operation-row"><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.planet_name)} / ${escapeHtml(item.system_name)} / ${escapeHtml(item.subsector_name)}</small><small>${escapeHtml(item.aar_mission)} / ${item.pool === "omega" ? "Omega" : "Vanilla"} / ${item.filled} of ${item.capacity}${item.required_rank ? ` / ${escapeHtml(item.required_rank)}` : ""}</small><small>${escapeHtml(item.viewer_signup?.reason || statusLabel(item.status))}</small></span><span class="strike-search-actions"><button class="btn-dossier-action" type="button" data-strike-search-open="${escapeHtml(item.id)}">View on map</button><button class="btn-dossier-action" type="button" data-war-action="join" data-strike="${escapeHtml(item.id)}"${warView.busy ? " disabled" : ""}>Comply</button></span></article>`).join("") || `<p class="strike-operations-empty" role="status">${escapeHtml(searchStatus)}</p>`}</div>
         <div class="strike-operations-actions"><span>${search ? `Page ${search.page + 1} / ${Math.max(1, Math.ceil(search.total / search.page_size))}` : ""}</span><span>${search?.page > 0 ? `<button type="button" class="btn-dossier-action" data-strike-search-page="${search.page - 1}">Previous</button>` : ""}${search?.has_more ? `<button type="button" class="btn-dossier-action" data-strike-search-page="${search.page + 1}">Next</button>` : ""}</span></div>
       </section>
-      <section class="strike-operations-section" aria-label="Watch operations feed"><h3>Watch operations feed</h3>
+      <section class="strike-operations-section" aria-label="Watch operations feed"><h3>Completed operations</h3>
         <div class="strike-operation-terminal" role="log" aria-label="Astropathic operations chronicle" tabindex="0"><div class="strike-terminal-header">Watch Fortress Jericho · Astropathic traffic</div>
-          <div class="strike-terminal-section">Open musters ${activity.musters_truncated ? "(first 100)" : ""}</div>${activity.musters?.map(item => activityLine(item, "muster")).join("") || `<p class="strike-operations-empty">No strike musters currently open.</p>`}
-          <div class="strike-terminal-section">Sealed strike rosters ${activity.deployments_truncated ? "(latest 50)" : ""}</div>${activity.deployments?.map(item => activityLine(item, "deployment")).join("") || `<p class="strike-operations-empty">No sealed strike rosters.</p>`}
-          <div class="strike-terminal-section">Recent vigils</div>${activity.completed?.slice().reverse().map(item => activityLine(item, "completed")).join("") || `<p class="strike-operations-empty">No completed strike operations recorded.</p>`}
+          ${activity.completed?.slice().reverse().map(activityLine).join("") || `<p class="strike-operations-empty">No completed strike operations recorded.</p>`}
         </div>
         ${activity.next_cursor ? `<div class="strike-operations-actions"><span>Older records available</span><button type="button" class="btn-dossier-action" data-activity-more="${escapeHtml(activity.next_cursor)}">Load older records</button></div>` : ""}
       </section>
@@ -6205,6 +6241,7 @@ function strikeOperationsHtml() {
 }
 
 function refreshStrikeOperations() {
+  refreshPriorityStrikes();
   const host = document.getElementById("strike-operations");
   if (!host) return;
   const terminal = host.querySelector(".strike-operation-terminal");
@@ -6263,7 +6300,7 @@ function openStrikeSearchResult(identity) {
 }
 
 function openRecommendedStrike(identity) {
-  const offer = warView.operationData?.recommendations?.strikes?.find(item => item.id === identity);
+  const offer = (warView.operationData?.recommendations || warView.data?.recommendations)?.strikes?.find(item => item.id === identity);
   if (!offer || !state.auth.authenticated || warView.sandboxId) return;
   const sequence = ++warView.recommendationSequence;
   warView.recommendationPending = true;
@@ -8902,6 +8939,7 @@ function renderReach() {
     ${geographyLive ? `<div class="reach-mobile-toolbar"><label>Sector<select class="reach-select" data-mobile-sector-select aria-label="Choose map sector"><option value="">All sectors</option>${state.geography.sectors.map(sector => `<option value="${escapeHtml(sector.id)}"${sector.id === state.selectedSector ? " selected" : ""}>${escapeHtml(sector.name)}</option>`).join("")}</select></label><button class="btn-dossier-action" type="button" data-mobile-details${selectedSector ? "" : " disabled"}>Details &darr;</button></div><details class="reach-mobile-index"><summary>Sector directory</summary>${mobileGeographyHtml()}</details>` : ""}
     <div class="reach-map-shell${selectedSector ? " has-sector-panel" : ""}">
       <div class="reach-viewport" id="reach-viewport">
+        ${priorityStrikesHtml()}
         ${geographyLive ? `<canvas id="reach-canvas" class="reach-canvas" aria-label="Galactic sector chart with the Jericho Reach at its center"></canvas>` : reachSvg(reach, directives)}
         ${geographyLive ? `<section id="reach-planet-stage" class="reach-planet-stage" aria-label="Planet deployment view" hidden><img class="planet-art-fallback" alt=""><img id="planet-region-art" class="planet-region-art" alt=""><svg id="planet-preview-leader" class="planet-preview-leader" aria-hidden="true" hidden><path pathLength="1"></path></svg><div id="planet-strike-preview" class="planet-strike-preview" role="tooltip" hidden><img alt=""><strong></strong><small></small></div><div class="planet-stage-heading"><span class="field-label">Deathwatch deployment theatre</span><h2 id="planet-stage-name"></h2><p id="planet-stage-class"></p></div><button class="btn-dossier-action planet-stage-back" type="button" data-planet-return>Return to system</button><span id="planet-stage-target" class="planet-stage-target" aria-live="polite"></span></section>` : ""}
         ${geographyLive ? `<div class="reach-map-level"><strong>Galactic Map</strong>Sector chart</div><div id="reach-canvas-status" class="reach-canvas-status">29 sectors / Secure</div><div id="reach-canvas-tooltip" class="reach-canvas-tooltip" hidden></div>` : ""}

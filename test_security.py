@@ -1978,6 +1978,7 @@ const html=fs.readFileSync(process.argv[1],'utf8');
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 const renderStart=html.indexOf('function renderReach()'),renderEnd=html.indexOf('function reachFitWidth(',renderStart),render=html.slice(renderStart,renderEnd);
 assert.match(render,/<div class="reach-map-shell[\s\S]*?<\/div>\s*\$\{strikeOperationsHtml\(\)\}/);
+assert.match(render,/<div class="reach-viewport" id="reach-viewport">\s*\$\{priorityStrikesHtml\(\)\}/);
 assert.doesNotMatch(html,/\.priority-strikes\s*\{\s*position:\s*absolute/);
 const c={
  state:{auth:{authenticated:true},page:'reach',geographyStatus:'live',reachMapLevel:'reach',geography:{sectors:[],systems:[],bodies:[{id:'world',kind:'planet',name:'Vhaloris',systemId:'system'}]},selectedSystem:null},
@@ -1988,31 +1989,46 @@ const c={
 c.warView.operationData.recommendations={strikes:[{id:'current-strike',name:'Ashen Vigil',planet_name:'Vhaloris',system_name:'Ctesiphus',subsector_name:'Jericho Reach',aar_mission:'Inferno',pool:'omega',filled:5,capacity:5,reason:'Current deployment',current:true,status:'locked'}]};
 c.warView.operationData.matchmaking.can_join=true;
 c.warView.operationData.matchmaking.reason='';
+c.state.geography.sectors=[{id:'inactive-sector',name:'Inactive sector'}];
+c.state.geography.systems=[{id:'inactive-system',name:'Inactive system',sectorId:'inactive-sector'}];
+c.state.geography.bodies.push({id:'inactive-world',kind:'planet',name:'Inactive world',sectorId:'inactive-sector',systemId:'inactive-system'});
+c.warView.operationData.strike_search.facets={
+ subsectors:[{id:'alpha',name:'Jericho Reach'},{id:'other-active-sector',name:'Other active sector'}],
+ systems:[{id:'system',name:'Ctesiphus',subsector_id:'alpha'},{id:'other-active-system',name:'Other active system',subsector_id:'other-active-sector'}],
+ worlds:[{id:'world',name:'Vhaloris',subsector_id:'alpha',system_id:'system'},{id:'other-active-world',name:'Other active world',subsector_id:'other-active-sector',system_id:'other-active-system'}],
+};
 c.warView.operationData.participant_names={'42':'Watch Veteran MK','43':'Watch Veteran Aether','44':'Watch Veteran RXGUE','45':'Watch Apothecary Ro´shan','46':'<Watch Master Van>'};
 c.warView.operationData.activity.completed.push({id:'GW-mixed',name:'Cleansing Flame',mission:'Termination',pool:'omega',planet_name:'Kethrys',system_name:'Penumbral Choir',subsector_name:'The Canticle Reach',kill_teams:['Kill-Team Timotheos','Kill-Team Ghost','Kill-Team Van'],companies:['Primus','Tertius','Quartus'],participants:['42','43','44','45','46'],locked_at:'2026-11-01T16:00:00Z',completed_at:'2026-11-01T17:19:35.484Z'});
 vm.createContext(c);
-vm.runInContext(html.slice(html.indexOf('function strikeOperationsHtml()'),html.indexOf('function refreshStrikeOperations()')),c);
+vm.runInContext(html.slice(html.indexOf('function priorityStrikesHtml()'),html.indexOf('function refreshStrikeOperations()')),c);
 const markup=c.strikeOperationsHtml();
+const priorityMenu=c.priorityStrikesHtml();
 assert.match(markup,/Eligible strike orders/);
 assert.match(markup,/data-strike-filter="pool"/);
 assert.match(markup,/data-strike-filter="specialist"/);
+assert.match(markup,/<option value="alpha"/);
+assert.match(markup,/<option value="system"/);
+assert.match(markup,/<option value="world"/);
+assert.doesNotMatch(markup,/option value="inactive-(sector|system|world)"/);
 assert.match(markup,/data-war-action="queue_join"/);
-assert.match(markup,/<summary>Priority strike orders \(1\)<\/summary>/);
-assert.match(markup,/data-recommended-strike="current-strike"/);
-assert.match(markup,/Muster pending\. Overall queue entry 1; compatible preferences determine matching, with no ETA/);
+assert.match(priorityMenu,/<summary data-priority-strikes-toggle>Priority strikes \(1\)<\/summary>/);
+assert.doesNotMatch(markup,/strike-priority-orders|Recommended strikes|Priority strikes/);
+assert.match(html,/\.strike-priority-orders > summary \{ min-height: 46px/);
+assert.match(priorityMenu,/data-recommended-strike="current-strike"/);
+assert.match(markup,/Queued\. Waiting for a complete three-player Vanilla team\. Overall queue entry 1/);
+assert.match(markup,/data-war-action="queue_leave"[^>]*>Leave queue/);
+assert.doesNotMatch(markup.match(/<form class="strike-search-form"[\s\S]*?<\/form>/)[0],/data-war-action="queue_join"/);
 assert.match(markup,/Purge the Shrine/);
 assert.match(markup,/Astropathic traffic/);
-assert.match(markup,/Open musters/);
-assert.match(markup,/Sealed strike rosters/);
-assert.match(markup,/Recent vigils/);
-assert.match(markup,/Muster forming/);
-assert.match(markup,/Strike roster sealed/);
+assert.match(markup,/Completed operations/);
+const feed=markup.split('class="strike-operation-terminal"')[1];
+assert.doesNotMatch(feed,/Open musters|Sealed strike rosters|Muster forming|Strike roster sealed|The Sundered Reliquary|Purge the Shrine|GW-live/);
 assert.match(markup,/Vigil complete/);
 assert.match(markup,/<h4 class="terminal-event">Ashen Vigil<\/h4>/);
 assert.match(markup,/<dt>Kill-team<\/dt><dd>Alpha Strike Team<\/dd>/);
 assert.match(markup,/<dt>Company<\/dt><dd>Primus<\/dd>/);
-assert.match(markup,/Inferno · Omega/);
-assert.match(markup,/<strong>Avarax<\/strong>/);
+assert.match(markup,/Termination · Omega/);
+assert.match(markup,/<strong>Kethrys<\/strong>/);
 assert.match(markup,/Ctesiphus \/ Jericho Reach/);
 assert.match(markup,/<details class="terminal-roster" data-activity-roster="GW-done"><summary[^>]*>3 brothers deployed<\/summary>/);
 assert.match(markup,/2026-10-29 · 12:00 UTC/);
@@ -2027,10 +2043,33 @@ assert.doesNotMatch(markup,/AAR COMPLETION RECORDS|AAR RECORDED/);
 assert.doesNotMatch(markup,/AAR RECORDED ::/);
 assert.doesNotMatch(markup,/Full force assembled/);
 assert.doesNotMatch(markup,/data-war-action="queue_join" disabled/);
+c.warView.searchFilters.subsector_id='alpha';
+c.warView.searchFilters.system_id='system';
+const narrowed=c.strikeOperationsHtml();
+const systemOptions=narrowed.match(/data-strike-filter="system_id">([\s\S]*?)<\/select>/)[1];
+const worldOptions=narrowed.match(/data-strike-filter="planet_id">([\s\S]*?)<\/select>/)[1];
+assert.match(systemOptions,/option value="system"/);
+assert.doesNotMatch(systemOptions,/other-active-system/);
+assert.match(worldOptions,/option value="world"/);
+assert.doesNotMatch(worldOptions,/other-active-world/);
+c.warView.searchFilters.subsector_id='';
+c.warView.searchFilters.system_id='';
+const activeFacets=c.warView.operationData.strike_search.facets;
+delete c.warView.operationData.strike_search.facets;
+assert.doesNotMatch(c.strikeOperationsHtml(),/option value="(inactive-sector|inactive-system|inactive-world|world)"/);
+c.warView.operationData.strike_search.facets=activeFacets;
+const completed=c.warView.operationData.activity.completed;
+c.warView.operationData.activity.completed=[];
+const emptyFeed=c.strikeOperationsHtml().split('class="strike-operation-terminal"')[1];
+assert.match(emptyFeed,/No completed strike operations recorded/);
+assert.doesNotMatch(emptyFeed,/The Sundered Reliquary|Purge the Shrine/);
+c.warView.operationData.activity.completed=completed;
 const waitingMatchmaking=c.warView.operationData.matchmaking;
 c.warView.operationData.matchmaking={status:{status:'not_queued'},can_join:true,reason:''};
 const eligibleMarkup=c.strikeOperationsHtml();
-assert.match(eligibleMarkup,/No active muster entry/);
+assert.match(eligibleMarkup,/Not queued\./);
+assert.match(eligibleMarkup,/data-war-action="queue_join">Join queue/);
+assert.doesNotMatch(eligibleMarkup,/Your muster status|Enter muster|Amend muster preferences/);
 assert.doesNotMatch(eligibleMarkup,/Matchmaking is unavailable|data-war-action="queue_join" disabled/);
 for(const reason of ['Active Watch Brother membership is required for matchmaking.','Withdraw from your current direct signup before entering matchmaking.']){
  c.warView.operationData.matchmaking={status:{status:'not_queued'},can_join:false,reason};
@@ -2039,20 +2078,40 @@ for(const reason of ['Active Watch Brother membership is required for matchmakin
  assert.match(restrictedMarkup,/data-war-action="queue_join" disabled/);
 }
 c.warView.operationData.matchmaking={status:'disabled',can_join:false,reason:''};
-assert.match(c.strikeOperationsHtml(),/Matchmaking is disabled in invasion test sessions/);
+assert.match(c.strikeOperationsHtml(),/Queue unavailable in invasion test sessions/);
 delete c.warView.operationData.matchmaking;
-assert.match(c.strikeOperationsHtml(),/Receiving your muster status/);
+assert.match(c.strikeOperationsHtml(),/Loading queue status/);
 c.warView.operationData.matchmaking=waitingMatchmaking;
 const restoredRoster={open:false,getAttribute:()=> 'GW-mixed'};
 const originalTerminal={scrollTop:20,scrollHeight:900,clientHeight:520,querySelectorAll:()=>[{getAttribute:()=> 'GW-mixed'}]};
 const updatedTerminal={scrollHeight:900,querySelectorAll:()=>[restoredRoster]};
-let refreshed=false;
+let refreshed=false,menuRefreshed=false;
+const originalRecommendations={open:true,scrollTop:9,contains:()=>false,set outerHTML(value){menuRefreshed=true;}};
+const updatedRecommendations={open:false,scrollTop:0};
 const host={querySelector:()=>refreshed?updatedTerminal:originalTerminal,set outerHTML(value){refreshed=true;}};
-c.document.getElementById=()=>host;
+c.document.getElementById=identity=>identity==='priority-strikes'?(menuRefreshed?updatedRecommendations:originalRecommendations):host;
 vm.runInContext(html.slice(html.indexOf('function refreshStrikeOperations()'),html.indexOf('function openStrikeSearchResult(')),c);
 c.refreshStrikeOperations();
 assert.equal(restoredRoster.open,true);
 assert.equal(updatedTerminal.scrollTop,20);
+assert.equal(updatedRecommendations.open,true);
+assert.equal(updatedRecommendations.scrollTop,9);
+let openedStrike='',openedSystem='';
+c.warView.data={boards:{world:[{id:'current-strike',status:'locked'}]}};
+c.warView.recommendationSequence=0;
+c.warView.recommendationPending=false;
+c.warView.operationData.recommendations.strikes[0].system_id='system';
+c.showSystemLevel=async identity=>{openedSystem=identity;c.state.selectedSystem=identity;c.state.reachMapLevel='system';};
+c.selectPlanetStrike=async identity=>{openedStrike=identity;};
+c.document.getElementById=()=>({scrollIntoView:()=>{}});
+c.refreshStrikeOperations=()=>{};
+vm.runInContext(html.slice(html.indexOf('function openRecommendedStrike('),html.indexOf('async function loadWar()')),c);
+(async()=>{
+ await c.openRecommendedStrike('current-strike');
+ assert.equal(openedSystem,'system');
+ assert.equal(openedStrike,'current-strike');
+ assert.equal(c.warView.recommendationPending,false);
+})().catch(error=>{console.error(error);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
