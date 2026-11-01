@@ -4589,12 +4589,10 @@ function renderSubmitAar() {
       aarDraft.reviewing = false;
       renderSubmitAar();
       setAarStatus(
-        result.review_pending
-          ? "Evidence is awaiting independent review. Rewards have not been applied."
-          : result.processing_pending
+        result.processing_pending
           ? "The Discord receipt is posted. Archive processing will retry automatically."
           : "The report is recorded in the Watch archive.",
-        result.processing_pending || result.review_pending ? "" : "success"
+        result.processing_pending ? "" : "success"
       );
       const receiptUrl = String(result.receipt_url || "");
       if (receiptUrl.startsWith("https://discord.com/channels/")) {
@@ -5868,7 +5866,7 @@ function strikeActionBarHtml(offer) {
     const war = warView.data;
     const joined = offer.participants.includes(war.actor.id);
     const recruiting = ["available", "recruiting"].includes(offer.status);
-    const locked = ["locked", "deployed"].includes(offer.status);
+    const locked = ["locked", "deployed", "review_pending"].includes(offer.status);
     const testing = war.sandbox?.viewing === true;
     if (testing) return "";
     const canParticipate = !testing && war.actor.watch_brother === true && war.actor.active !== false;
@@ -5878,8 +5876,8 @@ function strikeActionBarHtml(offer) {
     let primary = "";
     if (recruiting && joined) primary = button("leave", "Withdraw", `data-strike="${escapeHtml(offer.id)}" `);
     else if (recruiting) primary = button("join", "Comply", `data-strike="${escapeHtml(offer.id)}" `, !canJoin);
-    else if (locked && joined) primary = button("report", "Report completion", `data-strike="${escapeHtml(offer.id)}" `);
-    const reason = recruiting && !joined ? signup?.reason || (!canParticipate ? "Active membership and the Watch Brother role are required." : "") : offer.status === "review_pending" ? "Evidence awaiting independent review." : locked ? "Roster locked" : "";
+    else if (locked && joined) primary = button("report", offer.report_correction ? "Correct AAR" : "Report completion", `data-strike="${escapeHtml(offer.id)}" `);
+    const reason = recruiting && !joined ? signup?.reason || (!canParticipate ? "Active membership and the Watch Brother role are required." : "") : locked ? offer.report_correction ? `Correction required: ${offer.report_correction.reason} The previous report was not archived or credited.` : "Roster locked" : "";
     const replacement = recruiting && !joined && canJoin && signup?.replaces_strike?.name ? `Complying with this strike will withdraw you from ${signup.replaces_strike.name}.` : "";
     const message = reason || replacement;
     return `<div class="strike-action-bar">${primary || `<span class="strike-context">${escapeHtml(titleCase(offer.status))}</span>`}<span class="strike-capacity">${offer.participants.length} / ${offer.capacity} joined</span>${message ? `<p class="strike-action-reason">${escapeHtml(message)}</p>` : ""}</div>`;
@@ -6215,22 +6213,16 @@ function warConsoleHtml() {
     <p><span class="field-label">Positive</span><br>${escapeHtml(recipe.positive)}</p>
     <span class="field-label">Three negatives</span><ul>${(recipe.negatives || []).map(name => `<li>${escapeHtml(name)}</li>`).join("")}</ul>
     ${recipe.forced?.length ? `<p><span class="field-label">Mandatory faction conversion / additional</span><br>${recipe.forced.map(name => escapeHtml(name)).join(", ")}</p>` : ""}
-    <p>${testing ? "TEST / Simulated completions only. No real AARs or rewards." : "Evidence: stratagem selection and operation result. Independent staff approval required."}</p>
+    <p>${testing ? "TEST / Simulated completions only. No real AARs or rewards." : "Submitted participants, mission and difficulty must match the locked strike."}</p>
     <details><summary>Vanilla adaptation / revision ${escapeHtml(recipe.version)}</summary>${(recipe.notes || []).map(note => `<p>${escapeHtml(note)}</p>`).join("")}</details>
   </div>` : "";
-  const reviewPanel = staff ? `<section aria-label="Strike evidence review"><h3 class="tier-label">Evidence review</h3>
-    ${(war.reviews || []).map(review => `<div class="reach-toolbar"><span>${escapeHtml(review.mission)} / AAR ${escapeHtml(review.aar_id)} / ${escapeHtml(review.reason)}</span>
-      ${recipeHtml(review.recipe)}
-      ${review.receipt_url?.startsWith("https://discord.com/channels/") ? `<a href="${escapeHtml(review.receipt_url)}" target="_blank" rel="noopener noreferrer">Evidence receipt</a>` : ""}
-      ${review.status === "pending" && !review.participants.includes(war.actor.id) ? `<label>Review reason<input class="reach-select" data-war-review-reason="${escapeHtml(review.strike_id)}" maxlength="500"></label>${button("review", "Approve", `data-strike="${escapeHtml(review.strike_id)}" data-decision="approve" `)}${button("review", "Reject", `data-strike="${escapeHtml(review.strike_id)}" data-decision="reject" `)}` : `<span>${review.status === "approved" ? "Approved / archive processing" : "Independent reviewer required"}</span>`}
-    </div>`).join("") || `<p>No reports awaiting review.</p>`}
-    <h3 class="tier-label">Strike credit corrections</h3><div class="reach-toolbar"><label>Settled strike to reverse<select class="reach-select" data-war-reversal>${(war.recent_results || []).filter(result => !result.reversed && !result.participants.includes(war.actor.id)).map(result => option(result.strike_id, `${result.mission} / AAR ${result.aar_id}`)).join("")}</select></label><label>Why reverse this credit?<input class="reach-select" data-war-reversal-reason maxlength="500"></label>${button("reverse", "Reverse strike credit")}</div>
+  const reviewPanel = staff ? `<section aria-label="Strike credit corrections"><h3 class="tier-label">Strike credit corrections</h3><div class="reach-toolbar"><label>Settled strike to reverse<select class="reach-select" data-war-reversal>${(war.recent_results || []).filter(result => !result.reversed && !result.participants.includes(war.actor.id)).map(result => option(result.strike_id, `${result.mission} / AAR ${result.aar_id}`)).join("")}</select></label><label>Why reverse this credit?<input class="reach-select" data-war-reversal-reason maxlength="500"></label>${button("reverse", "Reverse strike credit")}</div>
   </section>` : "";
   if (strikeMode) {
     const offer = selectedStrike;
     if (!offer) return `<section id="war-console" aria-label="Strike deployment"><button type="button" class="btn-dossier-action strike-panel-back" data-strike-back>Return to planet</button><p>This strike is no longer available.</p></section>`;
     const joined = offer.participants.includes(war.actor.id);
-    const locked = ["locked", "deployed"].includes(offer.status);
+    const locked = ["locked", "deployed", "review_pending"].includes(offer.status);
     const signup = offer.viewer_signup;
     const sceneAction = state.geographyStatus === "live" && !!state.geography;
     const actionFallback = sceneAction ? "" : strikeActionBarHtml(offer);
@@ -6250,7 +6242,7 @@ function warConsoleHtml() {
       }).join("")}</ol></section>
       <details class="strike-secondary strike-modifier-details" data-war-section="strike-modifiers"><summary>Modifier effects</summary><section class="strike-section" aria-label="Strike modifiers">${recipe ? `<div class="strike-modifier-group positive"><h4>Positive / 1</h4>${modifier(recipe.positive)}</div><div class="strike-modifier-group negative"><h4>Negative / ${recipe.negatives.length}</h4>${recipe.negatives.map(modifier).join("")}</div>${recipe.forced?.length ? `<div class="strike-modifier-group forced"><h4>Mandatory faction conversion / additional</h4>${recipe.forced.map(modifier).join("")}</div>` : ""}` : `<p class="strike-context">No additional stratagem recipe assigned.</p>`}</section></details>
       ${testingTools}
-      ${recipe ? `<details class="strike-secondary" data-war-section="strike-evidence"><summary>Evidence and adaptation</summary><p>Evidence must show the assigned stratagems and operation result. Independent staff approval is required.</p>${(recipe.notes || []).map(note => `<p>${escapeHtml(note)}</p>`).join("")}</details>` : ""}
+      ${recipe ? `<details class="strike-secondary" data-war-section="strike-evidence"><summary>Evidence and adaptation</summary><p>Submitted participants, mission and difficulty must match the locked strike.</p>${(recipe.notes || []).map(note => `<p>${escapeHtml(note)}</p>`).join("")}</details>` : ""}
       ${offer.attempt_id ? `<details class="strike-secondary"><summary>Strike reference</summary><p><code>${escapeHtml(offer.attempt_id)}</code></p></details>` : ""}
       ${locked && (joined || master) ? `<details class="strike-secondary" data-war-section="strike-cancel"><summary>Cancel roster</summary><label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}</details>` : ""}
     </article><div role="status" aria-live="polite">${escapeHtml(warView.error)}</div></section>`;
@@ -6289,18 +6281,18 @@ function warConsoleHtml() {
       <button class="btn-dossier-action" type="button" data-war-pool="omega" aria-pressed="${pool === "omega"}"${warView.busy ? " disabled" : ""}>Omega</button>
     </div>
     <h3 class="tier-label">${selectedSystem ? `${escapeHtml(selectedSystem.name)} / ` : ""}Strikes</h3>
-    <div class="war-board-status" aria-label="Selected strike board status"><span>${board.filter(offer => offer.status === "available").length} available</span><span>${board.filter(offer => offer.status === "recruiting").length} recruiting</span><span>${board.filter(offer => ["locked", "deployed"].includes(offer.status)).length} locked</span><span>${board.filter(offer => offer.status === "review_pending").length} awaiting review</span></div>
+    <div class="war-board-status" aria-label="Selected strike board status"><span>${board.filter(offer => offer.status === "available").length} available</span><span>${board.filter(offer => offer.status === "recruiting").length} recruiting</span><span>${board.filter(offer => ["locked", "deployed", "review_pending"].includes(offer.status)).length} locked</span></div>
     <div class="war-strike-list" aria-label="System strikes">${board.map(offer => `<button type="button" class="war-strike-row" data-war-strike="${escapeHtml(offer.id)}" data-war-strike-planet="${escapeHtml(offer.planet_id)}" aria-pressed="${offer.id === selectedStrike?.id}"><span><strong>${escapeHtml(offer.name)}</strong><small>${escapeHtml(worldName(offer.planet_id))} / ${escapeHtml(offer.aar_mission)}${offer.required_rank ? ` / ${escapeHtml(offer.required_rank)}` : ""}</small></span><span>${escapeHtml(titleCase(offer.status))}<small>${offer.participants.length}/${offer.capacity}</small></span></button>`).join("") || `<p class="aar-empty">${selectedSystem ? "No strikes in this system." : "Select a system to view its strikes."}</p>`}</div>
     ${!testing && !canParticipate ? `<p class="aar-upload-hint">The Watch Brother role and active membership are required for strike signup.</p>` : ""}
-    <div class="war-strike-grid">${(!["planet", "system"].includes(state.reachMapLevel) && selectedStrike ? [selectedStrike] : []).map(offer => `<article class="war-strike"><span class="field-label">Game mission</span><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p>${recipeHtml(offer.recipe)}<p><span class="field-label">Briefing theme</span><br>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${escapeHtml(offer.briefing)}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
+    <div class="war-strike-grid">${(!["planet", "system"].includes(state.reachMapLevel) && selectedStrike ? [selectedStrike] : []).map(offer => `<article class="war-strike"><span class="field-label">Game mission</span><h3>${escapeHtml(offer.aar_mission || offer.name)}</h3><p>${escapeHtml(offer.aar_difficulty || "")} / ${offer.capacity} players</p>${recipeHtml(offer.recipe)}${offer.report_correction ? `<p class="aar-upload-hint" role="note"><strong>Correction required.</strong> ${escapeHtml(offer.report_correction.reason)} The previous report was not archived or credited. Submit a corrected AAR for this locked strike.</p>` : ""}<p><span class="field-label">Briefing theme</span><br>${escapeHtml(offer.name)}${offer.briefing && offer.briefing !== offer.name ? `: ${offer.briefing}` : ""}</p><p>${["locked", "deployed"].includes(offer.status) ? "Roster locked" : escapeHtml(titleCase(offer.status))} / ${offer.participants.length} of ${offer.capacity}</p><p>${escapeHtml(offer.required_rank || "No specialist requirement")}</p>
       <ul>${offer.participants.map(identity => `<li>${escapeHtml(war.participant_names?.[identity] || identity)}${offer.specialist_id === identity ? " (required specialist)" : ""}</li>`).join("")}</ul>
       ${offer.attempt_id && ["locked", "deployed"].includes(offer.status) ? `<p>Strike ID: <code>${escapeHtml(offer.attempt_id)}</code></p>` : ""}<div class="tools">
       ${!testing && ["available", "recruiting"].includes(offer.status) && (canParticipate || offer.participants.includes(war.actor.id)) ? button(offer.participants.includes(war.actor.id) ? "leave" : "join", offer.participants.includes(war.actor.id) ? "Withdraw" : "Comply", `data-strike="${escapeHtml(offer.id)}" `) : ""}
-      ${!testing && ["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", "Report Completion", `data-strike="${escapeHtml(offer.id)}" `) : ""}
+      ${!testing && ["locked", "deployed"].includes(offer.status) && offer.participants.includes(war.actor.id) ? button("report", offer.report_correction ? "Correct AAR" : "Report Completion", `data-strike="${escapeHtml(offer.id)}" `) : ""}
       ${testCompletionTools(offer)}
     </div>${["locked", "deployed"].includes(offer.status) && (offer.participants.includes(war.actor.id) || master) ? `<label>Cancellation reason<input class="reach-select" data-war-cancel-reason="${escapeHtml(offer.id)}" maxlength="300" aria-label="Cancellation reason for ${escapeHtml(offer.name)}"></label>${button("cancel", "Cancel attempt", `data-strike="${escapeHtml(offer.id)}" `)}` : ""}</article>`).join("") || (warView.planet && !board.length ? `<p class="aar-empty">No strikes assigned to this planet.</p>` : "")}</div>
     ` : ""}
-    ${reviewPanel ? `<details class="war-review-tools"><summary>Evidence review and credit corrections</summary>${reviewPanel}</details>` : ""}
+    ${reviewPanel ? `<details class="war-review-tools"><summary>Credit corrections</summary>${reviewPanel}</details>` : ""}
     <div role="status" aria-live="polite">${escapeHtml(warView.error)}</div>
   </section>`;
 }
@@ -6315,7 +6307,7 @@ function refreshWarConsole() {
   const console = document.getElementById("war-console");
   const strikeScroll = console?.querySelector?.(".war-strike-list")?.scrollTop || 0;
   const openSections = [...(console?.querySelectorAll?.("details[open]") || [])].map(section => section.getAttribute("data-war-section") || section.getAttribute("data-world-intel") || section.querySelector("summary")?.textContent);
-  const attributes = ["data-war-field", "data-war-review-reason", "data-war-cancel-reason", "data-war-reversal", "data-war-reversal-reason"];
+  const attributes = ["data-war-field", "data-war-cancel-reason", "data-war-reversal", "data-war-reversal-reason"];
   const drafts = [...(console?.querySelectorAll?.("input, textarea, select") || [])].map(control => ({
     attribute: attributes.find(name => control.hasAttribute(name)),
     identity: attributes.map(name => control.getAttribute(name)),
@@ -6518,15 +6510,12 @@ document.addEventListener("click", async event => {
     if (status) status.textContent = warView.error;
     return;
   }
-  if (payload.action === "review") {
-    payload.decision = button.dataset.decision;
-    payload.reason = [...document.querySelectorAll("[data-war-review-reason]")].find(input => input.dataset.warReviewReason === payload.strike_id)?.value.trim() || "";
-  } else if (payload.action === "reverse") {
+  if (payload.action === "reverse") {
     payload.strike_id = document.querySelector("[data-war-reversal]")?.value || "";
     payload.reason = document.querySelector("[data-war-reversal-reason]")?.value.trim() || "";
   }
-  if (["review", "reverse"].includes(payload.action) && !payload.reason) {
-    warView.error = "Enter a reason for the review or credit correction.";
+  if (payload.action === "reverse" && !payload.reason) {
+    warView.error = "Enter a reason for the credit correction.";
     const status = document.querySelector("#war-console [role='status']");
     if (status) status.textContent = warView.error;
     return;
@@ -8547,7 +8536,7 @@ function geographySystemOverviewHtml(system, expanded = false) {
       const themes = [...new Set(offers.map(offer => offer.name))];
       const planet = `<button class="war-world-select" type="button" data-war-planet="${escapeHtml(world.id)}" aria-label="Focus ${escapeHtml(world.name)}">${geographyBodyIcon(world)}<span><strong>${escapeHtml(world.name)}</strong><small>${escapeHtml(geographyBodyLabel(world))}${world.battleEligible ? " / Strike theatre" : ""}</small><small>${escapeHtml(counts)}</small></span></button>`;
       if (!expanded) return planet;
-      return `<article class="system-world-briefing" aria-label="${escapeHtml(world.name)} briefing">${planet}${world.description ? `<p>${escapeHtml(world.description)}</p>` : ""}<p>${world.battleEligible ? boardAvailable ? `${recruiting} recruiting / ${locked} locked or awaiting review` : "Live deployment status unavailable" : "Non-combat location"}</p>${themes.length ? `<p>Objectives: ${escapeHtml(themes.slice(0, 4).join(" / "))}${themes.length > 4 ? ` / +${themes.length - 4} more` : ""}</p>` : ""}${boardAvailable || !world.battleEligible ? `<details data-world-intel="${escapeHtml(world.id)}"><summary>${offers.length} strike assignments</summary><ul class="system-strike-summary">${offers.map(offer => `<li><button type="button" data-war-strike="${escapeHtml(offer.id)}" data-war-strike-planet="${escapeHtml(world.id)}"><strong>${escapeHtml(offer.name)}</strong><small>${escapeHtml(offer.aar_mission || "")} / ${escapeHtml(offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla"))} / ${escapeHtml(titleCase(offer.status))} / ${offer.participants.length}/${offer.capacity}${offer.required_rank ? ` / ${escapeHtml(offer.required_rank)}` : ""}</small></button></li>`).join("") || `<li><p>${world.battleEligible ? "No strikes currently issued." : "No deployments assigned."}</p></li>`}</ul></details>` : ""}</article>`;
+      return `<article class="system-world-briefing" aria-label="${escapeHtml(world.name)} briefing">${planet}${world.description ? `<p>${escapeHtml(world.description)}</p>` : ""}<p>${world.battleEligible ? boardAvailable ? `${recruiting} recruiting / ${locked} locked` : "Live deployment status unavailable" : "Non-combat location"}</p>${themes.length ? `<p>Objectives: ${escapeHtml(themes.slice(0, 4).join(" / "))}${themes.length > 4 ? ` / +${themes.length - 4} more` : ""}</p>` : ""}${boardAvailable || !world.battleEligible ? `<details data-world-intel="${escapeHtml(world.id)}"><summary>${offers.length} strike assignments</summary><ul class="system-strike-summary">${offers.map(offer => `<li><button type="button" data-war-strike="${escapeHtml(offer.id)}" data-war-strike-planet="${escapeHtml(world.id)}"><strong>${escapeHtml(offer.name)}</strong><small>${escapeHtml(offer.aar_mission || "")} / ${escapeHtml(offer.pool || (offer.aar_mode === "omega" ? "omega" : "vanilla"))} / ${escapeHtml(titleCase(offer.status))} / ${offer.participants.length}/${offer.capacity}${offer.required_rank ? ` / ${escapeHtml(offer.required_rank)}` : ""}</small></button></li>`).join("") || `<li><p>${world.battleEligible ? "No strikes currently issued." : "No deployments assigned."}</p></li>`}</ul></details>` : ""}</article>`;
     }).join("") || `<p class="aar-empty">No planets recorded.</p>`}</div>
   </section>`;
 }

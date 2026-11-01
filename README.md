@@ -228,8 +228,9 @@ and existing five-player Omega, not custom in-game interactions. Each generated 
 independently has a 25% specialist requirement chance; only specialist tracks can gate
 it. Equerry combinations qualify for intermediate titles. The war reference includes
 artwork-derived neighbors and provisional gameplay terrain, visibly marked for review.
-It does not require certified custom maps. Staff have independent evidence approval,
-rejection and audited strike-credit reversal controls; on-time reports have a bounded
+It does not require certified custom maps. Valid strike reports settle automatically;
+incorrect roster or report details are rejected before receipt, and settled strike
+credit can still be reversed with an audited reason. On-time reports have a bounded
 24-hour processing grace at campaign closure. Existing AAR records and cosmetic roles
 are retained, and no live migration is performed by this branch.
 
