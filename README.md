@@ -43,17 +43,22 @@ Location dropdowns contain only locations with currently joinable active strikes
 independently of the current search filters and result page.
 The adjacent Chronicle of the Long Vigil is a scrolling feed of completed operations
 only, with the newest completion at the bottom. Open musters and sealed rosters do
-not appear in the feed. Entries identify the Kill-Team, Company, operation, format,
+not appear in the feed. Entries identify the Kill-Team, Company, specialist cadres, operation, format,
 world, system, and subsector from campaign records. It does not invent failed
 deployments or a Ready/Deploy step. Search and feed refresh independently without
 covering the map or resetting its camera.
 Eligible strike rows separate the title, location, mission, roster and actions.
 Chronicle and search locations link to their map views; completed-operation companies,
-Kill-teams and Astartes link to their existing dossiers. Links support direct URLs and
+Kill-teams, specialist cadres and Astartes link to their existing dossiers. Links support direct URLs and
 new tabs. Unit IDs come from the locked roster snapshot. Older name-only records link
 only when the team resolves uniquely within the recorded companies; known catalogue
 teams remain linkable even with an empty current roster. Ambiguous or retired targets
 remain plain text.
+Galactic War company-role IDs are translated through the live team directory to the
+catalogue's dossier IDs before generating links; a reused slot with a different team
+name is not treated as the historical team.
+Specialist cadres use formation IDs recorded at roster lock, such as Apothecarion,
+Librarius or Hall of Blades. Later promotions do not add a cadre to old records.
 System overviews omit the Strike theatres and Warp lanes counts while retaining
 primary-star information, planets and KT deployments; route and eligibility data
 are unchanged.

@@ -6179,8 +6179,19 @@ function refreshPriorityStrikes() {
 
 function chronicleKillTeam(companyId, identity) {
   const catalog = state.killTeams?.[String(companyId)] || [];
-  return catalog.find(team => String(team.id) === String(identity))
-    || killTeamsForCompany(Number(companyId)).find(team => String(team.killTeam) === String(identity));
+  const direct = catalog.find(team => String(team.id) === String(identity)
+    || ((typeof team.roleId === "string" || Number.isSafeInteger(team.roleId)) && String(identity) === `${companyId}-${team.roleId}`));
+  if (direct) return direct;
+  const directory = warView.operationData?.kill_teams || warView.data?.kill_teams || [];
+  const warTeam = directory.find(team => team.id === String(identity) && String(team.company_id) === String(companyId));
+  const teams = killTeamsForCompany(Number(companyId));
+  if (warTeam) {
+    const sameName = name => String(name).replace(/^kill[ -]team\s+/i, "").trim().toLowerCase()
+      === String(warTeam.name).replace(/^kill[ -]team\s+/i, "").trim().toLowerCase();
+    return catalog.find(team => String(team.id) === String(warTeam.display_id) && sameName(team.name))
+      || teams.find(team => String(team.killTeam) === String(warTeam.display_id) && sameName(team.name));
+  }
+  return teams.find(team => String(team.killTeam) === String(identity));
 }
 
 function chronicleCompanyReferences(item) {
@@ -6215,8 +6226,13 @@ function chronicleEntityLink(kind, identity, label, companyId = "") {
     : kind === "sector" ? state.geography?.sectors?.some(item => item.id === identity)
     : kind === "company" ? Boolean(COMPANY_NAMES[identity])
     : kind === "killteam" ? Boolean(companyId && chronicleKillTeam(companyId, identity))
+    : kind === "formation" ? Boolean(FORMATIONS[identity])
     : kind === "member" ? state.members?.some(item => item.id === identity) : false;
   if (!identity || !exists) return escapeHtml(label);
+  if (kind === "killteam") {
+    const team = chronicleKillTeam(companyId, identity);
+    identity = String(team.id || team.killTeam);
+  }
   const params = new URLSearchParams({entity: kind, id: identity});
   if (companyId) params.set("company", companyId);
   const path = ["world", "system", "sector"].includes(kind) ? "/reach" : "/";
@@ -6229,7 +6245,7 @@ async function loadChronicleLocation() {
   const kind = params.get("entity"), identity = params.get("id");
   if (!identity) return;
   const geography = ["world", "system", "sector"].includes(kind);
-  if (!geography && !["company", "killteam", "member"].includes(kind)) return;
+  if (!geography && !["company", "killteam", "member", "formation"].includes(kind)) return;
   await setPage(geography ? "reach" : "fortress", false);
   if (window.location.search !== search) return;
   if (kind === "sector") showSectorLevel(identity);
@@ -6242,11 +6258,14 @@ async function loadChronicleLocation() {
     openPlanetView(identity);
   } else if (kind === "member") {
     if (findMember(identity)) openMemberModal(identity);
+  } else if (kind === "formation") {
+    if (FORMATIONS[identity]) navigate("formation", {formationId: identity}, null, "in", false);
   } else {
     const companyId = Number(kind === "company" ? identity : params.get("company"));
     if (!COMPANY_NAMES[companyId]) return;
-    if (kind === "killteam" && !chronicleKillTeam(companyId, identity)) return;
-    navigate(kind, {companyId, killTeamId: kind === "killteam" ? identity : null}, null, "in", false);
+    const team = kind === "killteam" ? chronicleKillTeam(companyId, identity) : null;
+    if (kind === "killteam" && !team) return;
+    navigate(kind, {companyId, killTeamId: team ? String(team.id || team.killTeam) : null}, null, "in", false);
   }
   if (geography) document.getElementById("reach-viewport")?.scrollIntoView({block: "start"});
 }
@@ -6288,13 +6307,15 @@ function strikeOperationsHtml() {
     const companyName = item.companies?.join(" · ") || "Unrecorded";
     const teamLinks = chronicleTeamReferences(item).map(team => chronicleEntityLink("killteam", team.id, team.name.replace(/^kill[ -]team\s+/i, ""), team.company_id)).join(" · ") || escapeHtml(teamName);
     const companyLinks = chronicleCompanyReferences(item).map(company => chronicleEntityLink("company", company.id, company.name)).join(" · ") || escapeHtml(companyName);
+    const cadreLinks = (item.specialist_cadres || []).map(cadre => chronicleEntityLink("formation", cadre.id, FORMATIONS[cadre.id]?.name || cadre.id)).join(" · ")
+      || (Array.isArray(item.specialist_cadres) ? "None" : "Unrecorded");
     const operationName = item.name || item.mission || "Strike order";
     return `<article class="strike-terminal-line ${item.reversed ? "reversed" : "completed"}">
       <header class="terminal-entry-header"><span class="terminal-state">${escapeHtml(status)}</span><time${timestamp ? ` datetime="${escapeHtml(timestamp)}"` : ""}>${escapeHtml(timeLabel)}</time></header>
       <h4 class="terminal-event">${escapeHtml(operationName)}</h4>
       <p class="terminal-mission">${escapeHtml(item.mission || "Unrecorded mission")} · ${format}${count ? ` · ${count} brothers` : ""}</p>
       <p class="terminal-location"><strong>${chronicleEntityLink("world", item.planet_id, item.planet_name || "Uncharted world")}</strong><small>${chronicleEntityLink("system", item.system_id, item.system_name || "Uncharted system")} / ${chronicleEntityLink("sector", item.subsector_id, item.subsector_name || "Uncharted sector")}</small></p>
-      <dl class="terminal-assignment"><dt>${teams.length > 1 ? "Kill-teams" : "Kill-team"}</dt><dd>${teamLinks}</dd><dt>${item.companies?.length > 1 ? "Companies" : "Company"}</dt><dd>${companyLinks}</dd></dl>
+      <dl class="terminal-assignment"><dt>${teams.length > 1 ? "Kill-teams" : "Kill-team"}</dt><dd>${teamLinks}</dd><dt>${item.companies?.length > 1 ? "Companies" : "Company"}</dt><dd>${companyLinks}</dd><dt>Specialist cadres</dt><dd>${cadreLinks}</dd></dl>
       ${members.length ? `<details class="terminal-roster" data-activity-roster="${escapeHtml(item.id)}"><summary data-activity-roster-toggle="${escapeHtml(item.id)}">${members.length} ${members.length === 1 ? "brother" : "brothers"} deployed</summary><ul>${members.map(name => `<li>${name}</li>`).join("")}</ul></details>` : ""}
     </article>`;
   };

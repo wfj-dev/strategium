@@ -2026,6 +2026,7 @@ c.warView.operationData.activity.completed.push({id:'GW-mixed',name:'Cleansing F
 vm.createContext(c);
 c.URLSearchParams=URLSearchParams;
 c.COMPANY_NAMES={'1':'Primus','3':'Tertius','4':'Quartus'};
+c.FORMATIONS={apothecarion:{name:'Apothecarion'},librarius:{name:'Librarius'}};
 c.killTeamsForCompany=()=>[];
 vm.runInContext(html.slice(html.indexOf('function priorityStrikesHtml()'),html.indexOf('function refreshStrikeOperations()')),c);
 const markup=c.strikeOperationsHtml();
@@ -2087,6 +2088,16 @@ for(const [kind,identity,company] of [['world','world',''],['system','system',''
 assert.equal(c.chronicleEntityLink('member','missing','Unknown Brother'),'Unknown Brother');
 assert.equal(c.chronicleEntityLink('killteam','missing','Retired team','1'),'Retired team');
 c.state.killTeams={'1':[{id:'1-3',name:'Kill Team Timotheos'}],'2':[{id:'2-3',name:'Kill-Team Timotheos'}]};
+c.warView.operationData.kill_teams=[{id:'1-1429342357414244372',name:'Kill-Team Timotheos',company_id:'1',display_id:'1-3'}];
+assert.match(c.chronicleEntityLink('killteam','1-1429342357414244372','Timotheos','1'),/entity=killteam&amp;id=1-3&amp;company=1/);
+assert.doesNotMatch(c.chronicleEntityLink('killteam','1-1429342357414244372','Timotheos','1'),/id=1-1429342357414244372/);
+c.state.killTeams['1'][0].roleId='1429342357414244372';
+assert.match(c.chronicleEntityLink('killteam','1-1429342357414244372','Timotheos','1'),/id=1-3/);
+delete c.state.killTeams['1'][0].roleId;
+assert.equal(c.chronicleEntityLink('killteam','1-1429342357414244372','Timotheos','2'),'Timotheos');
+c.state.killTeams['1'][0].name='Kill Team Replacement';
+assert.equal(c.chronicleEntityLink('killteam','1-1429342357414244372','Timotheos','1'),'Timotheos');
+c.state.killTeams['1'][0].name='Kill Team Timotheos';
 c.COMPANY_NAMES['2']='Secundus';
 const legacy={companies:['Primus'],kill_teams:['Kill-Team Timotheos']};
 const resolved=c.chronicleTeamReferences(legacy)[0];
@@ -2101,6 +2112,9 @@ const history=c.warView.operationData.activity.completed[0];
 const savedTeams=history.kill_teams,savedCompanies=history.companies;
 history.kill_teams=legacy.kill_teams;history.companies=legacy.companies;
 assert.match(c.strikeOperationsHtml(),/entity=killteam&amp;id=1-3&amp;company=1/);
+c.warView.operationData.activity.completed[0].specialist_cadres=[{id:'apothecarion'},{id:'librarius'}];
+assert.match(c.strikeOperationsHtml(),/<dt>Specialist cadres<\/dt><dd>[\s\S]*?entity=formation&amp;id=apothecarion[\s\S]*?Apothecarion<\/a> · [\s\S]*?Librarius<\/a>/);
+assert.equal(c.chronicleEntityLink('formation','missing','Unknown cadre'),'Unknown cadre');
 history.kill_teams=savedTeams;history.companies=savedCompanies;
 assert.match(c.strikeOperationsHtml(),/entity=member&amp;id=42/);
 assert.match(c.strikeOperationsHtml(),/entity=world&amp;id=world/);
@@ -2108,6 +2122,8 @@ c.warView.operationData.activity.completed[0].company_refs=[{id:'1',name:'Primus
 c.warView.operationData.activity.completed[0].kill_team_refs=[{id:'1-1',name:'Kill-Team Timotheos',company_id:'1'}];
 assert.match(c.strikeOperationsHtml(),/entity=company&amp;id=1/);
 assert.match(c.strikeOperationsHtml(),/entity=killteam&amp;id=1-1&amp;company=1/);
+c.warView.operationData.activity.completed[0].kill_team_refs=[{id:'1-1429342357414244372',name:'Kill-Team Timotheos',company_id:'1'}];
+assert.match(c.strikeOperationsHtml(),/entity=killteam&amp;id=1-3&amp;company=1/);
 c.warView.searchFilters.subsector_id='alpha';
 c.warView.searchFilters.system_id='system';
 const narrowed=c.strikeOperationsHtml();
@@ -2182,8 +2198,8 @@ vm.runInContext(html.slice(html.indexOf('function openRecommendedStrike('),html.
  c.openPlanetView=identity=>{openedEntity=`world:${identity}`;};
  c.findMember=identity=>c.state.members.find(item=>item.id===identity);
  c.openMemberModal=identity=>{openedEntity=`member:${identity}`;};
- c.navigate=(kind,params)=>{openedEntity=`${kind}:${params.companyId}:${params.killTeamId||''}`;};
- for(const [query,expected] of [['entity=sector&id=alpha','sector:alpha'],['entity=world&id=world','world:world'],['entity=member&id=42','member:42'],['entity=company&id=1','company:1:'],['entity=killteam&id=1-1&company=1','killteam:1:1-1'],['entity=killteam&id=1-3&company=1','killteam:1:1-3']]){
+ c.navigate=(kind,params)=>{openedEntity=kind==='formation'?`formation:${params.formationId}`:`${kind}:${params.companyId}:${params.killTeamId||''}`;};
+ for(const [query,expected] of [['entity=sector&id=alpha','sector:alpha'],['entity=world&id=world','world:world'],['entity=member&id=42','member:42'],['entity=company&id=1','company:1:'],['entity=killteam&id=1-1&company=1','killteam:1:1-1'],['entity=killteam&id=1-3&company=1','killteam:1:1-3'],['entity=killteam&id=1-1429342357414244372&company=1','killteam:1:1-3']]){
   c.window={location:{search:`?${query}`}};
   await c.loadChronicleLocation();
   assert.equal(openedEntity,expected);
@@ -2191,6 +2207,9 @@ vm.runInContext(html.slice(html.indexOf('function openRecommendedStrike('),html.
  c.window={location:{search:'?entity=system&id=system'}};
  await c.loadChronicleLocation();
  assert.equal(c.state.selectedSystem,'system');
+ c.window={location:{search:'?entity=formation&id=apothecarion'}};
+ await c.loadChronicleLocation();
+ assert.equal(openedEntity,'formation:apothecarion');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
