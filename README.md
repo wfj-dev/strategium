@@ -16,6 +16,21 @@ All actions use authenticated `/api/war` requests. The existing signed AAR bridg
 carries these requests, so no campaign database or bot credentials are exposed to the
 browser.
 
+Active Tyranid Synaptic Onslaughts appear beside the campaign balance with their
+end time, additional hourly drain and current synapse disruption. Successful strikes
+weaken the remaining offensive pressure. Status comes from the bot's campaign clock,
+including invasion testing; future offensive schedules are not sent to the browser.
+
+Displayed timestamps use Imperial notation with the real calendar year, such as
+`0.834.026.M3` for a date in 2026, rather than shifting it into M41/M42. The first
+digit marks this direct calendar conversion, followed by the UTC year fraction
+(000-999), year within the millennium and millennium. A UTC clock accompanies
+the date; hovering reveals its exact Gregorian timestamp. Campaign deadlines and
+offensive end times also show time remaining, using the sandbox clock when testing.
+Only presentation changes: stored timestamps and campaign deadlines remain ISO UTC.
+Campaign balance, deadline and offensive details use separate labelled rows so they
+remain readable in the desktop side panel and on phones.
+
 Select a subsector to open its campaign panel alongside the desktop map, or use
 the collapsible subsector navigator on phones. Authenticated campaign permissions
 load before the first map render. Role actions and systems are visible immediately;

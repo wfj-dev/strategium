@@ -2028,6 +2028,7 @@ c.URLSearchParams=URLSearchParams;
 c.COMPANY_NAMES={'1':'Primus','3':'Tertius','4':'Quartus'};
 c.FORMATIONS={apothecarion:{name:'Apothecarion'},librarius:{name:'Librarius'}};
 c.killTeamsForCompany=()=>[];
+vm.runInContext(html.slice(html.indexOf('function imperialTimestamp('),html.indexOf('function watchEntryLabel(')),c);
 vm.runInContext(html.slice(html.indexOf('function priorityStrikesHtml()'),html.indexOf('function refreshStrikeOperations()')),c);
 const markup=c.strikeOperationsHtml();
 const priorityMenu=c.priorityStrikesHtml();
@@ -2062,11 +2063,13 @@ assert.match(markup,/Termination · Omega/);
 assert.match(markup,/<strong>Kethrys<\/strong>/);
 assert.match(markup,/Ctesiphus \/ Jericho Reach/);
 assert.match(markup,/<details class="terminal-roster" data-activity-roster="GW-done"><summary[^>]*>3 brothers deployed<\/summary>/);
-assert.match(markup,/2026-10-29 · 12:00 UTC/);
+assert.match(markup,/0\.\d{3}\.026\.M3/);assert.match(markup,/12:00 UTC/);
+assert.match(markup,/datetime="2026-10-29T12:00:00.000Z"/);
 assert.match(markup,/<h4 class="terminal-event">Cleansing Flame<\/h4>/);
 assert.match(markup,/<dt>Kill-teams<\/dt><dd>Timotheos · Ghost · Van<\/dd>/);
 assert.match(markup,/<dt>Companies<\/dt><dd>[\s\S]*?Primus<\/a> · [\s\S]*?Tertius<\/a> · [\s\S]*?Quartus<\/a><\/dd>/);
-assert.match(markup,/2026-11-01 · 17:19 UTC/);
+assert.match(markup,/0\.834\.026\.M3/);assert.match(markup,/17:19 UTC/);
+assert.match(markup,/datetime="2026-11-01T17:19:35.484Z"/);
 assert.doesNotMatch(markup,/>[^<]*17:19:35\.484|Kill-Team Timotheos, Kill-Team Ghost/);
 assert.match(markup,/<li>&lt;Watch Master Van&gt;<\/li>/);
 assert.doesNotMatch(markup,/KILL-TEAM:|MISSION TYPE:|BROTHERS:|Alpha Strike Team of Primus/);
@@ -2306,6 +2309,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function strikeActionBarHtml('),html.indexOf('function strikeRegionArtwork(')),context);
+vm.runInContext(html.slice(html.indexOf('function imperialTimestamp('),html.indexOf('function watchEntryLabel(')),context);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
 const markup = context.warConsoleHtml();
 assert.match(markup,/<dt>Assigned strikes<\/dt>/);
@@ -2446,6 +2450,7 @@ context.openPlanetView=id=>{context.warView.planet=id;context.state.reachMapLeve
 context.selectPlanetStrike=id=>{context.warView.strike=id;context.openPlanetView(context.warView.data.boards['world-b'].find(offer=>offer.id===id).planet_id);context.state.reachMapLevel='strike';context.refreshWarConsole();};
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function strikeActionBarHtml('),html.indexOf('function strikeRegionArtwork(')),context);
+vm.runInContext(html.slice(html.indexOf('function imperialTimestamp('),html.indexOf('function watchEntryLabel(')),context);
 vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('async function refreshReach()')),context);
 let markup=context.warConsoleHtml();
 assert.match(markup,/data-war-strike="a"/);assert.match(markup,/data-war-strike="b"/);
@@ -2582,6 +2587,70 @@ c.state.auth.authenticated=false;c.warView.planet='';markup=c.warConsoleHtml();
 assert.match(markup,/Sign in/);assert.match(markup,/Sancta Liora/);assert.match(markup,/Kethrys/);
 """
     result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html"), str(server.ROOT / "data" / "reach_geography.json")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for campaign rendering")
+def test_imperial_timestamps_use_utc_year_fractions_and_real_millennia():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8'),c={};vm.createContext(c);
+vm.runInContext(html.slice(html.indexOf('function imperialTimestamp('),html.indexOf('function watchEntryLabel(')),c);
+assert.equal(c.imperialTimestamp('2026-01-01T00:00:00Z'),'0.000.026.M3');
+assert.equal(c.imperialTimestamp('2026-12-31T23:59:59Z'),'0.999.026.M3');
+assert.equal(c.imperialTimestamp('2024-07-02T00:00:00Z'),'0.500.024.M3');
+assert.equal(c.imperialTimestamp('2000-01-01T00:00:00Z'),'0.000.000.M3');
+assert.equal(c.imperialTimestamp('1999-12-31T23:59:59Z'),'0.999.999.M2');
+assert.equal(c.imperialTimestamp('2025-12-31T19:00:00-05:00'),'0.000.026.M3');
+for(const bad of [null,undefined,'','not-a-date','<script>'])assert.equal(c.imperialTimestamp(bad),'Unrecorded');
+const markup=c.imperialTimeHtml('2026-01-02T03:04:05Z','2026-01-01T00:00:00Z');
+assert.match(markup,/datetime="2026-01-02T03:04:05.000Z"/);
+assert.match(markup,/title="2026-01-02 03:04:05.000 UTC"/);
+assert.match(markup,/03:04 UTC/);assert.match(markup,/1d 3h remaining/);
+assert.match(c.imperialTimeHtml('2026-01-01T03:04:00Z','2026-01-01T02:00:00Z'),/1h 4m remaining/);
+assert.match(c.imperialTimeHtml('2026-01-01T00:00:00Z','2026-01-02T00:00:00Z'),/Elapsed/);
+assert.doesNotMatch(c.imperialTimeHtml('2026-01-01T00:00:00Z'),/remaining|Elapsed/);
+assert.doesNotMatch(c.imperialTimeHtml('<script>'),/<script>|NaN|Invalid Date/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for campaign rendering")
+def test_campaign_onslaught_status_uses_server_clock_and_handles_legacy_payloads():
+    source = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const campaign={status:'contested',balance:42,deadline:'2026-10-30T12:00:00Z'};
+const c={state:{auth:{authenticated:true},selectedSector:'alpha',geography:{sectors:[],systems:[]}},
+warView:{subsector:'alpha',busy:false,error:'',data:{actor:{id:'42',roles:[],company_id:'1'},
+campaigns:{alpha:campaign},kill_teams:[],commitments:{},assignments:{},planets:[],boards:{}}},
+escapeHtml:value=>String(value??'').replaceAll('<','&lt;').replaceAll('>','&gt;'),titleCase:value=>value,
+geographySystemDirectoryHtml:()=>''};
+vm.createContext(c);
+vm.runInContext(html.slice(html.indexOf('function imperialTimestamp('),html.indexOf('function watchEntryLabel(')),c);
+vm.runInContext(html.slice(html.indexOf('function warConsoleHtml()'),html.indexOf('function refreshWarConsole()')),c);
+assert.doesNotMatch(c.warConsoleHtml(),/Synaptic Onslaught|war-onslaught/);
+campaign.active_offensive={name:'Synaptic Onslaught',ends_at:'2026-10-20T12:00:00Z',extra_drain_per_hour:0.625,mitigation_percent:30};
+let markup=c.warConsoleHtml();
+assert.match(markup,/Synaptic Onslaught/);assert.match(markup,/\+0.63 pts\/hour/);
+assert.match(markup,/<dt>Synapse disruption<\/dt><dd>30%/);assert.match(markup,/class="war-onslaught" role="status"/);
+assert.match(markup,/42.00%/);assert.match(markup,/Campaign deadline/);assert.match(markup,/0\.\d{3}\.026\.M3/);
+assert.match(markup,/Deathwatch control/);assert.match(markup,/<dl class="war-onslaught-facts">/);
+c.Date=class extends Date {static now(){return Date.parse('2026-10-20T08:00:00Z');}};
+assert.match(c.warConsoleHtml(),/4h 0m remaining/);
+delete c.Date;
+c.COMPANY_NAMES={};
+c.warView.data.sandbox={viewing:true,clock:'2026-10-20T10:00:00Z'};
+assert.match(c.warConsoleHtml(),/2h 0m remaining/);
+c.warView.data.sandbox=null;
+campaign.active_offensive.name='<script>bad</script>';
+assert.doesNotMatch(c.warConsoleHtml(),/<script>bad/);
+campaign.status='lost';assert.doesNotMatch(c.warConsoleHtml(),/war-onslaught/);
+campaign.status='contested';campaign.active_offensive=null;assert.doesNotMatch(c.warConsoleHtml(),/war-onslaught/);
+assert.match(html,/\.war-onslaught \{[^}]*flex: 1 1 100%[^}]*overflow-wrap: anywhere/);
+"""
+    result = subprocess.run(["node", "-e", source, str(server.ROOT / "jericho-strategium.html")], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
 
 
@@ -2966,6 +3035,7 @@ const context={aarManager:{selectedId:'',reviewId:''},AAR_SUBMISSION_TAGS:[['bla
   aarReviewHref:(id,type,review)=>`/manage-aars?aar=${id}${type?'&review_type='+type+'&review_id='+review:''}`};
 vm.createContext(context);
 const start=html.indexOf('function aarReviewListItemHtml('),end=html.indexOf('function renderAarManagement()',start);
+vm.runInContext(html.slice(html.indexOf('function imperialTimestamp('),html.indexOf('function watchEntryLabel(')),context);
 vm.runInContext(html.slice(start,end),context);
 const history=context.aarReviewListItemHtml({kind:'',id:'123',review:'',label:'PvE',title:'Inferno',
   mode:'ops_strat',difficulty:'Ruthless',rank:'A',waves:10,kia:1,date:'2026-10-22T12:00:00Z',
@@ -2974,6 +3044,14 @@ assert.match(history,/aar-history-item/);assert.match(history,/Ruthless/);assert
 assert(history.includes('Operations / Stratagems'));assert.match(history,/Rank A/);
 assert.match(history,/10 waves/);assert.match(history,/1 KIA/);
 assert.match(history,/Black Laurels/);assert.match(history,/Open report/);
+assert.match(history,/0\.\d{3}\.026\.M3/);assert.match(history,/12:00 UTC/);
+assert.match(history,/title="2026-10-22 12:00:00.000 UTC"/);
+context.AAR_PVE_MISSIONS=[];context.state={members:[]};
+vm.runInContext(html.slice(html.indexOf('function aarReportPreviewHtml('),html.indexOf('function aarSelectedReviewHtml(')),context);
+const report=context.aarReportPreviewHtml({id:'123',timestamp:'2026-10-22T12:00:00Z',submission:{mode:'ops_strat'}});
+assert.match(report,/<dt>Operation date<\/dt><dd><time class="imperial-date"/);
+assert.match(report,/0\.\d{3}\.026\.M3/);assert.match(report,/12:00 UTC/);
+assert.match(context.aarReportPreviewHtml({id:'124'}),/Unrecorded/);
 const zeroCounts=context.aarReviewListItemHtml({kind:'',id:'125',waves:0,kia:0});
 assert.match(zeroCounts,/0 waves/);assert.match(zeroCounts,/0 KIA/);
 const pvp=context.aarReviewListItemHtml({kind:'',id:'124',review:'',label:'PvP',title:'Match',
